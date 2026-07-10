@@ -13,7 +13,12 @@
     </div>
 
     <el-table :data="articles" v-loading="loading" stripe>
-      <el-table-column prop="article.title" label="标题" min-width="200" />
+      <el-table-column label="标题" min-width="200">
+        <template #default="{ row }">
+          <el-tag v-if="row.article.isTop === 1" type="danger" size="small" style="margin-right: 6px">置顶</el-tag>
+          {{ row.article.title }}
+        </template>
+      </el-table-column>
       <el-table-column prop="categoryName" label="分类" width="120" />
       <el-table-column label="标签" width="200">
         <template #default="{ row }">
@@ -28,9 +33,12 @@
         </template>
       </el-table-column>
       <el-table-column prop="article.createTime" label="创建时间" width="180" />
-      <el-table-column label="操作" width="250" fixed="right">
+      <el-table-column label="操作" width="310" fixed="right">
         <template #default="{ row }">
           <el-button size="small" @click="router.push('/articles/edit/' + row.article.id)">编辑</el-button>
+          <el-button size="small" :type="row.article.isTop === 1 ? 'warning' : ''" @click="toggleTop(row.article.id)">
+            {{ row.article.isTop === 1 ? '取消置顶' : '置顶' }}
+          </el-button>
           <el-button size="small" :type="row.article.status === 1 ? 'warning' : 'success'" @click="toggleStatus(row.article.id)">
             {{ row.article.status === 1 ? '下架' : '发布' }}
           </el-button>
@@ -91,6 +99,12 @@ async function loadFilters() {
 async function toggleStatus(id) {
   await request.put(`/articles/${id}/status`)
   ElMessage.success('状态切换成功')
+  loadArticles()
+}
+
+async function toggleTop(id) {
+  await request.put(`/articles/${id}/top`)
+  ElMessage.success('置顶状态切换成功')
   loadArticles()
 }
 

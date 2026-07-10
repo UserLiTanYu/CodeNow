@@ -87,6 +87,7 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         LambdaQueryWrapper<BlogArticle> wrapper = new LambdaQueryWrapper<BlogArticle>()
                 .eq(categoryId != null, BlogArticle::getCategoryId, categoryId)
                 .in(articleIds != null && !articleIds.isEmpty(), BlogArticle::getId, articleIds)
+                .orderByDesc(BlogArticle::getIsTop)
                 .orderByDesc(BlogArticle::getCreateTime);
 
         // 分页查询文章

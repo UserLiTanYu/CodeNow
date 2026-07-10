@@ -87,4 +87,17 @@ public class ArticleController {
         articleService.updateById(article);
         return R.ok();
     }
+
+    @Operation(summary = "切换文章置顶", description = "切换文章的置顶状态（0=不置顶, 1=置顶）")
+    @PutMapping("/{id}/top")
+    public R<Void> toggleTop(
+            @Parameter(description = "文章 ID", example = "1") @PathVariable Long id) {
+        BlogArticle article = articleService.getById(id);
+        if (article == null) {
+            return R.error(404, "文章不存在");
+        }
+        article.setIsTop(article.getIsTop() == 0 ? 1 : 0);
+        articleService.updateById(article);
+        return R.ok();
+    }
 }
