@@ -102,6 +102,50 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         return voPage;
     }
 
+    @Override
+    public Page<ArticleVO> pagePublishedArticles(Integer pageNum, Integer pageSize, Long categoryId, Long tagId) {
+        List<Long> articleIds = null;
+        if (tagId != null) {
+            List<BlogArticleTag> relations = articleTagMapper.selectList(
+                    new LambdaQueryWrapper<BlogArticleTag>().eq(BlogArticleTag::getTagId, tagId));
+            articleIds = relations.stream().map(BlogArticleTag::getArticleId).collect(Collectors.toList());
+            if (articleIds.isEmpty()) {
+                return new Page<>(pageNum, pageSize);
+            }
+        }
+
+        LambdaQueryWrapper<BlogArticle> wrapper = new LambdaQueryWrapper<BlogArticle>()
+                .eq(BlogArticle::getStatus, 1)  // 仅已发布
+                .eq(categoryId != null, BlogArticle::getCategoryId, categoryId)
+                .in(articleIds != null && !articleIds.isEmpty(), BlogArticle::getId, articleIds)
+                .orderByDesc(BlogArticle::getIsTop)
+                .orderByDesc(BlogArticle::getCreateTime);
+
+        Page<BlogArticle> articlePage = page(new Page<>(pageNum, pageSize), wrapper);
+
+        Page<ArticleVO> voPage = new Page<>(articlePage.getCurrent(), articlePage.getSize(), articlePage.getTotal());
+        List<ArticleVO> voList = articlePage.getRecords().stream()
+                .map(this::buildArticleVO)
+                .collect(Collectors.toList());
+        voPage.setRecords(voList);
+        return voPage;
+    }
+
+    @Override
+    @Transactional
+    public ArticleVO getPublishedArticleById(Long id) {
+        BlogArticle article = getById(id);
+        if (article == null || article.getStatus() != 1) {
+            return null;
+        }
+        // 浏览量 +1
+        lambdaUpdate().eq(BlogArticle::getId, id)
+                .setSql("view_count = view_count + 1")
+                .update();
+        article.setViewCount(article.getViewCount() + 1);
+        return buildArticleVO(article);
+    }
+
     /**
      * 保存文章-标签关联记录
      */

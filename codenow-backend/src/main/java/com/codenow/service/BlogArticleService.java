@@ -33,4 +33,14 @@ public interface BlogArticleService extends IService<BlogArticle> {
      * 分页查询文章列表（含分类名称和标签列表，支持按分类/标签筛选）
      */
     Page<ArticleVO> pageArticleVO(Integer pageNum, Integer pageSize, Long categoryId, Long tagId);
+
+    /**
+     * 分页查询已发布文章（用户端，仅 status=1）
+     */
+    Page<ArticleVO> pagePublishedArticles(Integer pageNum, Integer pageSize, Long categoryId, Long tagId);
+
+    /**
+     * 查询已发布文章详情（用户端），同时浏览量 +1
+     */
+    ArticleVO getPublishedArticleById(Long id);
 }

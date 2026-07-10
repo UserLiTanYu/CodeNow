@@ -35,13 +35,43 @@ const router = createRouter({
         },
       ],
     },
+    {
+      path: '/blog',
+      component: () => import('@/layout/BlogLayout.vue'),
+      children: [
+        {
+          path: '',
+          name: 'blog-home',
+          component: () => import('@/views/blog/BlogHome.vue'),
+        },
+        {
+          path: 'article/:id',
+          name: 'blog-article',
+          component: () => import('@/views/blog/BlogArticle.vue'),
+        },
+        {
+          path: 'category/:id',
+          name: 'blog-category',
+          component: () => import('@/views/blog/BlogCategory.vue'),
+        },
+        {
+          path: 'tag/:id',
+          name: 'blog-tag',
+          component: () => import('@/views/blog/BlogTag.vue'),
+        },
+      ],
+    },
   ],
 })
 
-// 路由守卫：未登录跳转登录页
+// 路由守卫：/blog 路由公开访问，其他路由需要登录
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
-  if (to.path !== '/login' && !token) {
+  if (to.path.startsWith('/blog')) {
+    next()
+  } else if (to.path === '/login') {
+    next()
+  } else if (!token) {
     next('/login')
   } else {
     next()
