@@ -30,6 +30,8 @@
 | Pinia | 3.x | 状态管理 |
 | Axios | 1.x | HTTP 请求库 |
 | md-editor-v3 | 6.x | Markdown 编辑器组件 |
+| marked | 15.x | Markdown 渲染为 HTML（博客前台） |
+| highlight.js | 11.x | 代码语法高亮（博客前台） |
 
 ---
 
@@ -42,7 +44,7 @@ codenow/
 │   ├── pom.xml                         # Maven 依赖配置
 │   └── src/main/java/com/codenow/
 │       ├── config/                     # 配置类（CORS、Sa-Token、MyBatis-Plus、Security）
-│       ├── controller/                 # 控制器（Auth、Article、Category、Tag）
+│       ├── controller/                 # 控制器（Auth、Article、Category、Tag、Blog）
 │       ├── service/                    # 业务逻辑层
 │       │   └── impl/                   # Service 实现类
 │       ├── mapper/                     # 数据访问层（MyBatis-Plus Mapper）
@@ -54,20 +56,28 @@ codenow/
 ├── codenow-frontend/                   # 前端项目
 │   ├── vite.config.js                  # Vite 配置（含 API 代理）
 │   └── src/
-│       ├── layout/                     # 主布局（侧边栏 + 顶导航）
+│       ├── layout/                     # 布局组件
+│       │   ├── MainLayout.vue          # 管理后台布局（侧边栏 + 顶导航）
+│       │   └── BlogLayout.vue          # 博客前台布局（顶栏 + 内容区 + 侧边栏）
 │       ├── router/                     # 路由配置（含登录守卫）
 │       ├── stores/                     # Pinia 状态管理
 │       ├── utils/                      # 工具函数（Axios 封装）
 │       └── views/                      # 页面组件
-│           ├── login/                  # 登录页
-│           ├── article/                # 文章列表 + 文章编辑
-│           ├── category/               # 分类管理
-│           └── tag/                    # 标签管理
+│           ├── login/                  # 登录页（管理端）
+│           ├── article/                # 文章列表 + 文章编辑（管理端）
+│           ├── category/               # 分类管理（管理端）
+│           ├── tag/                    # 标签管理（管理端）
+│           └── blog/                   # 博客前台页面（用户端）
+│               ├── BlogHome.vue        # 博客首页（文章列表）
+│               ├── BlogArticle.vue     # 文章详情页（Markdown 渲染）
+│               ├── BlogCategory.vue    # 分类文章页
+│               └── BlogTag.vue         # 标签文章页
 │
-├── 开发文档.md                          # 完整开发文档（含六阶段规划）
+├── 开发文档.md                          # 完整开发文档（含七阶段规划）
 ├── 阶段一-环境搭建与项目初始化-操作日志.md
 ├── 阶段二-后端核心开发-操作日志.md
 ├── 阶段三-后端进阶与文档完善-操作日志.md
+├── 阶段七-用户端博客开发-操作日志.md
 └── README.md                           # 本文件
 ```
 
@@ -127,9 +137,8 @@ npm run dev
 
 ### 5. 访问系统
 
-- 打开浏览器访问 `http://localhost:5173`
-- 自动跳转到登录页，输入 admin / 123456 登录
-- 登录后进入管理后台
+- **管理后台**：访问 `http://localhost:5173`，自动跳转到登录页，输入 admin / 123456 登录
+- **博客前台**：访问 `http://localhost:5173/blog`，无需登录即可浏览已发布文章
 
 ---
 
@@ -142,7 +151,7 @@ http://localhost:8080/doc.html
 ```
 
 在 Knife4j 页面中可以：
-- 查看所有接口分组（认证管理、文章管理、分类管理、标签管理）
+- 查看所有接口分组（认证管理、文章管理、分类管理、标签管理、博客前台）
 - 点击任意接口查看请求参数说明和示例值
 - 点击「Try it out」直接在页面上测试接口（需在请求头中手动添加 `Authorization: <token>`）
 
@@ -173,11 +182,15 @@ http://localhost:8080/doc.html
 - [x] 前端文章编辑页（Markdown 编辑器 + 分类下拉 + 标签多选）
 - [x] 前端分类管理页（弹窗表单 CRUD）
 - [x] 前端标签管理页
+- [x] 博客前台首页（文章卡片列表 + 分页）
+- [x] 文章详情页（Markdown 渲染 + 代码高亮）
+- [x] 博客前台按分类 / 标签筛选文章
+- [x] 博客前台公开 API（无需登录）
+- [x] 文章置顶 / 推荐
+- [x] 文章浏览量统计（访问详情页自动 +1）
 
 ### 计划中
 
-- [ ] 文章置顶 / 推荐
-- [ ] 文章浏览量统计
 - [ ] 评论系统
 - [ ] 全文搜索
 - [ ] 文章归档（按月份）
@@ -195,8 +208,9 @@ http://localhost:8080/doc.html
 | 第二阶段 | 后端核心开发 — 数据库与基础 CRUD | ✅ 已完成 |
 | 第三阶段 | 后端进阶 — 业务逻辑完善 | ✅ 已完成 |
 | 第四阶段 | 前端核心开发 — 页面与路由 | ✅ 已完成 |
-| 第五阶段 | 前后端联调与细节打磨 | ⏳ 待开始 |
-| 第六阶段 | 部署上线 | ⏳ 待开始 |
+| 第五阶段 | 前后端联调与细节打磨 | ✅ 已完成 |
+| 第六阶段 | 用户端（前台博客）开发 | ✅ 已完成 |
+| 第七阶段 | 部署上线 | ⏳ 待开始 |
 
 ---
 
