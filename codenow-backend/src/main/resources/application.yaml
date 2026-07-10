@@ -50,17 +50,13 @@ sa-token:
   # 是否输出操作日志
   is-log: false
 
-# Knife4j 配置
+# Knife4j / SpringDoc 配置
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
   api-docs:
     path: /v3/api-docs
-  group-configs:
-    - group: default
-      display-name: 码上记 API
-      paths-to-match: /**
-      packages-to-scan: com.codenow.controller
+  packages-to-scan: com.codenow.controller
 
 # 日志配置（可选，降低日志噪音）
 logging:
