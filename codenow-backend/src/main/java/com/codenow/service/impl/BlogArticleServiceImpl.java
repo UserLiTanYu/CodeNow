@@ -13,6 +13,7 @@ import com.codenow.mapper.BlogArticleTagMapper;
 import com.codenow.mapper.BlogCategoryMapper;
 import com.codenow.mapper.BlogTagMapper;
 import com.codenow.service.BlogArticleService;
+import com.codenow.service.HotArticleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +29,7 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
     private final BlogArticleTagMapper articleTagMapper;
     private final BlogCategoryMapper categoryMapper;
     private final BlogTagMapper tagMapper;
+    private final HotArticleService hotArticleService;
 
     @Override
     @Transactional
@@ -142,7 +144,10 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         lambdaUpdate().eq(BlogArticle::getId, id)
                 .setSql("view_count = view_count + 1")
                 .update();
-        article.setViewCount(article.getViewCount() + 1);
+        int newViewCount = article.getViewCount() + 1;
+        article.setViewCount(newViewCount);
+        // 同步更新 Redis 缓存
+        hotArticleService.incrementViewCount(id, newViewCount);
         return buildArticleVO(article);
     }
 

@@ -26,6 +26,21 @@
       </main>
       <aside class="blog-sidebar">
         <div class="sidebar-section">
+          <h3 class="sidebar-title">热门文章</h3>
+          <div v-if="hotArticles.length > 0" class="hot-list">
+            <router-link
+              v-for="item in hotArticles"
+              :key="item.article.id"
+              :to="`/blog/article/${item.article.id}`"
+              class="hot-item"
+            >
+              <span class="hot-title">{{ item.article.title }}</span>
+              <span class="hot-views">{{ item.article.viewCount }} 阅读</span>
+            </router-link>
+          </div>
+          <p v-else class="empty-text">暂无热门文章</p>
+        </div>
+        <div class="sidebar-section">
           <h3 class="sidebar-title">标签</h3>
           <div class="tag-cloud">
             <router-link
@@ -58,15 +73,18 @@ import request from '@/utils/request'
 
 const categories = ref([])
 const tags = ref([])
+const hotArticles = ref([])
 
 onMounted(async () => {
   try {
-    const [catRes, tagRes] = await Promise.all([
+    const [catRes, tagRes, hotRes] = await Promise.all([
       request.get('/blog/categories'),
       request.get('/blog/tags'),
+      request.get('/blog/articles/hot', { params: { topN: 10 } }),
     ])
     categories.value = catRes.data
     tags.value = tagRes.data
+    hotArticles.value = hotRes.data
   } catch {
     // 静默失败
   }
@@ -189,6 +207,44 @@ onMounted(async () => {
   font-size: 14px;
   color: #909399;
   line-height: 1.6;
+  margin: 0;
+}
+.hot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.hot-item {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+  transition: all 0.2s;
+}
+.hot-item:last-child {
+  border-bottom: none;
+}
+.hot-item:hover .hot-title {
+  color: #409eff;
+}
+.hot-title {
+  font-size: 14px;
+  color: #303133;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.hot-views {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 4px;
+}
+.empty-text {
+  font-size: 13px;
+  color: #c0c4cc;
   margin: 0;
 }
 
