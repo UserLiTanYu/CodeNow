@@ -33,6 +33,11 @@ const router = createRouter({
           name: 'tags',
           component: () => import('@/views/tag/TagList.vue'),
         },
+        {
+          path: 'logs',
+          name: 'logs',
+          component: () => import('@/views/log/LogList.vue'),
+        },
       ],
     },
     {
