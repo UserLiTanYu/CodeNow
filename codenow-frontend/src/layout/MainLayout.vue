@@ -21,6 +21,10 @@
           <el-icon><PriceTag /></el-icon>
           <span>标签管理</span>
         </el-menu-item>
+        <el-menu-item index="/comments">
+          <el-icon><ChatDotRound /></el-icon>
+          <span>评论管理</span>
+        </el-menu-item>
         <el-menu-item index="/logs">
           <el-icon><Notebook /></el-icon>
           <span>操作日志</span>
@@ -53,7 +57,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { Document, Folder, PriceTag, ArrowDown, Notebook } from '@element-plus/icons-vue'
+import { Document, Folder, PriceTag, ArrowDown, Notebook, ChatDotRound } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 
 const route = useRoute()
@@ -65,6 +69,7 @@ const routeTitle = computed(() => {
     '/articles': '文章管理',
     '/categories': '分类管理',
     '/tags': '标签管理',
+    '/comments': '评论管理',
     '/logs': '操作日志',
   }
   return map[route.path] || '文章管理'

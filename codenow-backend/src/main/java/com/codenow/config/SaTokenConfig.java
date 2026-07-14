@@ -16,6 +16,7 @@ public class SaTokenConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                         "/api/auth/login",
                         "/api/blog/**",
+                        "/api/comments/**",
                         "/doc.html",
                         "/webjars/**",
                         "/v3/api-docs/**",

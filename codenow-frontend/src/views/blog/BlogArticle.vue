@@ -29,6 +29,26 @@
         </div>
       </div>
       <div class="article-body markdown-body" v-html="renderedContent"></div>
+
+      <!-- 评论区 -->
+      <div class="comment-section">
+        <h3 class="section-title">评论 ({{ comments.length }})</h3>
+        <CommentForm
+          :article-id="Number(route.params.id)"
+          :parent-id="0"
+          @success="fetchComments"
+        />
+        <div v-if="comments.length > 0" class="comment-list">
+          <CommentTree
+            :comments="comments"
+            :article-id="Number(route.params.id)"
+            @refresh="fetchComments"
+          />
+        </div>
+        <div v-else class="no-comments">
+          <p>暂无评论，快来发表第一条评论吧</p>
+        </div>
+      </div>
     </template>
     <div v-else class="empty-box">
       <el-empty description="文章不存在" />
@@ -41,6 +61,8 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { Folder, Clock, View } from '@element-plus/icons-vue'
 import { marked } from 'marked'
+import CommentForm from '@/components/CommentForm.vue'
+import CommentTree from '@/components/CommentTree.vue'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 import request from '@/utils/request'
@@ -49,6 +71,7 @@ const route = useRoute()
 const article = ref(null)
 const categoryName = ref('')
 const tags = ref([])
+const comments = ref([])
 const loading = ref(true)
 
 // 配置 marked 使用 highlight.js
@@ -80,10 +103,20 @@ async function fetchArticle(id) {
     article.value = res.data.article
     categoryName.value = res.data.categoryName || ''
     tags.value = res.data.tags || []
+    fetchComments()
   } catch {
     article.value = null
   } finally {
     loading.value = false
+  }
+}
+
+async function fetchComments() {
+  try {
+    const res = await request.get(`/comments/article/${route.params.id}`)
+    comments.value = res.data
+  } catch {
+    comments.value = []
   }
 }
 
@@ -228,5 +261,28 @@ watch(
   background: #fff;
   border-radius: 8px;
   padding: 40px;
+}
+
+/* 评论区 */
+.comment-section {
+  background: #fff;
+  border-radius: 8px;
+  padding: 32px;
+  margin-top: 16px;
+}
+.section-title {
+  margin: 0 0 20px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+}
+.comment-list {
+  margin-top: 24px;
+}
+.no-comments {
+  margin-top: 24px;
+  text-align: center;
+  color: #909399;
+  font-size: 14px;
 }
 </style>

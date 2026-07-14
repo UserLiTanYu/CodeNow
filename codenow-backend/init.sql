@@ -114,3 +114,22 @@ CREATE TABLE `sys_operation_log` (
     KEY `idx_user_id` (`user_id`),
     KEY `idx_create_time` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='操作日志表';
+
+-- -------------------------------------------
+-- 7. 评论表
+-- -------------------------------------------
+DROP TABLE IF EXISTS `blog_comment`;
+CREATE TABLE `blog_comment` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `article_id`  BIGINT       NOT NULL                COMMENT '文章 ID',
+    `parent_id`   BIGINT       DEFAULT 0                COMMENT '父评论 ID（顶级评论为 0）',
+    `content`     TEXT         NOT NULL                COMMENT '评论内容',
+    `nickname`    VARCHAR(50)  NOT NULL                COMMENT '昵称',
+    `email`       VARCHAR(100) DEFAULT NULL            COMMENT '邮箱（不公开显示）',
+    `ip`          VARCHAR(50)  DEFAULT NULL            COMMENT '评论者 IP',
+    `status`      TINYINT      DEFAULT 1               COMMENT '状态（0=待审核, 1=已通过）',
+    `create_time` DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_article_id` (`article_id`),
+    KEY `idx_parent_id` (`parent_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='评论表';
