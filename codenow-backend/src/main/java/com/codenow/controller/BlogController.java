@@ -2,6 +2,7 @@ package com.codenow.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.codenow.annotation.RateLimit;
 import com.codenow.common.R;
 import com.codenow.dto.ArticleVO;
 import com.codenow.entity.BlogCategory;
@@ -31,6 +32,7 @@ public class BlogController {
     private final BlogTagService tagService;
     private final HotArticleService hotArticleService;
 
+    @RateLimit(maxCount = 30, timeWindow = 10, message = "请求过于频繁，请稍后再试")
     @Operation(summary = "分页查询已发布文章", description = "仅返回已发布文章，置顶优先，支持按分类和标签筛选")
     @GetMapping("/articles")
     public R<Page<ArticleVO>> listArticles(
@@ -41,6 +43,7 @@ public class BlogController {
         return R.ok(articleService.pagePublishedArticles(pageNum, pageSize, categoryId, tagId));
     }
 
+    @RateLimit(maxCount = 20, timeWindow = 10, message = "请求过于频繁，请稍后再试")
     @Operation(summary = "查询热门文章", description = "返回浏览量 Top 10 的已发布文章，数据来自 Redis 缓存")
     @GetMapping("/articles/hot")
     public R<List<ArticleVO>> hotArticles(

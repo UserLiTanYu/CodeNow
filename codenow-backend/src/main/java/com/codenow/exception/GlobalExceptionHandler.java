@@ -13,6 +13,11 @@ public class GlobalExceptionHandler {
         return R.error(e.getCode(), e.getMessage());
     }
 
+    @ExceptionHandler(RateLimitException.class)
+    public R<Void> handleRateLimitException(RateLimitException e) {
+        return R.error(e.getCode(), e.getMessage());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public R<Void> handleValidationException(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getAllErrors().get(0).getDefaultMessage();

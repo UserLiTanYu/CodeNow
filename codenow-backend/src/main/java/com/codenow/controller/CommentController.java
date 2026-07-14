@@ -2,6 +2,7 @@ package com.codenow.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.codenow.annotation.OperationLog;
+import com.codenow.annotation.RateLimit;
 import com.codenow.common.R;
 import com.codenow.dto.CommentDTO;
 import com.codenow.entity.BlogComment;
@@ -32,6 +33,7 @@ public class CommentController {
         return R.ok(commentService.getCommentTree(articleId));
     }
 
+    @RateLimit(maxCount = 5, timeWindow = 60, message = "评论过于频繁，请 1 分钟后再试")
     @Operation(summary = "发表评论", description = "发表文章评论，支持回复某条评论（楼中楼）")
     @PostMapping
     public R<Void> save(@Valid @RequestBody CommentDTO dto, HttpServletRequest request) {
