@@ -117,6 +117,11 @@ mysql -u root -p --default-character-set=utf8mb4 < codenow-backend/init.sql
 ### 3. 启动后端
 
 ```bash
+# Windows CMD
+cd codenow-backend
+.\mvnw.cmd spring-boot:run
+
+# Mac / Linux
 cd codenow-backend
 ./mvnw spring-boot:run
 ```
