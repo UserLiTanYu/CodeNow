@@ -39,6 +39,22 @@ public class TagController {
         return R.ok();
     }
 
+    @OperationLog("修改标签")
+    @Operation(summary = "修改标签", description = "根据 ID 修改标签名称")
+    @PutMapping("/{id}")
+    public R<Void> update(
+            @Parameter(description = "标签 ID", example = "1") @PathVariable Long id,
+            @Valid @RequestBody TagDTO dto) {
+        BlogTag tag = tagService.getById(id);
+        if (tag == null) {
+            return R.error(404, "标签不存在");
+        }
+        BeanUtils.copyProperties(dto, tag);
+        tag.setId(id);
+        tagService.updateById(tag);
+        return R.ok();
+    }
+
     @OperationLog("删除标签")
     @Operation(summary = "删除标签", description = "根据 ID 逻辑删除标签")
     @DeleteMapping("/{id}")
