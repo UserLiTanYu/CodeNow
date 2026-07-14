@@ -1,5 +1,6 @@
 package com.codenow.controller;
 
+import com.codenow.annotation.OperationLog;
 import com.codenow.common.R;
 import com.codenow.dto.TagDTO;
 import com.codenow.entity.BlogTag;
@@ -28,6 +29,7 @@ public class TagController {
         return R.ok(tagService.list());
     }
 
+    @OperationLog("新增标签")
     @Operation(summary = "新增标签", description = "创建一个新标签")
     @PostMapping
     public R<Void> save(@Valid @RequestBody TagDTO dto) {
@@ -37,6 +39,7 @@ public class TagController {
         return R.ok();
     }
 
+    @OperationLog("删除标签")
     @Operation(summary = "删除标签", description = "根据 ID 逻辑删除标签")
     @DeleteMapping("/{id}")
     public R<Void> delete(

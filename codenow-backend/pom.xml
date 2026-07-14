@@ -39,6 +39,12 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- Spring AOP（操作日志切面） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+
         <!-- Spring Security（仅用于 BCrypt 密码加密，Sa-Token 负责认证） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

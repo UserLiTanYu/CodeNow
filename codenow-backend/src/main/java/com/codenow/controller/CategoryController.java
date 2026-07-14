@@ -1,6 +1,7 @@
 package com.codenow.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.codenow.annotation.OperationLog;
 import com.codenow.common.R;
 import com.codenow.dto.CategoryDTO;
 import com.codenow.entity.BlogCategory;
@@ -31,6 +32,7 @@ public class CategoryController {
         return R.ok(list);
     }
 
+    @OperationLog("新增分类")
     @Operation(summary = "新增分类", description = "创建一个新分类")
     @PostMapping
     public R<Void> save(@Valid @RequestBody CategoryDTO dto) {
@@ -40,6 +42,7 @@ public class CategoryController {
         return R.ok();
     }
 
+    @OperationLog("修改分类")
     @Operation(summary = "修改分类", description = "根据 ID 修改分类信息")
     @PutMapping("/{id}")
     public R<Void> update(
@@ -55,6 +58,7 @@ public class CategoryController {
         return R.ok();
     }
 
+    @OperationLog("删除分类")
     @Operation(summary = "删除分类", description = "根据 ID 逻辑删除分类")
     @DeleteMapping("/{id}")
     public R<Void> delete(

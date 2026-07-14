@@ -2,6 +2,7 @@ package com.codenow.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.codenow.annotation.OperationLog;
 import com.codenow.common.R;
 import com.codenow.dto.LoginDTO;
 import com.codenow.entity.SysUser;
@@ -25,6 +26,7 @@ public class AuthController {
     private final SysUserService sysUserService;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
+    @OperationLog("用户登录")
     @Operation(summary = "登录", description = "用户名密码登录，返回 Token")
     @PostMapping("/login")
     public R<Map<String, Object>> login(@Valid @RequestBody LoginDTO dto) {
@@ -35,6 +37,8 @@ public class AuthController {
             return R.error(401, "用户名或密码错误");
         }
         StpUtil.login(user.getId());
+        // 将用户名存入 Session，供 AOP 操作日志使用
+        StpUtil.getSession().set("username", user.getUsername());
         Map<String, Object> result = new HashMap<>();
         result.put("token", StpUtil.getTokenValue());
         result.put("userId", user.getId());
@@ -43,6 +47,7 @@ public class AuthController {
         return R.ok(result);
     }
 
+    @OperationLog("用户登出")
     @Operation(summary = "登出", description = "退出登录，Token 失效")
     @PostMapping("/logout")
     public R<Void> logout() {

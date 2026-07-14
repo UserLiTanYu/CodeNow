@@ -1,6 +1,7 @@
 package com.codenow.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.codenow.annotation.OperationLog;
 import com.codenow.common.R;
 import com.codenow.dto.ArticleDTO;
 import com.codenow.dto.ArticleVO;
@@ -43,6 +44,7 @@ public class ArticleController {
         return R.ok(vo);
     }
 
+    @OperationLog("新增文章")
     @Operation(summary = "新增文章", description = "创建一篇新文章，可同时关联标签")
     @PostMapping
     public R<Void> save(@Valid @RequestBody ArticleDTO dto) {
@@ -52,6 +54,7 @@ public class ArticleController {
         return R.ok();
     }
 
+    @OperationLog("修改文章")
     @Operation(summary = "修改文章", description = "根据 ID 修改文章内容和标签关联")
     @PutMapping("/{id}")
     public R<Void> update(
@@ -67,6 +70,7 @@ public class ArticleController {
         return R.ok();
     }
 
+    @OperationLog("删除文章")
     @Operation(summary = "删除文章", description = "根据 ID 逻辑删除文章及其标签关联")
     @DeleteMapping("/{id}")
     public R<Void> delete(
@@ -75,6 +79,7 @@ public class ArticleController {
         return R.ok();
     }
 
+    @OperationLog("切换文章状态")
     @Operation(summary = "切换文章状态", description = "切换文章的草稿/发布状态（0=草稿, 1=已发布）")
     @PutMapping("/{id}/status")
     public R<Void> toggleStatus(
@@ -88,6 +93,7 @@ public class ArticleController {
         return R.ok();
     }
 
+    @OperationLog("切换文章置顶")
     @Operation(summary = "切换文章置顶", description = "切换文章的置顶状态（0=不置顶, 1=置顶）")
     @PutMapping("/{id}/top")
     public R<Void> toggleTop(
