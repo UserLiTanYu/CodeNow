@@ -14,8 +14,11 @@
 | Spring Boot | 3.4.7 | Web 应用框架 |
 | MyBatis-Plus | 3.5.7 | ORM 框架，内置通用 CRUD |
 | MySQL | 8.0+ | 关系型数据库 |
+| Redis | 7.x | 缓存热门文章、滑动窗口限流 |
 | Sa-Token | 1.39.0 | 轻量级权限认证框架 |
 | Knife4j | 4.5.0 | API 文档自动生成（基于 SpringDoc 2.8.6） |
+| Aliyun OSS SDK | 3.17.4 | 文件上传到阿里云 OSS |
+| Spring AOP | — | 操作日志切面、接口限流切面 |
 | Spring Security | — | 仅用于 BCrypt 密码加密 |
 | Lombok | — | 减少样板代码 |
 
@@ -33,6 +36,13 @@
 | marked | 15.x | Markdown 渲染为 HTML（博客前台） |
 | highlight.js | 11.x | 代码语法高亮（博客前台） |
 
+### 部署
+
+| 技术 | 用途 |
+|------|------|
+| Docker + Docker Compose | 容器化部署，一键启动全部服务 |
+| Nginx | 前端静态文件服务 + 后端 API 反向代理 |
+
 ---
 
 ## 项目目录结构
@@ -40,25 +50,39 @@
 ```
 codenow/
 ├── codenow-backend/                    # 后端项目
-│   ├── init.sql                        # 数据库初始化脚本（5 张表 + 默认管理员）
+│   ├── Dockerfile                      # 后端 Docker 镜像构建文件
+│   ├── init.sql                        # 数据库初始化脚本（7 张表 + 默认管理员）
 │   ├── pom.xml                         # Maven 依赖配置
-│   └── src/main/java/com/codenow/
-│       ├── config/                     # 配置类（CORS、Sa-Token、MyBatis-Plus、Security）
-│       ├── controller/                 # 控制器（Auth、Article、Category、Tag、Blog）
-│       ├── service/                    # 业务逻辑层
-│       │   └── impl/                   # Service 实现类
-│       ├── mapper/                     # 数据访问层（MyBatis-Plus Mapper）
-│       ├── entity/                     # 数据库实体类（对应表结构）
-│       ├── dto/                        # 数据传输对象（请求/响应参数）
-│       ├── common/                     # 公共类（统一返回格式 R、分页参数）
-│       └── exception/                  # 全局异常处理
+│   └── src/main/
+│       ├── java/com/codenow/
+│       │   ├── annotation/             # 自定义注解（@OperationLog、@RateLimit）
+│       │   ├── aspect/                 # AOP 切面（操作日志、接口限流）
+│       │   ├── config/                 # 配置类（CORS、Sa-Token、Redis、OSS、异步）
+│       │   ├── controller/             # 控制器（Auth、Article、Category、Tag、Blog、Comment、Upload、Log）
+│       │   ├── service/                # 业务逻辑层
+│       │   │   └── impl/               # Service 实现类
+│       │   ├── mapper/                 # 数据访问层（MyBatis-Plus Mapper）
+│       │   ├── entity/                 # 数据库实体类（对应表结构）
+│       │   ├── dto/                    # 数据传输对象（请求/响应参数）
+│       │   ├── common/                 # 公共类（统一返回格式 R、分页参数）
+│       │   └── exception/              # 全局异常处理（含限流异常）
+│       └── resources/
+│           ├── application.yaml        # 开发环境配置
+│           ├── application-prod.yml    # 生产环境配置
+│           └── scripts/                # Lua 脚本（Redis 限流）
 │
 ├── codenow-frontend/                   # 前端项目
+│   ├── Dockerfile                      # 前端 Docker 镜像（多阶段构建）
+│   ├── nginx.conf                      # Nginx 配置（反向代理）
 │   ├── vite.config.js                  # Vite 配置（含 API 代理）
 │   └── src/
 │       ├── layout/                     # 布局组件
 │       │   ├── MainLayout.vue          # 管理后台布局（侧边栏 + 顶导航）
 │       │   └── BlogLayout.vue          # 博客前台布局（顶栏 + 内容区 + 侧边栏）
+│       ├── components/                 # 公共组件
+│       │   ├── CommentForm.vue         # 评论表单组件
+│       │   ├── CommentTree.vue         # 递归评论树组件
+│       │   └── ImageUpload.vue         # 图片上传组件（拖拽/点击）
 │       ├── router/                     # 路由配置（含登录守卫）
 │       ├── stores/                     # Pinia 状态管理
 │       ├── utils/                      # 工具函数（Axios 封装）
@@ -67,17 +91,27 @@ codenow/
 │           ├── article/                # 文章列表 + 文章编辑（管理端）
 │           ├── category/               # 分类管理（管理端）
 │           ├── tag/                    # 标签管理（管理端）
+│           ├── comment/                # 评论管理（管理端）
+│           ├── log/                    # 操作日志（管理端）
 │           └── blog/                   # 博客前台页面（用户端）
-│               ├── BlogHome.vue        # 博客首页（文章列表）
-│               ├── BlogArticle.vue     # 文章详情页（Markdown 渲染）
+│               ├── BlogHome.vue        # 博客首页（文章列表 + 热门文章）
+│               ├── BlogArticle.vue     # 文章详情页（Markdown 渲染 + 评论区）
 │               ├── BlogCategory.vue    # 分类文章页
 │               └── BlogTag.vue         # 标签文章页
 │
-├── 开发文档.md                          # 完整开发文档（含七阶段规划）
-├── 阶段一-环境搭建与项目初始化-操作日志.md
-├── 阶段二-后端核心开发-操作日志.md
-├── 阶段三-后端进阶与文档完善-操作日志.md
-├── 阶段七-用户端博客开发-操作日志.md
+├── docker-compose.yml                  # Docker Compose 编排文件
+├── .env.example                        # 环境变量模板
+├── deploy.sh                           # Linux/Mac 一键部署脚本
+├── deploy.bat                          # Windows 一键部署脚本
+├── DEPLOY.md                           # 部署文档
+├── 开发文档.md                          # 完整开发文档
+├── 扩展功能开发文档.md                    # 扩展功能方案设计
+├── 扩展功能一-Redis缓存热门文章-操作日志.md
+├── 扩展功能二-操作日志AOP-操作日志.md
+├── 扩展功能三-评论系统-操作日志.md
+├── 扩展功能四-API接口限流-操作日志.md
+├── 扩展功能五-文件上传-操作日志.md
+├── 扩展功能六-Docker部署-操作日志.md
 └── README.md                           # 本文件
 ```
 
@@ -89,9 +123,10 @@ codenow/
 |------|---------|------|
 | JDK | 21 | Spring Boot 3.x 最低要求 JDK 17，本项目使用 21 |
 | Maven | 3.9+ | 后端构建工具 |
-| Node.js | 22+ 或 24+ | 前端构建工具（package.json engines 要求） |
+| Node.js | 22+ 或 24+ | 前端构建工具 |
 | MySQL | 8.0+ | 数据库 |
-| Redis | 可选 | Sa-Token 分布式 Session，开发阶段可不装 |
+| Redis | 7.x | 缓存热门文章、接口限流（必需） |
+| Docker（可选） | 20+ | 容器化部署时需要 |
 
 ---
 
@@ -106,18 +141,20 @@ cd codenow
 
 ### 2. 初始化数据库
 
-打开 MySQL 客户端，执行建表脚本：
-
 ```bash
 mysql -u root -p --default-character-set=utf8mb4 < codenow-backend/init.sql
 ```
 
-这会创建 `codenow` 数据库、5 张表和一个默认管理员账号（admin / 123456）。
+创建 `codenow` 数据库、7 张表和默认管理员账号（admin / 123456）。
 
-### 3. 启动后端
+### 3. 启动 Redis
+
+确保 Redis 运行在 `localhost:6379`，密码 `123456`（可在 `application.yaml` 中修改）。
+
+### 4. 启动后端
 
 ```bash
-# Windows CMD
+# Windows
 cd codenow-backend
 .\mvnw.cmd spring-boot:run
 
@@ -126,11 +163,7 @@ cd codenow-backend
 ./mvnw spring-boot:run
 ```
 
-启动成功后看到 `Started CodenowBackendApplication in x.x seconds`，后端运行在 `http://localhost:8080`。
-
-### 4. 启动前端
-
-新开一个终端：
+### 5. 启动前端
 
 ```bash
 cd codenow-frontend
@@ -138,35 +171,45 @@ npm install
 npm run dev
 ```
 
-启动成功后看到 `Local: http://localhost:5173/`，前端运行在 `http://localhost:5173`。
+### 6. 访问系统
 
-### 5. 访问系统
+- **管理后台**：`http://localhost:5173`（admin / 123456）
+- **博客前台**：`http://localhost:5173/blog`（无需登录）
 
-- **管理后台**：访问 `http://localhost:5173`，自动跳转到登录页，输入 admin / 123456 登录
-- **博客前台**：访问 `http://localhost:5173/blog`，无需登录即可浏览已发布文章
+---
+
+## Docker 一键部署
+
+```bash
+# 1. 配置环境变量
+cp .env.example .env
+
+# 2. 一键启动（Linux/Mac）
+bash deploy.sh
+
+# Windows
+deploy.bat
+```
+
+访问 `http://localhost` 即可。详见 [DEPLOY.md](DEPLOY.md)。
 
 ---
 
 ## 接口文档
 
-后端集成了 Knife4j（基于 SpringDoc OpenAPI），启动后端后访问：
+后端集成了 Knife4j，启动后端后访问：
 
 ```
 http://localhost:8080/doc.html
 ```
 
-在 Knife4j 页面中可以：
-- 查看所有接口分组（认证管理、文章管理、分类管理、标签管理、博客前台）
-- 点击任意接口查看请求参数说明和示例值
-- 点击「Try it out」直接在页面上测试接口（需在请求头中手动添加 `Authorization: <token>`）
-
-获取 Token 方式：调用 `POST /api/auth/login`，传入 `{"username":"admin","password":"123456"}`，返回的 `token` 字段即为认证凭证。
+接口分组：认证管理、文章管理、分类管理、标签管理、评论管理、文件上传、操作日志、博客前台。
 
 ---
 
 ## 功能模块清单
 
-### 已实现
+### 核心功能
 
 - [x] 用户登录 / 登出 / 获取当前用户信息
 - [x] 文章 CRUD（创建、查询、修改、删除）
@@ -175,33 +218,48 @@ http://localhost:8080/doc.html
 - [x] 文章查询返回分类名称和标签列表
 - [x] 文章列表按分类筛选、按标签筛选
 - [x] 文章状态切换（草稿 / 已发布）
+- [x] 文章置顶 / 推荐
 - [x] 分类 CRUD
 - [x] 标签 CRUD
 - [x] 全局异常处理（统一 `{code, message, data}` 返回格式）
 - [x] 参数校验（`@NotBlank` + `@Valid`）
 - [x] Sa-Token 登录认证 + 路由守卫
 - [x] Knife4j API 文档自动生成
-- [x] 前端管理后台布局（侧边栏 + 顶导航）
-- [x] 前端登录页
-- [x] 前端文章列表页（分页 + 筛选）
-- [x] 前端文章编辑页（Markdown 编辑器 + 分类下拉 + 标签多选）
-- [x] 前端分类管理页（弹窗表单 CRUD）
-- [x] 前端标签管理页
-- [x] 博客前台首页（文章卡片列表 + 分页）
+
+### 博客前台
+
+- [x] 博客首页（文章卡片列表 + 分页）
 - [x] 文章详情页（Markdown 渲染 + 代码高亮）
 - [x] 博客前台按分类 / 标签筛选文章
 - [x] 博客前台公开 API（无需登录）
-- [x] 文章置顶 / 推荐
 - [x] 文章浏览量统计（访问详情页自动 +1）
+- [x] 侧边栏热门文章（Redis ZSet 缓存 Top 10）
+- [x] 评论系统（支持楼中楼回复、树形嵌套展示）
+
+### 扩展功能
+
+- [x] Redis 缓存热门文章（ZSet + TTL 5 分钟自动刷新）
+- [x] AOP 操作日志（自动记录管理员操作，异步写入数据库）
+- [x] API 接口限流（Redis + Lua 滑动窗口，Redis 不可用时降级放行）
+- [x] 文件上传（阿里云 OSS，拖拽上传 + 图片预览）
+- [x] Docker 容器化部署（MySQL + Redis + 后端 + 前端四服务编排）
+
+### 管理后台页面
+
+- [x] 登录页
+- [x] 文章列表页（分页 + 筛选 + 置顶）
+- [x] 文章编辑页（Markdown 编辑器 + 分类下拉 + 标签多选 + 图片上传）
+- [x] 分类管理页（弹窗表单 CRUD）
+- [x] 标签管理页
+- [x] 评论管理页（分页 + 删除）
+- [x] 操作日志页（分页查看）
 
 ### 计划中
 
-- [ ] 评论系统
 - [ ] 全文搜索
 - [ ] 文章归档（按月份）
 - [ ] 访客统计
-- [ ] Docker 容器化部署
-- [ ] Nginx 反向代理 + HTTPS
+- [ ] CI/CD 自动化部署
 
 ---
 
@@ -215,7 +273,21 @@ http://localhost:8080/doc.html
 | 第四阶段 | 前端核心开发 — 页面与路由 | ✅ 已完成 |
 | 第五阶段 | 前后端联调与细节打磨 | ✅ 已完成 |
 | 第六阶段 | 用户端（前台博客）开发 | ✅ 已完成 |
-| 第七阶段 | 部署上线 | ⏳ 待开始 |
+| 扩展功能 | Redis 缓存、AOP 操作日志、评论系统、接口限流、文件上传、Docker 部署 | ✅ 已完成 |
+
+---
+
+## 数据库表结构
+
+| 表名 | 说明 |
+|------|------|
+| `sys_user` | 用户表 |
+| `blog_article` | 文章表 |
+| `blog_category` | 分类表 |
+| `blog_tag` | 标签表 |
+| `blog_article_tag` | 文章-标签关联表 |
+| `sys_operation_log` | 操作日志表 |
+| `blog_comment` | 评论表 |
 
 ---
 
