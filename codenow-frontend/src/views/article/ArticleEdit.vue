@@ -51,7 +51,9 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Picture } from '@element-plus/icons-vue'
-import request from '@/utils/request'
+import { getArticle, createArticle, updateArticle } from '@/api/article'
+import { getCategories } from '@/api/category'
+import { getTags } from '@/api/tag'
 import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import ImageUpload from '@/components/ImageUpload.vue'
@@ -83,7 +85,7 @@ const rules = {
 }
 
 async function loadOptions() {
-  const [catRes, tagRes] = await Promise.all([request.get('/categories'), request.get('/tags')])
+  const [catRes, tagRes] = await Promise.all([getCategories(), getTags()])
   categories.value = catRes.data
   tags.value = tagRes.data
 }
@@ -92,7 +94,7 @@ async function loadArticle() {
   const id = route.params.id
   if (!id) return
   isEdit.value = true
-  const res = await request.get(`/articles/${id}`)
+  const res = await getArticle(id)
   const a = res.data.article
   form.title = a.title
   form.content = a.content
@@ -110,10 +112,10 @@ async function handleSave(status) {
   try {
     const data = { ...form, status }
     if (isEdit.value) {
-      await request.put(`/articles/${route.params.id}`, data)
+      await updateArticle(route.params.id, data)
       ElMessage.success('修改成功')
     } else {
-      await request.post('/articles', data)
+      await createArticle(data)
       ElMessage.success('创建成功')
     }
     router.push('/articles')

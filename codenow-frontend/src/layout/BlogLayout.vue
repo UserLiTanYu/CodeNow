@@ -69,7 +69,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import request from '@/utils/request'
+import { getBlogCategories, getBlogTags, getHotArticles } from '@/api/blog'
 
 const categories = ref([])
 const tags = ref([])
@@ -78,9 +78,9 @@ const hotArticles = ref([])
 onMounted(async () => {
   try {
     const [catRes, tagRes, hotRes] = await Promise.all([
-      request.get('/blog/categories'),
-      request.get('/blog/tags'),
-      request.get('/blog/articles/hot', { params: { topN: 10 } }),
+      getBlogCategories(),
+      getBlogTags(),
+      getHotArticles({ topN: 10 }),
     ])
     categories.value = catRes.data
     tags.value = tagRes.data

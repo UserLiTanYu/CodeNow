@@ -25,7 +25,7 @@ import java.util.Map;
 public class AuthController {
 
     private final SysUserService sysUserService;
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final BCryptPasswordEncoder passwordEncoder;
 
     @RateLimit(maxCount = 5, timeWindow = 60, message = "登录尝试过于频繁，请 1 分钟后再试")
     @OperationLog("用户登录")

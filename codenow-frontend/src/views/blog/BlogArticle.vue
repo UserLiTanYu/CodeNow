@@ -61,11 +61,25 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { Folder, Clock, View } from '@element-plus/icons-vue'
 import { marked } from 'marked'
+import { markedHighlight } from 'marked-highlight'
 import CommentForm from '@/components/CommentForm.vue'
 import CommentTree from '@/components/CommentTree.vue'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
-import request from '@/utils/request'
+import { getBlogArticle } from '@/api/blog'
+import { getCommentTree } from '@/api/comment'
+import { formatDate } from '@/utils/format'
+
+// 配置 marked 使用 highlight.js（v18 使用 marked-highlight 扩展）
+marked.use(markedHighlight({
+  langPrefix: 'hljs language-',
+  highlight(code, lang) {
+    if (lang && hljs.getLanguage(lang)) {
+      return hljs.highlight(code, { language: lang }).value
+    }
+    return hljs.highlightAuto(code).value
+  },
+}))
 
 const route = useRoute()
 const article = ref(null)
@@ -74,32 +88,15 @@ const tags = ref([])
 const comments = ref([])
 const loading = ref(true)
 
-// 配置 marked 使用 highlight.js
-marked.setOptions({
-  highlight(code, lang) {
-    if (lang && hljs.getLanguage(lang)) {
-      return hljs.highlight(code, { language: lang }).value
-    }
-    return hljs.highlightAuto(code).value
-  },
-  breaks: true,
-  gfm: true,
-})
-
 const renderedContent = computed(() => {
   if (!article.value?.content) return ''
   return marked(article.value.content)
 })
 
-function formatDate(dateStr) {
-  if (!dateStr) return ''
-  return dateStr.replace('T', ' ').substring(0, 16)
-}
-
 async function fetchArticle(id) {
   loading.value = true
   try {
-    const res = await request.get(`/blog/articles/${id}`)
+    const res = await getBlogArticle(id)
     article.value = res.data.article
     categoryName.value = res.data.categoryName || ''
     tags.value = res.data.tags || []
@@ -113,7 +110,7 @@ async function fetchArticle(id) {
 
 async function fetchComments() {
   try {
-    const res = await request.get(`/comments/article/${route.params.id}`)
+    const res = await getCommentTree(route.params.id)
     comments.value = res.data
   } catch {
     comments.value = []

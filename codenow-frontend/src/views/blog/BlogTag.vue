@@ -55,7 +55,8 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Folder, Clock, View } from '@element-plus/icons-vue'
-import request from '@/utils/request'
+import { getBlogArticles, getBlogTags } from '@/api/blog'
+import { formatDate } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
@@ -66,11 +67,6 @@ const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 
-function formatDate(dateStr) {
-  if (!dateStr) return ''
-  return dateStr.replace('T', ' ').substring(0, 16)
-}
-
 function goDetail(id) {
   router.push(`/blog/article/${id}`)
 }
@@ -78,9 +74,7 @@ function goDetail(id) {
 async function fetchArticles() {
   loading.value = true
   try {
-    const res = await request.get('/blog/articles', {
-      params: { pageNum: pageNum.value, pageSize: pageSize.value, tagId: route.params.id },
-    })
+    const res = await getBlogArticles({ pageNum: pageNum.value, pageSize: pageSize.value, tagId: route.params.id })
     articles.value = res.data.records
     total.value = res.data.total
   } catch {
@@ -92,7 +86,7 @@ async function fetchArticles() {
 
 async function fetchTagName() {
   try {
-    const res = await request.get('/blog/tags')
+    const res = await getBlogTags()
     const tag = res.data.find((t) => t.id === Number(route.params.id))
     tagName.value = tag ? tag.name : '未知标签'
   } catch {

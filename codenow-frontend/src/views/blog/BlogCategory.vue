@@ -53,7 +53,8 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Clock, View } from '@element-plus/icons-vue'
-import request from '@/utils/request'
+import { getBlogArticles, getBlogCategories } from '@/api/blog'
+import { formatDate } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
@@ -64,11 +65,6 @@ const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 
-function formatDate(dateStr) {
-  if (!dateStr) return ''
-  return dateStr.replace('T', ' ').substring(0, 16)
-}
-
 function goDetail(id) {
   router.push(`/blog/article/${id}`)
 }
@@ -76,9 +72,7 @@ function goDetail(id) {
 async function fetchArticles() {
   loading.value = true
   try {
-    const res = await request.get('/blog/articles', {
-      params: { pageNum: pageNum.value, pageSize: pageSize.value, categoryId: route.params.id },
-    })
+    const res = await getBlogArticles({ pageNum: pageNum.value, pageSize: pageSize.value, categoryId: route.params.id })
     articles.value = res.data.records
     total.value = res.data.total
   } catch {
@@ -90,7 +84,7 @@ async function fetchArticles() {
 
 async function fetchCategoryName() {
   try {
-    const res = await request.get('/blog/categories')
+    const res = await getBlogCategories()
     const cat = res.data.find((c) => c.id === Number(route.params.id))
     categoryName.value = cat ? cat.name : '未知分类'
   } catch {

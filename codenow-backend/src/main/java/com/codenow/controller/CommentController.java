@@ -7,7 +7,6 @@ import com.codenow.common.R;
 import com.codenow.dto.CommentDTO;
 import com.codenow.entity.BlogComment;
 import com.codenow.service.CommentService;
-import cn.dev33.satoken.stp.StpUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,7 +33,7 @@ public class CommentController {
     }
 
     @RateLimit(maxCount = 5, timeWindow = 60, message = "评论过于频繁，请 1 分钟后再试")
-    @Operation(summary = "发表评论", description = "发表文章评论，支持回复某条评论（楼中楼）")
+    @Operation(summary = "发表评论", description = "发表文章评论，支持回复某条评论（楼中楼），需登录")
     @PostMapping
     public R<Void> save(@Valid @RequestBody CommentDTO dto, HttpServletRequest request) {
         BlogComment comment = new BlogComment();
@@ -44,27 +43,25 @@ public class CommentController {
         comment.setNickname(dto.getNickname());
         comment.setEmail(dto.getEmail());
         comment.setIp(getClientIp(request));
-        comment.setStatus(1); // 默认直接通过审核
+        comment.setStatus(0); // 待审核，管理员审核后才显示
         commentService.save(comment);
         return R.ok();
     }
 
-    @Operation(summary = "分页查询评论（管理后台）", description = "分页查询所有评论，支持按文章筛选")
+    @Operation(summary = "分页查询评论（管理后台）", description = "分页查询所有评论，支持按文章筛选，需登录")
     @GetMapping
     public R<Page<BlogComment>> list(
             @Parameter(description = "当前页码", example = "1") @RequestParam(defaultValue = "1") Integer pageNum,
             @Parameter(description = "每页条数", example = "10") @RequestParam(defaultValue = "10") Integer pageSize,
             @Parameter(description = "文章 ID（可选）") @RequestParam(required = false) Long articleId) {
-        StpUtil.checkLogin();
         return R.ok(commentService.pageComments(pageNum, pageSize, articleId));
     }
 
     @OperationLog("删除评论")
-    @Operation(summary = "删除评论", description = "删除评论及其所有子评论")
+    @Operation(summary = "删除评论", description = "删除评论及其所有子评论，需登录")
     @DeleteMapping("/{id}")
     public R<Void> delete(
             @Parameter(description = "评论 ID", example = "1") @PathVariable Long id) {
-        StpUtil.checkLogin();
         commentService.deleteWithChildren(id);
         return R.ok();
     }

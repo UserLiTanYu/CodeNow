@@ -36,7 +36,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import request from '@/utils/request'
+import { getComments, deleteComment } from '@/api/comment'
 
 const comments = ref([])
 const loading = ref(false)
@@ -47,9 +47,7 @@ const pageSize = ref(10)
 async function fetchComments() {
   loading.value = true
   try {
-    const res = await request.get('/comments', {
-      params: { pageNum: pageNum.value, pageSize: pageSize.value },
-    })
+    const res = await getComments({ pageNum: pageNum.value, pageSize: pageSize.value })
     comments.value = res.data.records
     total.value = res.data.total
   } finally {
@@ -59,7 +57,7 @@ async function fetchComments() {
 
 async function handleDelete(id) {
   await ElMessageBox.confirm('删除评论将同时删除其所有回复，确定继续？', '提示', { type: 'warning' })
-  await request.delete(`/comments/${id}`)
+  await deleteComment(id)
   ElMessage.success('删除成功')
   fetchComments()
 }

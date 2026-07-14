@@ -40,7 +40,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import request from '@/utils/request'
+import { getCategories, createCategory, updateCategory, deleteCategory } from '@/api/category'
 
 const categories = ref([])
 const loading = ref(false)
@@ -58,7 +58,7 @@ const rules = {
 async function loadCategories() {
   loading.value = true
   try {
-    const res = await request.get('/categories')
+    const res = await getCategories()
     categories.value = res.data
   } finally {
     loading.value = false
@@ -88,10 +88,10 @@ async function handleSave() {
   saving.value = true
   try {
     if (isEdit.value) {
-      await request.put(`/categories/${editId.value}`, { ...form })
+      await updateCategory(editId.value, { ...form })
       ElMessage.success('修改成功')
     } else {
-      await request.post('/categories', { ...form })
+      await createCategory({ ...form })
       ElMessage.success('新增成功')
     }
     dialogVisible.value = false
@@ -103,7 +103,7 @@ async function handleSave() {
 
 async function handleDelete(id) {
   await ElMessageBox.confirm('确定删除该分类？', '提示', { type: 'warning' })
-  await request.delete(`/categories/${id}`)
+  await deleteCategory(id)
   ElMessage.success('删除成功')
   loadCategories()
 }

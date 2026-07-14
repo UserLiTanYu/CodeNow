@@ -1,10 +1,12 @@
 package com.codenow.exception;
 
 import com.codenow.common.R;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -26,6 +28,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public R<Void> handleException(Exception e) {
-        return R.error("系统异常：" + e.getMessage());
+        // 记录完整堆栈到日志，但不暴露给客户端
+        log.error("系统异常", e);
+        return R.error("系统繁忙，请稍后再试");
     }
 }

@@ -33,7 +33,7 @@
 
 <script setup>
 import { reactive, ref } from 'vue'
-import request from '@/utils/request'
+import { createComment } from '@/api/comment'
 import { ElMessage } from 'element-plus'
 
 const props = defineProps({
@@ -62,7 +62,7 @@ async function handleSubmit() {
 
   submitting.value = true
   try {
-    await request.post('/comments', {
+    await createComment({
       articleId: props.articleId,
       parentId: props.parentId || 0,
       content: form.content.trim(),

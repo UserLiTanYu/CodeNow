@@ -56,7 +56,8 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Folder, Clock, View } from '@element-plus/icons-vue'
-import request from '@/utils/request'
+import { getBlogArticles } from '@/api/blog'
+import { formatDate } from '@/utils/format'
 
 const router = useRouter()
 const articles = ref([])
@@ -65,11 +66,6 @@ const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 
-function formatDate(dateStr) {
-  if (!dateStr) return ''
-  return dateStr.replace('T', ' ').substring(0, 16)
-}
-
 function goDetail(id) {
   router.push(`/blog/article/${id}`)
 }
@@ -77,9 +73,7 @@ function goDetail(id) {
 async function fetchArticles() {
   loading.value = true
   try {
-    const res = await request.get('/blog/articles', {
-      params: { pageNum: pageNum.value, pageSize: pageSize.value },
-    })
+    const res = await getBlogArticles({ pageNum: pageNum.value, pageSize: pageSize.value })
     articles.value = res.data.records
     total.value = res.data.total
   } catch {

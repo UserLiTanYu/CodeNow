@@ -63,7 +63,9 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import request from '@/utils/request'
+import { getArticles, deleteArticle, toggleArticleStatus, toggleArticleTop } from '@/api/article'
+import { getCategories } from '@/api/category'
+import { getTags } from '@/api/tag'
 
 const router = useRouter()
 const articles = ref([])
@@ -82,7 +84,7 @@ async function loadArticles() {
     const params = { pageNum: pageNum.value, pageSize: pageSize.value }
     if (filterCategoryId.value) params.categoryId = filterCategoryId.value
     if (filterTagId.value) params.tagId = filterTagId.value
-    const res = await request.get('/articles', { params })
+    const res = await getArticles(params)
     articles.value = res.data.records
     total.value = res.data.total
   } finally {
@@ -91,26 +93,26 @@ async function loadArticles() {
 }
 
 async function loadFilters() {
-  const [catRes, tagRes] = await Promise.all([request.get('/categories'), request.get('/tags')])
+  const [catRes, tagRes] = await Promise.all([getCategories(), getTags()])
   categories.value = catRes.data
   tags.value = tagRes.data
 }
 
 async function toggleStatus(id) {
-  await request.put(`/articles/${id}/status`)
+  await toggleArticleStatus(id)
   ElMessage.success('状态切换成功')
   loadArticles()
 }
 
 async function toggleTop(id) {
-  await request.put(`/articles/${id}/top`)
+  await toggleArticleTop(id)
   ElMessage.success('置顶状态切换成功')
   loadArticles()
 }
 
 async function handleDelete(id) {
   await ElMessageBox.confirm('确定删除该文章？', '提示', { type: 'warning' })
-  await request.delete(`/articles/${id}`)
+  await deleteArticle(id)
   ElMessage.success('删除成功')
   loadArticles()
 }

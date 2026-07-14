@@ -78,13 +78,12 @@
             <version>${sa-token.version}</version>
         </dependency>
 
-        <!-- Sa-Token 整合 Redis（部署时启用）
+        <!-- Sa-Token 整合 Redis（Session 存储） -->
         <dependency>
             <groupId>cn.dev33</groupId>
             <artifactId>sa-token-redis-jackson</artifactId>
             <version>${sa-token.version}</version>
         </dependency>
-        -->
 
         <!-- Spring Data Redis（缓存热门文章） -->
         <dependency>

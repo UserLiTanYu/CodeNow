@@ -18,8 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -68,7 +67,8 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         if (article == null) {
             return null;
         }
-        return buildArticleVO(article);
+        List<ArticleVO> voList = buildArticleVOBatch(List.of(article));
+        return voList.isEmpty() ? null : voList.get(0);
     }
 
     @Override
@@ -95,12 +95,9 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         // 分页查询文章
         Page<BlogArticle> articlePage = page(new Page<>(pageNum, pageSize), wrapper);
 
-        // 转换为 VO
+        // 批量转换为 VO（避免 N+1 查询）
         Page<ArticleVO> voPage = new Page<>(articlePage.getCurrent(), articlePage.getSize(), articlePage.getTotal());
-        List<ArticleVO> voList = articlePage.getRecords().stream()
-                .map(this::buildArticleVO)
-                .collect(Collectors.toList());
-        voPage.setRecords(voList);
+        voPage.setRecords(buildArticleVOBatch(articlePage.getRecords()));
         return voPage;
     }
 
@@ -126,10 +123,7 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         Page<BlogArticle> articlePage = page(new Page<>(pageNum, pageSize), wrapper);
 
         Page<ArticleVO> voPage = new Page<>(articlePage.getCurrent(), articlePage.getSize(), articlePage.getTotal());
-        List<ArticleVO> voList = articlePage.getRecords().stream()
-                .map(this::buildArticleVO)
-                .collect(Collectors.toList());
-        voPage.setRecords(voList);
+        voPage.setRecords(buildArticleVOBatch(articlePage.getRecords()));
         return voPage;
     }
 
@@ -148,7 +142,8 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         article.setViewCount(newViewCount);
         // 同步更新 Redis 缓存
         hotArticleService.incrementViewCount(id, newViewCount);
-        return buildArticleVO(article);
+        List<ArticleVO> voList = buildArticleVOBatch(List.of(article));
+        return voList.isEmpty() ? null : voList.get(0);
     }
 
     /**
@@ -167,31 +162,57 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
     }
 
     /**
-     * 构建 ArticleVO（填充分类名称和标签列表）
+     * 批量构建 ArticleVO（避免 N+1 查询：分类和标签一次性批量加载）
      */
-    private ArticleVO buildArticleVO(BlogArticle article) {
-        ArticleVO vo = new ArticleVO();
-        vo.setArticle(article);
-
-        // 查询分类名称
-        if (article.getCategoryId() != null) {
-            BlogCategory category = categoryMapper.selectById(article.getCategoryId());
-            if (category != null) {
-                vo.setCategoryName(category.getName());
-            }
+    private List<ArticleVO> buildArticleVOBatch(List<BlogArticle> articles) {
+        if (articles == null || articles.isEmpty()) {
+            return Collections.emptyList();
         }
 
-        // 查询标签列表
-        List<BlogArticleTag> relations = articleTagMapper.selectList(
-                new LambdaQueryWrapper<BlogArticleTag>().eq(BlogArticleTag::getArticleId, article.getId()));
-        if (!relations.isEmpty()) {
-            List<Long> tagIds = relations.stream().map(BlogArticleTag::getTagId).collect(Collectors.toList());
+        List<Long> articleIds = articles.stream().map(BlogArticle::getId).collect(Collectors.toList());
+
+        // 1. 批量查询分类
+        Set<Long> categoryIds = articles.stream()
+                .map(BlogArticle::getCategoryId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, String> categoryNameMap = Collections.emptyMap();
+        if (!categoryIds.isEmpty()) {
+            List<BlogCategory> categories = categoryMapper.selectBatchIds(categoryIds);
+            categoryNameMap = categories.stream()
+                    .collect(Collectors.toMap(BlogCategory::getId, BlogCategory::getName, (a, b) -> a));
+        }
+
+        // 2. 批量查询文章-标签关联
+        List<BlogArticleTag> allRelations = articleTagMapper.selectList(
+                new LambdaQueryWrapper<BlogArticleTag>().in(BlogArticleTag::getArticleId, articleIds));
+
+        // 3. 批量查询标签
+        Set<Long> tagIds = allRelations.stream().map(BlogArticleTag::getTagId).collect(Collectors.toSet());
+        Map<Long, BlogTag> tagMap = Collections.emptyMap();
+        if (!tagIds.isEmpty()) {
             List<BlogTag> tags = tagMapper.selectBatchIds(tagIds);
-            vo.setTags(tags);
-        } else {
-            vo.setTags(Collections.emptyList());
+            tagMap = tags.stream().collect(Collectors.toMap(BlogTag::getId, t -> t, (a, b) -> a));
         }
 
-        return vo;
+        // 4. 按 articleId 分组标签
+        Map<Long, List<Long>> articleTagMap = allRelations.stream()
+                .collect(Collectors.groupingBy(BlogArticleTag::getArticleId,
+                        Collectors.mapping(BlogArticleTag::getTagId, Collectors.toList())));
+
+        // 5. 组装 VO
+        Map<Long, String> finalCategoryNameMap = categoryNameMap;
+        Map<Long, BlogTag> finalTagMap = tagMap;
+        return articles.stream().map(article -> {
+            ArticleVO vo = new ArticleVO();
+            vo.setArticle(article);
+            vo.setCategoryName(finalCategoryNameMap.get(article.getCategoryId()));
+            List<Long> articleTagIds = articleTagMap.getOrDefault(article.getId(), Collections.emptyList());
+            vo.setTags(articleTagIds.stream()
+                    .map(finalTagMap::get)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList()));
+            return vo;
+        }).collect(Collectors.toList());
     }
 }

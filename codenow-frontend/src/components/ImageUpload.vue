@@ -34,7 +34,7 @@
 import { ref, watch } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import request from '@/utils/request'
+import { uploadImage } from '@/api/upload'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -77,9 +77,7 @@ async function uploadFile(file) {
   try {
     const formData = new FormData()
     formData.append('file', file)
-    const res = await request.post('/upload/image', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
+    const res = await uploadImage(formData)
     imageUrl.value = res.data.url
     emit('update:modelValue', res.data.url)
     ElMessage.success('上传成功')

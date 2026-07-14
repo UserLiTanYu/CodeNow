@@ -21,7 +21,8 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import request from '@/utils/request'
+
+import { getTags, createTag, deleteTag } from '@/api/tag'
 
 const tags = ref([])
 const loading = ref(false)
@@ -31,7 +32,7 @@ const newTagName = ref('')
 async function loadTags() {
   loading.value = true
   try {
-    const res = await request.get('/tags')
+    const res = await getTags()
     tags.value = res.data
   } finally {
     loading.value = false
@@ -42,7 +43,7 @@ async function handleAdd() {
   if (!newTagName.value.trim()) return
   adding.value = true
   try {
-    await request.post('/tags', { name: newTagName.value.trim() })
+    await createTag({ name: newTagName.value.trim() })
     ElMessage.success('新增成功')
     newTagName.value = ''
     loadTags()
@@ -53,7 +54,7 @@ async function handleAdd() {
 
 async function handleDelete(id) {
   await ElMessageBox.confirm('确定删除该标签？', '提示', { type: 'warning' })
-  await request.delete(`/tags/${id}`)
+  await deleteTag(id)
   ElMessage.success('删除成功')
   loadTags()
 }

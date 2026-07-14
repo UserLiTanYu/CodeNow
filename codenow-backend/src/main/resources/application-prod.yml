@@ -7,13 +7,13 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://${DB_HOST:mysql}:3306/${DB_NAME:codenow}?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: ${DB_USER:root}
-    password: ${DB_PASSWORD:123456}
+    password: ${DB_PASSWORD}
   data:
     redis:
       host: ${REDIS_HOST:redis}
       port: ${REDIS_PORT:6379}
       database: 1
-      password: ${REDIS_PASSWORD:123456}
+      password: ${REDIS_PASSWORD}
 
 # 阿里云 OSS 配置
 alioss:

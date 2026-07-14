@@ -63,7 +63,8 @@ public class RateLimitAspect {
                     Collections.singletonList(redisKey),
                     String.valueOf(windowStart),
                     String.valueOf(now),
-                    String.valueOf(rateLimit.maxCount())
+                    String.valueOf(rateLimit.maxCount()),
+                    String.valueOf(rateLimit.timeWindow())
             );
 
             if (result == null || result == 0) {

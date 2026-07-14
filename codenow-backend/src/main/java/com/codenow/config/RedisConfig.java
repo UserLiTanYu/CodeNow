@@ -3,7 +3,8 @@ package com.codenow.config;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
+import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -43,7 +44,14 @@ public class RedisConfig {
     private GenericJackson2JsonRedisSerializer createJsonSerializer() {
         ObjectMapper om = new ObjectMapper();
         om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-        om.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
+
+        // 白名单：只允许反序列化应用内实体、Java 基础类型和集合
+        PolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator.builder()
+                .allowIfSubType("com.codenow.")
+                .allowIfSubType("java.")
+                .build();
+        om.activateDefaultTyping(ptv, ObjectMapper.DefaultTyping.NON_FINAL);
+
         om.registerModule(new JavaTimeModule());
         return new GenericJackson2JsonRedisSerializer(om);
     }
