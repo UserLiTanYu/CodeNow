@@ -18,11 +18,25 @@
         <el-input v-model="form.summary" type="textarea" :rows="2" placeholder="文章摘要（可选）" />
       </el-form-item>
       <el-form-item label="封面图">
-        <el-input v-model="form.coverImage" placeholder="封面图 URL（可选）" />
+        <ImageUpload v-model="form.coverImage" />
       </el-form-item>
       <el-form-item label="内容" prop="content">
+        <div class="editor-toolbar">
+          <el-button size="small" @click="showImageUpload = true">
+            <el-icon><Picture /></el-icon> 插入图片
+          </el-button>
+        </div>
         <md-editor v-model="form.content" style="height: 500px" />
       </el-form-item>
+
+      <!-- 插入图片弹窗 -->
+      <el-dialog v-model="showImageUpload" title="插入图片" width="450px">
+        <ImageUpload v-model="insertImageUrl" />
+        <template #footer>
+          <el-button @click="showImageUpload = false">取消</el-button>
+          <el-button type="primary" :disabled="!insertImageUrl" @click="handleInsertImage">插入</el-button>
+        </template>
+      </el-dialog>
       <el-form-item>
         <el-button @click="router.back()">取消</el-button>
         <el-button type="primary" :loading="saving" @click="handleSave(0)">保存草稿</el-button>
@@ -36,9 +50,11 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Picture } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
+import ImageUpload from '@/components/ImageUpload.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -47,6 +63,8 @@ const saving = ref(false)
 const categories = ref([])
 const tags = ref([])
 const isEdit = ref(false)
+const showImageUpload = ref(false)
+const insertImageUrl = ref('')
 
 const form = reactive({
   title: '',
@@ -104,6 +122,14 @@ async function handleSave(status) {
   }
 }
 
+function handleInsertImage() {
+  if (!insertImageUrl.value) return
+  const mdImage = `![图片](${insertImageUrl.value})`
+  form.content = form.content + '\n' + mdImage + '\n'
+  showImageUpload.value = false
+  insertImageUrl.value = ''
+}
+
 onMounted(() => {
   loadOptions()
   loadArticle()
@@ -113,5 +139,8 @@ onMounted(() => {
 <style scoped>
 .article-edit {
   max-width: 900px;
+}
+.editor-toolbar {
+  margin-bottom: 8px;
 }
 </style>
