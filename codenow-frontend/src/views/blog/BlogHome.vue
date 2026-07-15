@@ -4,6 +4,7 @@
       <el-skeleton :rows="5" animated />
     </div>
     <template v-else>
+      <el-alert v-if="errorMessage" :title="errorMessage" type="error" show-icon :closable="false" class="error-alert" />
       <div v-if="articles.length === 0" class="empty-box">
         <el-empty description="暂无文章" />
       </div>
@@ -65,6 +66,7 @@ const loading = ref(true)
 const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+const errorMessage = ref('')
 
 function goDetail(id) {
   router.push(`/blog/article/${id}`)
@@ -72,12 +74,15 @@ function goDetail(id) {
 
 async function fetchArticles() {
   loading.value = true
+  errorMessage.value = ''
   try {
     const res = await getBlogArticles({ pageNum: pageNum.value, pageSize: pageSize.value })
     articles.value = res.data.records
     total.value = res.data.total
   } catch {
-    // 静默失败
+    articles.value = []
+    total.value = 0
+    errorMessage.value = '文章列表加载失败，请检查网络后重试'
   } finally {
     loading.value = false
   }
@@ -169,5 +174,8 @@ onMounted(() => {
   background: #fff;
   border-radius: 8px;
   padding: 40px;
+}
+.error-alert {
+  margin-bottom: 16px;
 }
 </style>

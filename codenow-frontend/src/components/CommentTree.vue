@@ -37,7 +37,7 @@
 import { ref } from 'vue'
 import CommentForm from './CommentForm.vue'
 
-const props = defineProps({
+defineProps({
   comments: { type: Array, required: true },
   articleId: { type: Number, required: true },
 })

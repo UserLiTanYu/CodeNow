@@ -32,7 +32,7 @@
 
       <!-- 评论区 -->
       <div class="comment-section">
-        <h3 class="section-title">评论 ({{ comments.length }})</h3>
+        <h3 class="section-title">评论 ({{ commentTotalCount }})</h3>
         <CommentForm
           :article-id="Number(route.params.id)"
           :parent-id="0"
@@ -44,14 +44,25 @@
             :article-id="Number(route.params.id)"
             @refresh="fetchComments"
           />
+          <el-pagination
+            v-if="commentRootTotal > commentPageSize"
+            v-model:current-page="commentPageNum"
+            :page-size="commentPageSize"
+            :total="commentRootTotal"
+            layout="prev, pager, next"
+            class="comment-pagination"
+            @current-change="fetchComments"
+          />
         </div>
+        <el-alert v-if="commentError" :title="commentError" type="error" show-icon :closable="false" />
         <div v-else class="no-comments">
           <p>暂无评论，快来发表第一条评论吧</p>
         </div>
       </div>
     </template>
     <div v-else class="empty-box">
-      <el-empty description="文章不存在" />
+      <el-alert v-if="articleError" :title="articleError" type="error" show-icon :closable="false" />
+      <el-empty :description="articleError ? '暂时无法显示文章' : '文章不存在'" />
     </div>
   </div>
 </template>
@@ -65,8 +76,39 @@ import { markedHighlight } from 'marked-highlight'
 import DOMPurify from 'dompurify'
 import CommentForm from '@/components/CommentForm.vue'
 import CommentTree from '@/components/CommentTree.vue'
-import hljs from 'highlight.js'
+// highlight.js 按需导入（仅常用语言，避免全量打包 ~1MB）
+import hljs from 'highlight.js/lib/core'
+import javascript from 'highlight.js/lib/languages/javascript'
+import typescript from 'highlight.js/lib/languages/typescript'
+import python from 'highlight.js/lib/languages/python'
+import java from 'highlight.js/lib/languages/java'
+import sql from 'highlight.js/lib/languages/sql'
+import xml from 'highlight.js/lib/languages/xml'
+import css from 'highlight.js/lib/languages/css'
+import bash from 'highlight.js/lib/languages/bash'
+import json from 'highlight.js/lib/languages/json'
+import yaml from 'highlight.js/lib/languages/yaml'
+import go from 'highlight.js/lib/languages/go'
+import rust from 'highlight.js/lib/languages/rust'
+import cpp from 'highlight.js/lib/languages/cpp'
 import 'highlight.js/styles/github.css'
+
+hljs.registerLanguage('javascript', javascript)
+hljs.registerLanguage('typescript', typescript)
+hljs.registerLanguage('python', python)
+hljs.registerLanguage('java', java)
+hljs.registerLanguage('sql', sql)
+hljs.registerLanguage('html', xml)
+hljs.registerLanguage('xml', xml)
+hljs.registerLanguage('css', css)
+hljs.registerLanguage('bash', bash)
+hljs.registerLanguage('shell', bash)
+hljs.registerLanguage('json', json)
+hljs.registerLanguage('yaml', yaml)
+hljs.registerLanguage('go', go)
+hljs.registerLanguage('rust', rust)
+hljs.registerLanguage('c', cpp)
+hljs.registerLanguage('cpp', cpp)
 import { getBlogArticle } from '@/api/blog'
 import { getCommentTree } from '@/api/comment'
 import { formatDate } from '@/utils/format'
@@ -88,6 +130,12 @@ const categoryName = ref('')
 const tags = ref([])
 const comments = ref([])
 const loading = ref(true)
+const articleError = ref('')
+const commentError = ref('')
+const commentPageNum = ref(1)
+const commentPageSize = 20
+const commentRootTotal = ref(0)
+const commentTotalCount = ref(0)
 
 const renderedContent = computed(() => {
   if (!article.value?.content) return ''
@@ -98,25 +146,38 @@ const renderedContent = computed(() => {
 
 async function fetchArticle(id) {
   loading.value = true
+  articleError.value = ''
   try {
     const res = await getBlogArticle(id)
     article.value = res.data.article
     categoryName.value = res.data.categoryName || ''
     tags.value = res.data.tags || []
+    document.title = `${article.value.title} - 码上记`
+    commentPageNum.value = 1
     fetchComments()
   } catch {
     article.value = null
+    articleError.value = '文章加载失败，请稍后重试'
   } finally {
     loading.value = false
   }
 }
 
 async function fetchComments() {
+  commentError.value = ''
   try {
-    const res = await getCommentTree(route.params.id)
-    comments.value = res.data
+    const res = await getCommentTree(route.params.id, {
+      pageNum: commentPageNum.value,
+      pageSize: commentPageSize,
+    })
+    comments.value = res.data.page.records
+    commentRootTotal.value = res.data.page.total
+    commentTotalCount.value = res.data.totalCount
   } catch {
     comments.value = []
+    commentRootTotal.value = 0
+    commentTotalCount.value = 0
+    commentError.value = '评论加载失败，请稍后重试'
   }
 }
 
@@ -284,5 +345,9 @@ watch(
   text-align: center;
   color: #909399;
   font-size: 14px;
+}
+.comment-pagination {
+  justify-content: center;
+  margin-top: 24px;
 }
 </style>

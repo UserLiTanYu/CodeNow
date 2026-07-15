@@ -65,6 +65,13 @@
             <version>${sa-token.version}</version>
         </dependency>
 
+        <!-- Sa-Token JWT（签名 Token） -->
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-jwt</artifactId>
+            <version>${sa-token.version}</version>
+        </dependency>
+
         <!-- Sa-Token 整合 Redis（Session 存储） -->
         <dependency>
             <groupId>cn.dev33</groupId>
@@ -89,6 +96,13 @@
             <groupId>com.aliyun.oss</groupId>
             <artifactId>aliyun-sdk-oss</artifactId>
             <version>3.17.4</version>
+        </dependency>
+
+        <!-- HTML 清理（防 XSS） -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.18.3</version>
         </dependency>
 
         <!-- Knife4j API 文档 -->
@@ -116,12 +130,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mybatis.spring.boot</groupId>
-            <artifactId>mybatis-spring-boot-starter-test</artifactId>
-            <version>4.0.1</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

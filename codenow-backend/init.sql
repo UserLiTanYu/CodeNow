@@ -79,7 +79,9 @@ CREATE TABLE `blog_article` (
     `is_deleted`  TINYINT      DEFAULT 0               COMMENT '逻辑删除（0=正常, 1=已删）',
     PRIMARY KEY (`id`),
     KEY `idx_category_id` (`category_id`),
-    KEY `idx_author_id` (`author_id`)
+    KEY `idx_author_id` (`author_id`),
+    CONSTRAINT `fk_article_category` FOREIGN KEY (`category_id`) REFERENCES `blog_category` (`id`) ON DELETE SET NULL,
+    CONSTRAINT `fk_article_author` FOREIGN KEY (`author_id`) REFERENCES `sys_user` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='文章表';
 
 -- -------------------------------------------
@@ -90,9 +92,12 @@ CREATE TABLE `blog_article_tag` (
     `id`         BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
     `article_id` BIGINT NOT NULL               COMMENT '文章 ID',
     `tag_id`     BIGINT NOT NULL               COMMENT '标签 ID',
+    `is_deleted` TINYINT DEFAULT 0              COMMENT '逻辑删除（0=正常, 1=已删）',
     PRIMARY KEY (`id`),
     KEY `idx_article_id` (`article_id`),
-    KEY `idx_tag_id` (`tag_id`)
+    KEY `idx_tag_id` (`tag_id`),
+    CONSTRAINT `fk_artag_article` FOREIGN KEY (`article_id`) REFERENCES `blog_article` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_artag_tag` FOREIGN KEY (`tag_id`) REFERENCES `blog_tag` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='文章-标签关联表';
 
 -- -------------------------------------------
@@ -131,5 +136,6 @@ CREATE TABLE `blog_comment` (
     `create_time` DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (`id`),
     KEY `idx_article_id` (`article_id`),
-    KEY `idx_parent_id` (`parent_id`)
+    KEY `idx_parent_id` (`parent_id`),
+    CONSTRAINT `fk_comment_article` FOREIGN KEY (`article_id`) REFERENCES `blog_article` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='评论表';

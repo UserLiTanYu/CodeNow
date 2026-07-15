@@ -5,7 +5,7 @@ server:
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${DB_HOST:mysql}:3306/${DB_NAME:codenow}?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://${DB_HOST:mysql}:3306/${DB_NAME:codenow}?useUnicode=true&characterEncoding=utf-8&sslMode=${DB_SSL_MODE:REQUIRED}&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=false
     username: ${DB_USER:root}
     password: ${DB_PASSWORD}
   data:
@@ -39,3 +39,6 @@ logging:
   level:
     com.codenow: info
     com.baomidou.mybatisplus: warn
+
+sa-token:
+  jwt-secret-key: ${JWT_SECRET}

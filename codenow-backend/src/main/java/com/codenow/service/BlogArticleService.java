@@ -20,9 +20,23 @@ public interface BlogArticleService extends IService<BlogArticle> {
     void updateArticleWithTags(BlogArticle article, List<Long> tagIds);
 
     /**
-     * 删除文章及其标签关联
+     * 逻辑删除文章并保留标签关联，避免恢复文章时丢失标签
      */
     void deleteArticleWithTags(Long id);
+
+    /**
+     * 原子切换文章发布状态。
+     *
+     * @return 文章存在且切换成功时为 true
+     */
+    boolean toggleStatus(Long id);
+
+    /**
+     * 原子切换文章置顶状态。
+     *
+     * @return 文章存在且切换成功时为 true
+     */
+    boolean toggleTop(Long id);
 
     /**
      * 根据 ID 查询文章详情（含分类名称和标签列表）
@@ -43,4 +57,9 @@ public interface BlogArticleService extends IService<BlogArticle> {
      * 查询已发布文章详情（用户端），同时浏览量 +1
      */
     ArticleVO getPublishedArticleById(Long id);
+
+    /**
+     * 批量构建 ArticleVO（避免 N+1 查询）
+     */
+    List<ArticleVO> buildArticleVOBatch(List<BlogArticle> articles);
 }

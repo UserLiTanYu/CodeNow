@@ -21,7 +21,13 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # 复制构建产物
 COPY --from=builder /app/dist /usr/share/nginx/html
 
+# 确保 nginx 用户有权限访问静态文件
+RUN chown -R nginx:nginx /usr/share/nginx/html
+
 # 暴露端口
 EXPOSE 80
+
+# 以 nginx 用户运行（non-root）
+USER nginx
 
 CMD ["nginx", "-g", "daemon off;"]

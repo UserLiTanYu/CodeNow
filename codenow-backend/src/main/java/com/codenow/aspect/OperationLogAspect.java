@@ -93,7 +93,7 @@ public class OperationLogAspect {
             ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             if (attributes != null) {
                 HttpServletRequest request = attributes.getRequest();
-                logEntity.setIp(getClientIp(request));
+                logEntity.setIp(IpUtils.getProxyIp(request));
             }
         } catch (Exception e) {
             logEntity.setIp("unknown");
@@ -117,12 +117,5 @@ public class OperationLogAspect {
 
         // 异步写入数据库
         operationLogService.saveAsync(logEntity);
-    }
-
-    /**
-     * 获取客户端 IP（日志专用，信任 Nginx 传递的 X-Forwarded-For）
-     */
-    private String getClientIp(HttpServletRequest request) {
-        return IpUtils.getProxyIp(request);
     }
 }

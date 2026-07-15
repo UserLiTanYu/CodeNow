@@ -24,7 +24,7 @@ cd codenow
 
 # 2. 配置环境变量
 cp .env.example .env
-# 编辑 .env，修改数据库密码等配置（可选，有默认值）
+# 编辑 .env，设置数据库密码、Redis 密码和 JWT 签名密钥（必填）
 
 # 3. 一键启动
 # Linux / Mac
@@ -113,6 +113,8 @@ vim .env
 ```env
 DB_PASSWORD=你的安全密码
 REDIS_PASSWORD=你的Redis密码
+JWT_SECRET=至少32位的随机字符串
+DB_SSL_MODE=REQUIRED
 OSS_ACCESS_KEY_ID=你的阿里云AccessKey
 OSS_ACCESS_KEY_SECRET=你的阿里云Secret
 ```
@@ -122,7 +124,7 @@ OSS_ACCESS_KEY_SECRET=你的阿里云Secret
 ```bash
 # 构建后端 JAR
 cd codenow-backend
-./mvnw clean package -DskipTests
+./mvnw clean package
 cd ..
 
 # 启动所有服务
@@ -167,17 +169,29 @@ certbot certonly --standalone -d 你的域名
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
-| DB_PASSWORD | 123456 | MySQL root 密码 |
+| DB_PASSWORD | 无（必填） | MySQL root 密码 |
 | DB_NAME | codenow | 数据库名称 |
-| DB_PORT | 3306 | MySQL 端口 |
-| REDIS_PASSWORD | 123456 | Redis 密码 |
-| REDIS_PORT | 6379 | Redis 端口 |
+| DB_SSL_MODE | REQUIRED | 生产数据库 TLS 模式 |
+| REDIS_PASSWORD | 无（必填） | Redis 密码 |
+| JWT_SECRET | 无（必填） | Sa-Token JWT HMAC 签名密钥，至少 32 位 |
 | BACKEND_PORT | 8080 | 后端 API 端口 |
 | FRONTEND_PORT | 80 | 前端 Nginx 端口 |
 | OSS_ENDPOINT | - | 阿里云 OSS Endpoint |
 | OSS_BUCKET | - | OSS Bucket 名称 |
 | OSS_ACCESS_KEY_ID | - | OSS AccessKey ID |
 | OSS_ACCESS_KEY_SECRET | - | OSS AccessKey Secret |
+
+> MySQL 与 Redis 仅加入 Compose 内部网络，不再映射宿主机端口。需要维护数据库时，优先使用 `docker compose exec mysql mysql ...`，不要长期暴露端口。
+
+### 已有数据库升级
+
+从旧版本升级时，在启动新后端前执行一次：
+
+```bash
+docker compose exec -T mysql mysql -uroot -p"$DB_PASSWORD" codenow < codenow-backend/migration-medium-priority.sql
+```
+
+该迁移为 `blog_article_tag` 增加逻辑删除字段。全新部署无需执行，`init.sql` 已包含最新结构。
 
 ---
 

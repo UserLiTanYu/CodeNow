@@ -62,6 +62,10 @@ public class AuthController {
     public R<SysUser> me() {
         Long userId = StpUtil.getLoginIdAsLong();
         SysUser user = sysUserService.getById(userId);
+        if (user == null) {
+            StpUtil.logout();
+            return R.error(401, "当前用户不存在或已被删除，请重新登录");
+        }
         user.setPassword(null);
         return R.ok(user);
     }

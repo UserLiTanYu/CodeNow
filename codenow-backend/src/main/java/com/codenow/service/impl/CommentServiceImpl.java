@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.codenow.entity.BlogComment;
+import com.codenow.common.CommentStatus;
 import com.codenow.mapper.BlogCommentMapper;
 import com.codenow.service.CommentService;
 import org.springframework.stereotype.Service;
@@ -16,28 +17,45 @@ import java.util.stream.Collectors;
 public class CommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogComment> implements CommentService {
 
     @Override
-    public List<BlogComment> getCommentTree(Long articleId) {
-        // 1. 查出该文章所有已通过审核的评论
-        List<BlogComment> allComments = list(new LambdaQueryWrapper<BlogComment>()
+    public Page<BlogComment> getCommentTree(Long articleId, Integer pageNum, Integer pageSize) {
+        // 仅分页查询根评论，避免一次性把文章的全部评论载入内存。
+        Page<BlogComment> rootPage = page(new Page<>(pageNum, pageSize),
+                new LambdaQueryWrapper<BlogComment>()
                 .eq(BlogComment::getArticleId, articleId)
-                .eq(BlogComment::getStatus, 1)
+                .eq(BlogComment::getStatus, CommentStatus.APPROVED)
+                .eq(BlogComment::getParentId, CommentStatus.ROOT_PARENT_ID)
                 .orderByAsc(BlogComment::getCreateTime));
 
-        if (allComments.isEmpty()) {
-            return Collections.emptyList();
+        List<BlogComment> roots = rootPage.getRecords();
+        if (roots.isEmpty()) {
+            return rootPage;
         }
 
-        // 2. 按 parentId 分组
-        Map<Long, List<BlogComment>> parentMap = allComments.stream()
-                .collect(Collectors.groupingBy(c -> c.getParentId() == null ? 0L : c.getParentId()));
+        // 按层批量加载当前页根评论的后代，查询次数与树深度相关，而非评论总数相关。
+        List<BlogComment> descendants = new ArrayList<>();
+        Set<Long> visited = roots.stream().map(BlogComment::getId).collect(Collectors.toSet());
+        List<Long> parentIds = new ArrayList<>(visited);
+        while (!parentIds.isEmpty()) {
+            List<BlogComment> children = list(new LambdaQueryWrapper<BlogComment>()
+                    .eq(BlogComment::getArticleId, articleId)
+                    .eq(BlogComment::getStatus, CommentStatus.APPROVED)
+                    .in(BlogComment::getParentId, parentIds)
+                    .orderByAsc(BlogComment::getCreateTime));
+            List<BlogComment> newChildren = children.stream()
+                    .filter(comment -> visited.add(comment.getId()))
+                    .toList();
+            descendants.addAll(newChildren);
+            parentIds = newChildren.stream().map(BlogComment::getId).toList();
+        }
 
-        // 3. 从顶级评论（parentId=0）开始，递归填充 children
-        List<BlogComment> rootComments = parentMap.getOrDefault(0L, Collections.emptyList());
-        for (BlogComment root : rootComments) {
+        Map<Long, List<BlogComment>> parentMap = descendants.stream()
+                .collect(Collectors.groupingBy(BlogComment::getParentId));
+
+        for (BlogComment root : roots) {
             buildChildren(root, parentMap);
         }
-
-        return rootComments;
+        rootPage.setRecords(roots);
+        return rootPage;
     }
 
     @Override
@@ -46,6 +64,13 @@ public class CommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogComme
                 .eq(articleId != null, BlogComment::getArticleId, articleId)
                 .orderByDesc(BlogComment::getCreateTime);
         return page(new Page<>(pageNum, pageSize), wrapper);
+    }
+
+    @Override
+    public long countApproved(Long articleId) {
+        return count(new LambdaQueryWrapper<BlogComment>()
+                .eq(BlogComment::getArticleId, articleId)
+                .eq(BlogComment::getStatus, CommentStatus.APPROVED));
     }
 
     @Override

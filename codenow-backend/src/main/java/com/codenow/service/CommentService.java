@@ -4,14 +4,17 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.codenow.entity.BlogComment;
 
-import java.util.List;
-
 public interface CommentService extends IService<BlogComment> {
 
     /**
      * 获取文章评论树形结构（已通过审核的评论）
      */
-    List<BlogComment> getCommentTree(Long articleId);
+    Page<BlogComment> getCommentTree(Long articleId, Integer pageNum, Integer pageSize);
+
+    /**
+     * 统计文章下所有已审核评论（包含回复）。
+     */
+    long countApproved(Long articleId);
 
     /**
      * 分页查询评论列表（管理后台，含所有状态）

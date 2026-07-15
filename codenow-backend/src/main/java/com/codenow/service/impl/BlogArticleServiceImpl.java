@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.codenow.dto.ArticleVO;
+import com.codenow.common.ArticleStatus;
+import com.codenow.exception.BusinessException;
 import com.codenow.entity.BlogArticle;
 import com.codenow.entity.BlogArticleTag;
 import com.codenow.entity.BlogCategory;
@@ -54,11 +56,18 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
     @Override
     @Transactional
     public void deleteArticleWithTags(Long id) {
-        // 1. 删除文章标签关联
-        articleTagMapper.delete(
-                new LambdaQueryWrapper<BlogArticleTag>().eq(BlogArticleTag::getArticleId, id));
-        // 2. 逻辑删除文章
+        // 仅逻辑删除文章，保留标签关联，后续恢复文章时不会丢失标签。
         removeById(id);
+    }
+
+    @Override
+    public boolean toggleStatus(Long id) {
+        return baseMapper.toggleStatus(id) == 1;
+    }
+
+    @Override
+    public boolean toggleTop(Long id) {
+        return baseMapper.toggleTop(id) == 1;
     }
 
     @Override
@@ -114,7 +123,7 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         }
 
         LambdaQueryWrapper<BlogArticle> wrapper = new LambdaQueryWrapper<BlogArticle>()
-                .eq(BlogArticle::getStatus, 1)  // 仅已发布
+                .eq(BlogArticle::getStatus, ArticleStatus.PUBLISHED)
                 .eq(categoryId != null, BlogArticle::getCategoryId, categoryId)
                 .in(articleIds != null && !articleIds.isEmpty(), BlogArticle::getId, articleIds)
                 .orderByDesc(BlogArticle::getIsTop)
@@ -131,17 +140,17 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
     @Transactional
     public ArticleVO getPublishedArticleById(Long id) {
         BlogArticle article = getById(id);
-        if (article == null || article.getStatus() != 1) {
+        if (article == null || !Objects.equals(article.getStatus(), ArticleStatus.PUBLISHED)) {
             return null;
         }
-        // 浏览量 +1
+        // 浏览量 +1（原子更新后重新读取真实值，避免并发竞态）
         lambdaUpdate().eq(BlogArticle::getId, id)
                 .setSql("view_count = view_count + 1")
                 .update();
-        int newViewCount = article.getViewCount() + 1;
-        article.setViewCount(newViewCount);
-        // 同步更新 Redis 缓存
-        hotArticleService.incrementViewCount(id, newViewCount);
+        // 重新读取数据库中的真实浏览量，推送到 Redis
+        int actualViewCount = getById(id).getViewCount();
+        article.setViewCount(actualViewCount);
+        hotArticleService.incrementViewCount(id, actualViewCount);
         List<ArticleVO> voList = buildArticleVOBatch(List.of(article));
         return voList.isEmpty() ? null : voList.get(0);
     }
@@ -153,7 +162,15 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         if (tagIds == null || tagIds.isEmpty()) {
             return;
         }
-        for (Long tagId : tagIds) {
+        List<Long> distinctTagIds = tagIds.stream().filter(Objects::nonNull).distinct().toList();
+        if (distinctTagIds.isEmpty()) {
+            return;
+        }
+        List<BlogTag> existingTags = tagMapper.selectBatchIds(distinctTagIds);
+        if (existingTags.size() != distinctTagIds.size()) {
+            throw new BusinessException(400, "包含不存在的标签 ID");
+        }
+        for (Long tagId : distinctTagIds) {
             BlogArticleTag relation = new BlogArticleTag();
             relation.setArticleId(articleId);
             relation.setTagId(tagId);
@@ -164,7 +181,8 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
     /**
      * 批量构建 ArticleVO（避免 N+1 查询：分类和标签一次性批量加载）
      */
-    private List<ArticleVO> buildArticleVOBatch(List<BlogArticle> articles) {
+    @Override
+    public List<ArticleVO> buildArticleVOBatch(List<BlogArticle> articles) {
         if (articles == null || articles.isEmpty()) {
             return Collections.emptyList();
         }

@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.codenow.dto.ArticleVO;
 import com.codenow.entity.BlogArticle;
 import com.codenow.entity.BlogArticleTag;
+import com.codenow.entity.BlogTag;
+import com.codenow.exception.BusinessException;
 import com.codenow.mapper.BlogArticleMapper;
 import com.codenow.mapper.BlogArticleTagMapper;
 import com.codenow.mapper.BlogCategoryMapper;
@@ -65,6 +67,7 @@ class BlogArticleServiceImplTest {
             a.setId(1L);
             return 1;
         });
+        when(tagMapper.selectBatchIds(any())).thenReturn(List.of(tag(1L), tag(2L)));
 
         articleService.saveArticleWithTags(article, tagIds);
 
@@ -90,13 +93,38 @@ class BlogArticleServiceImplTest {
     }
 
     @Test
-    void deleteArticleWithTags_shouldDeleteRelationsAndArticle() {
+    void deleteArticleWithTags_shouldPreserveRelationsAndDeleteArticle() {
         Long articleId = 1L;
 
         articleService.deleteArticleWithTags(articleId);
 
-        verify(articleTagMapper).delete(any());
+        verify(articleTagMapper, never()).delete(any());
         verify(articleMapper).deleteById(articleId);
+    }
+
+    @Test
+    void saveArticleWithTags_withUnknownTag_shouldRollbackWithBusinessError() {
+        BlogArticle article = new BlogArticle();
+        when(articleMapper.insert(any(BlogArticle.class))).thenAnswer(invocation -> {
+            BlogArticle saved = invocation.getArgument(0);
+            saved.setId(1L);
+            return 1;
+        });
+        when(tagMapper.selectBatchIds(any())).thenReturn(List.of(tag(1L)));
+
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> articleService.saveArticleWithTags(article, List.of(1L, 999L)));
+
+        assertEquals(400, exception.getCode());
+        verify(articleTagMapper, never()).insert(any(BlogArticleTag.class));
+    }
+
+    @Test
+    void toggleStatus_shouldUseAtomicMapperUpdate() {
+        when(articleMapper.toggleStatus(1L)).thenReturn(1);
+
+        assertTrue(articleService.toggleStatus(1L));
+        verify(articleMapper).toggleStatus(1L);
     }
 
     @Test
@@ -161,7 +189,14 @@ class BlogArticleServiceImplTest {
         article.setViewCount(10);
         article.setCategoryId(1L);
 
-        when(articleMapper.selectById(1L)).thenReturn(article);
+        BlogArticle updatedArticle = new BlogArticle();
+        updatedArticle.setId(1L);
+        updatedArticle.setStatus(1);
+        updatedArticle.setViewCount(11);
+        updatedArticle.setCategoryId(1L);
+
+        // 第一次 selectById 返回原始值，第二次（重新读取）返回更新后的值
+        when(articleMapper.selectById(1L)).thenReturn(article).thenReturn(updatedArticle);
         when(articleMapper.update(any(), any())).thenReturn(1);
         when(articleTagMapper.selectList(any())).thenReturn(Collections.emptyList());
 
@@ -169,5 +204,12 @@ class BlogArticleServiceImplTest {
 
         assertNotNull(result);
         verify(hotArticleService).incrementViewCount(1L, 11);
+    }
+
+    private BlogTag tag(Long id) {
+        BlogTag tag = new BlogTag();
+        tag.setId(id);
+        tag.setName("tag-" + id);
+        return tag;
     }
 }

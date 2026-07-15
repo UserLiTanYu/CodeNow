@@ -4,7 +4,7 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 
-import 'element-plus/dist/index.css'
+// Element Plus CSS 由 unplugin-vue-components 自动按需导入，无需全量导入
 
 const app = createApp(App)
 app.use(createPinia())

@@ -71,7 +71,7 @@ public class ArticleController {
     }
 
     @OperationLog("删除文章")
-    @Operation(summary = "删除文章", description = "根据 ID 逻辑删除文章及其标签关联")
+    @Operation(summary = "删除文章", description = "根据 ID 逻辑删除文章并保留标签关联，以支持后续恢复")
     @DeleteMapping("/{id}")
     public R<Void> delete(
             @Parameter(description = "文章 ID", example = "1") @PathVariable Long id) {
@@ -84,12 +84,9 @@ public class ArticleController {
     @PutMapping("/{id}/status")
     public R<Void> toggleStatus(
             @Parameter(description = "文章 ID", example = "1") @PathVariable Long id) {
-        BlogArticle article = articleService.getById(id);
-        if (article == null) {
+        if (!articleService.toggleStatus(id)) {
             return R.error(404, "文章不存在");
         }
-        article.setStatus(article.getStatus() == 0 ? 1 : 0);
-        articleService.updateById(article);
         return R.ok();
     }
 
@@ -98,12 +95,9 @@ public class ArticleController {
     @PutMapping("/{id}/top")
     public R<Void> toggleTop(
             @Parameter(description = "文章 ID", example = "1") @PathVariable Long id) {
-        BlogArticle article = articleService.getById(id);
-        if (article == null) {
+        if (!articleService.toggleTop(id)) {
             return R.error(404, "文章不存在");
         }
-        article.setIsTop(article.getIsTop() == 0 ? 1 : 0);
-        articleService.updateById(article);
         return R.ok();
     }
 }

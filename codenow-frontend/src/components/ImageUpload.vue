@@ -46,6 +46,8 @@ const inputRef = ref(null)
 const imageUrl = ref(props.modelValue)
 const isDragover = ref(false)
 const uploading = ref(false)
+const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
+const MAX_FILE_SIZE = 5 * 1024 * 1024
 
 watch(
   () => props.modelValue,
@@ -72,6 +74,14 @@ function handleFileChange(e) {
 
 async function uploadFile(file) {
   if (uploading.value) return
+  if (!ALLOWED_TYPES.has(file.type)) {
+    ElMessage.error('仅支持 JPG、PNG、GIF、WebP 图片')
+    return
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    ElMessage.error('图片大小不能超过 5MB')
+    return
+  }
   uploading.value = true
 
   try {

@@ -15,7 +15,7 @@
 | MyBatis-Plus | 3.5.7 | ORM 框架，内置通用 CRUD |
 | MySQL | 8.0+ | 关系型数据库 |
 | Redis | 7.x | 缓存热门文章、滑动窗口限流 |
-| Sa-Token | 1.39.0 | 轻量级权限认证框架 |
+| Sa-Token + JWT | 1.39.0 | 带 HMAC 签名的登录认证 |
 | Knife4j | 4.5.0 | API 文档自动生成（基于 SpringDoc 2.8.6） |
 | Aliyun OSS SDK | 3.17.4 | 文件上传到阿里云 OSS |
 | Spring AOP | — | 操作日志切面、接口限流切面 |
@@ -234,7 +234,7 @@ http://localhost:8080/doc.html
 - [x] 博客前台公开 API（无需登录）
 - [x] 文章浏览量统计（访问详情页自动 +1）
 - [x] 侧边栏热门文章（Redis ZSet 缓存 Top 10）
-- [x] 评论系统（支持楼中楼回复、树形嵌套展示）
+- [x] 评论系统（支持楼中楼回复、根评论分页、树形嵌套展示）
 
 ### 扩展功能
 

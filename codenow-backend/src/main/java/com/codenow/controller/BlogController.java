@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.codenow.annotation.RateLimit;
 import com.codenow.common.R;
+import com.codenow.common.ArticleStatus;
 import com.codenow.dto.ArticleVO;
 import com.codenow.entity.BlogCategory;
 import com.codenow.entity.BlogTag;
@@ -13,13 +14,15 @@ import com.codenow.service.BlogTagService;
 import com.codenow.service.HotArticleService;
 import com.codenow.entity.BlogArticle;
 import io.swagger.v3.oas.annotations.Operation;
+
+import java.util.Collections;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Tag(name = "博客前台（公开）")
 @RestController
@@ -50,19 +53,20 @@ public class BlogController {
             @Parameter(description = "返回数量", example = "10") @RequestParam(defaultValue = "10") Integer topN) {
         List<Long> ids = hotArticleService.getHotArticleIds(topN);
         if (ids.isEmpty()) {
-            return R.ok(new ArrayList<>());
+            return R.ok(Collections.emptyList());
         }
         // 批量查询文章，保持 Redis 返回的排序
         List<BlogArticle> articles = articleService.listByIds(ids);
-        // 按 ids 顺序排序（listByIds 不保证顺序）
-        List<ArticleVO> voList = new ArrayList<>();
-        for (Long id : ids) {
-            articles.stream()
-                    .filter(a -> a.getId().equals(id) && a.getStatus() == 1)
-                    .findFirst()
-                    .ifPresent(a -> voList.add(articleService.getArticleVOById(id)));
-        }
-        return R.ok(voList);
+        // 按 ids 顺序排序并过滤已发布文章（listByIds 不保证顺序）
+        Map<Long, BlogArticle> articleMap = articles.stream()
+                .filter(a -> Objects.equals(a.getStatus(), ArticleStatus.PUBLISHED))
+                .collect(Collectors.toMap(BlogArticle::getId, a -> a, (a, b) -> a));
+        List<BlogArticle> orderedArticles = ids.stream()
+                .map(articleMap::get)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        // 一次性批量构建 VO（避免 N+1 查询）
+        return R.ok(articleService.buildArticleVOBatch(orderedArticles));
     }
 
     @Operation(summary = "查询文章详情", description = "查询已发布文章详情，浏览量自动 +1")

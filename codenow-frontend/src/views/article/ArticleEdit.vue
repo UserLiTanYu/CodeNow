@@ -47,9 +47,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Picture } from '@element-plus/icons-vue'
 import { getArticle, createArticle, updateArticle } from '@/api/article'
 import { getCategories } from '@/api/category'
@@ -67,6 +67,8 @@ const tags = ref([])
 const isEdit = ref(false)
 const showImageUpload = ref(false)
 const insertImageUrl = ref('')
+const initialSnapshot = ref('')
+const allowLeave = ref(false)
 
 const form = reactive({
   title: '',
@@ -103,6 +105,7 @@ async function loadArticle() {
   form.categoryId = a.categoryId
   form.status = a.status
   form.tagIds = res.data.tags.map((t) => t.id)
+  initialSnapshot.value = snapshotForm()
 }
 
 async function handleSave(status) {
@@ -118,11 +121,40 @@ async function handleSave(status) {
       await createArticle(data)
       ElMessage.success('创建成功')
     }
+    allowLeave.value = true
     router.push('/articles')
   } finally {
     saving.value = false
   }
 }
+
+function snapshotForm() {
+  return JSON.stringify({ ...form, tagIds: [...form.tagIds].sort((a, b) => a - b) })
+}
+
+function hasUnsavedChanges() {
+  return !allowLeave.value && initialSnapshot.value !== '' && snapshotForm() !== initialSnapshot.value
+}
+
+function handleBeforeUnload(event) {
+  if (!hasUnsavedChanges()) return
+  event.preventDefault()
+  event.returnValue = ''
+}
+
+onBeforeRouteLeave(async () => {
+  if (!hasUnsavedChanges()) return true
+  try {
+    await ElMessageBox.confirm('当前文章有未保存的修改，确定离开吗？', '未保存的修改', {
+      type: 'warning',
+      confirmButtonText: '离开',
+      cancelButtonText: '继续编辑',
+    })
+    return true
+  } catch {
+    return false
+  }
+})
 
 function handleInsertImage() {
   if (!insertImageUrl.value) return
@@ -132,10 +164,13 @@ function handleInsertImage() {
   insertImageUrl.value = ''
 }
 
-onMounted(() => {
-  loadOptions()
-  loadArticle()
+onMounted(async () => {
+  window.addEventListener('beforeunload', handleBeforeUnload)
+  await Promise.all([loadOptions(), loadArticle()])
+  if (!route.params.id) initialSnapshot.value = snapshotForm()
 })
+
+onBeforeUnmount(() => window.removeEventListener('beforeunload', handleBeforeUnload))
 </script>
 
 <style scoped>

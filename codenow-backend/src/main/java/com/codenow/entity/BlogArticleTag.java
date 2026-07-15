@@ -2,6 +2,7 @@ package com.codenow.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
@@ -15,4 +16,7 @@ public class BlogArticleTag {
     private Long articleId;
 
     private Long tagId;
+
+    @TableLogic
+    private Integer isDeleted;
 }
