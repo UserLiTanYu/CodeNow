@@ -49,69 +49,76 @@
 
 ```
 codenow/
-├── codenow-backend/                    # 后端项目
-│   ├── Dockerfile                      # 后端 Docker 镜像构建文件
-│   ├── init.sql                        # 数据库初始化脚本（7 张表 + 默认管理员）
-│   ├── pom.xml                         # Maven 依赖配置
-│   └── src/main/
-│       ├── java/com/codenow/
-│       │   ├── annotation/             # 自定义注解（@OperationLog、@RateLimit）
-│       │   ├── aspect/                 # AOP 切面（操作日志、接口限流）
-│       │   ├── config/                 # 配置类（CORS、Sa-Token、Redis、OSS、异步）
-│       │   ├── controller/             # 控制器（Auth、Article、Category、Tag、Blog、Comment、Upload、Log）
-│       │   ├── service/                # 业务逻辑层
-│       │   │   └── impl/               # Service 实现类
-│       │   ├── mapper/                 # 数据访问层（MyBatis-Plus Mapper）
-│       │   ├── entity/                 # 数据库实体类（对应表结构）
-│       │   ├── dto/                    # 数据传输对象（请求/响应参数）
-│       │   ├── common/                 # 公共类（统一返回格式 R、分页参数）
-│       │   └── exception/              # 全局异常处理（含限流异常）
-│       └── resources/
-│           ├── application.yaml        # 开发环境配置
-│           ├── application-prod.yml    # 生产环境配置
-│           └── scripts/                # Lua 脚本（Redis 限流）
+├── .github/
+│   └── workflows/
+│       └── ci.yml                      # GitHub Actions：后端、前端、Compose 三道门禁
 │
-├── codenow-frontend/                   # 前端项目
-│   ├── Dockerfile                      # 前端 Docker 镜像（多阶段构建）
-│   ├── nginx.conf                      # Nginx 配置（反向代理）
-│   ├── vite.config.js                  # Vite 配置（含 API 代理）
+├── codenow-backend/                    # Spring Boot 后端
+│   ├── .dockerignore                   # 后端镜像构建忽略规则
+│   ├── Dockerfile                      # JDK 21 多阶段构建、非 root 运行
+│   ├── init.sql                        # 全新数据库初始化脚本
+│   ├── migration-medium-priority.sql   # 已有数据库幂等升级脚本
+│   ├── rollback-medium-priority.sql    # 数据库幂等回滚脚本
+│   ├── pom.xml                         # Maven 依赖、构建与测试配置
 │   └── src/
-│       ├── layout/                     # 布局组件
-│       │   ├── MainLayout.vue          # 管理后台布局（侧边栏 + 顶导航）
-│       │   └── BlogLayout.vue          # 博客前台布局（顶栏 + 内容区 + 侧边栏）
-│       ├── components/                 # 公共组件
-│       │   ├── CommentForm.vue         # 评论表单组件
-│       │   ├── CommentTree.vue         # 递归评论树组件
-│       │   └── ImageUpload.vue         # 图片上传组件（拖拽/点击）
+│       ├── main/
+│       │   ├── java/com/codenow/
+│       │   │   ├── annotation/         # @OperationLog、@RateLimit
+│       │   │   ├── aspect/             # 操作日志、接口限流切面
+│       │   │   ├── common/             # 统一响应、文件校验等公共能力
+│       │   │   ├── config/             # CORS、Sa-Token、Redis、上传等配置
+│       │   │   ├── controller/         # 管理端、博客端、上传及本地文件接口
+│       │   │   ├── dto/                # 请求与响应 DTO/VO
+│       │   │   ├── entity/             # MyBatis-Plus 实体
+│       │   │   ├── exception/          # 业务异常与全局异常处理
+│       │   │   ├── mapper/             # 数据访问层
+│       │   │   └── service/
+│       │   │       └── impl/           # 业务实现、OSS/本地存储实现
+│       │   └── resources/
+│       │       ├── application.yaml
+│       │       ├── application-prod.yml
+│       │       └── scripts/            # Redis Lua 脚本
+│       └── test/java/com/codenow/      # JUnit 单元与 Spring 集成测试
+│           ├── common/                 # 文件真实性校验测试
+│           ├── exception/              # 全局异常映射测试
+│           └── service/impl/           # 文章、评论、本地存储 Service 测试
+│
+├── codenow-frontend/                   # Vue 3 前端
+│   ├── .dockerignore                   # 前端镜像构建忽略规则
+│   ├── Dockerfile                      # Node 构建 + 非 root Nginx 运行
+│   ├── nginx.conf                      # SPA、缓存、安全头和 API 反向代理
+│   ├── package.json                    # 前端依赖及 Lint/Test/Build 命令
+│   ├── package-lock.json               # npm 锁定依赖
+│   ├── vite.config.js                  # Vite、Vitest 与覆盖率门槛配置
+│   └── src/
+│       ├── api/                        # 后端 API 封装
+│       ├── components/                 # 评论、上传等公共组件
+│       │   └── __tests__/              # CommentForm、ImageUpload 交互测试
+│       ├── layout/                     # 管理后台与博客前台布局
 │       ├── router/                     # 路由配置（含登录守卫）
 │       ├── stores/                     # Pinia 状态管理
-│       ├── utils/                      # 工具函数（Axios 封装）
-│       └── views/                      # 页面组件
-│           ├── login/                  # 登录页（管理端）
-│           ├── article/                # 文章列表 + 文章编辑（管理端）
-│           ├── category/               # 分类管理（管理端）
-│           ├── tag/                    # 标签管理（管理端）
-│           ├── comment/                # 评论管理（管理端）
-│           ├── log/                    # 操作日志（管理端）
-│           └── blog/                   # 博客前台页面（用户端）
-│               ├── BlogHome.vue        # 博客首页（文章列表 + 热门文章）
-│               ├── BlogArticle.vue     # 文章详情页（Markdown 渲染 + 评论区）
-│               ├── BlogCategory.vue    # 分类文章页
-│               └── BlogTag.vue         # 标签文章页
+│       ├── test/setup.js               # Vitest/jsdom 全局测试初始化
+│       ├── utils/                      # Axios、格式化等工具及其测试
+│       └── views/                      # 登录、文章、分类、标签、评论、日志、博客页面
 │
-├── docker-compose.yml                  # Docker Compose 编排文件
-├── .env.example                        # 环境变量模板
-├── deploy.sh                           # Linux/Mac 一键部署脚本
-├── deploy.bat                          # Windows 一键部署脚本
-├── DEPLOY.md                           # 部署文档
-├── 开发文档.md                          # 完整开发文档
-├── 扩展功能开发文档.md                    # 扩展功能方案设计
-├── 扩展功能一-Redis缓存热门文章-操作日志.md
-├── 扩展功能二-操作日志AOP-操作日志.md
-├── 扩展功能三-评论系统-操作日志.md
-├── 扩展功能四-API接口限流-操作日志.md
-├── 扩展功能五-文件上传-操作日志.md
-├── 扩展功能六-Docker部署-操作日志.md
+├── scripts/
+│   ├── smoke-test.sh                   # Linux/CI 核心业务端到端冒烟
+│   └── smoke-test.ps1                  # Windows PowerShell 冒烟脚本
+│
+├── docs/
+│   ├── 开发/                           # 开发说明文档
+│   ├── 扩展功能/                       # Redis、日志、评论、限流、上传、Docker 文档
+│   └── 优化/
+│       ├── 项目系统性评估报告.md
+│       ├── 项目优化方案.md
+│       ├── 中等优先级问题修复总结.md
+│       └── 生产部署与CI验收报告.md
+│
+├── .env.example                        # 环境变量模板（不含真实密钥）
+├── .gitignore                          # Git 忽略规则
+├── docker-compose.yml                  # MySQL、Redis、存储初始化、后端、前端编排
+├── deploy.sh / deploy.bat              # Linux/macOS 与 Windows 部署入口
+├── DEPLOY.md                           # 部署、迁移、演练及回滚指南
 └── README.md                           # 本文件
 ```
 
@@ -298,3 +305,26 @@ http://localhost:8080/doc.html
 | admin | 123456 | 管理员 |
 
 > 密码使用 BCrypt 加密存储在数据库中，上述为明文登录密码。
+
+---
+
+## 自动化质量门禁
+
+本项目已接入 JUnit、Vitest 和 GitHub Actions。提交合并前应通过以下检查：
+
+```bash
+# 后端：26 项单元/集成测试
+cd codenow-backend
+./mvnw clean test
+
+# 前端：Lint、7 项测试、覆盖率门槛和生产构建
+cd codenow-frontend
+npm ci
+npm run lint:check
+npm run test:coverage
+npm run build
+```
+
+GitHub 仓库应在分支保护规则中将 `backend-tests`、`frontend-quality`、`compose-smoke` 设为必需检查。Compose 作业会验证完整构建、数据库升级/回滚、登录、文章发布、评论和上传流程。
+
+详细验收结果见 [生产部署与CI验收报告](docs/优化/生产部署与CI验收报告.md)。

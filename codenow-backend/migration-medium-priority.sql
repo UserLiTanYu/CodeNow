@@ -1,5 +1,18 @@
--- 已有数据库升级脚本（2026-07-15）
--- 新部署由 init.sql 自动包含该字段；已有实例仅需执行一次本脚本。
+-- Idempotent upgrade for existing databases (2026-07-15).
+-- Adds the logical-delete flag only when it is absent.
 
-ALTER TABLE `blog_article_tag`
-    ADD COLUMN `is_deleted` TINYINT DEFAULT 0 COMMENT '逻辑删除（0=正常, 1=已删）' AFTER `tag_id`;
+SET @column_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'blog_article_tag'
+      AND COLUMN_NAME = 'is_deleted'
+);
+SET @migration_sql = IF(
+    @column_exists = 0,
+    'ALTER TABLE `blog_article_tag` ADD COLUMN `is_deleted` TINYINT DEFAULT 0 AFTER `tag_id`',
+    'SELECT ''migration already applied'' AS message'
+);
+PREPARE migration_statement FROM @migration_sql;
+EXECUTE migration_statement;
+DEALLOCATE PREPARE migration_statement;

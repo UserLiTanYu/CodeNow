@@ -22,7 +22,9 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # 确保 nginx 用户有权限访问静态文件
-RUN chown -R nginx:nginx /usr/share/nginx/html
+RUN mkdir -p /var/cache/nginx /var/run && \
+    sed -i 's#/run/nginx.pid#/tmp/nginx.pid#' /etc/nginx/nginx.conf && \
+    chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/run
 
 # 暴露端口
 EXPOSE 80

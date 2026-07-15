@@ -74,6 +74,14 @@ upload:
   # 最大文件大小（5MB）
   max-size: 5242880
 
+storage:
+  # Docker/测试环境可使用 local；生产环境建议使用 oss
+  type: ${STORAGE_TYPE:oss}
+  local-path: ${STORAGE_LOCAL_PATH:uploads}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost}
+
 # 日志配置（可选，降低日志噪音）
 logging:
   level:

@@ -27,7 +27,7 @@ public class UploadController {
 
     @RateLimit(maxCount = 10, timeWindow = 60, message = "上传过于频繁，请稍后再试")
     @OperationLog("上传图片")
-    @Operation(summary = "上传图片", description = "上传图片到 OSS，返回可访问的 URL")
+    @Operation(summary = "上传图片", description = "上传图片到已配置的存储服务，返回可访问的 URL")
     @PostMapping("/image")
     public R<Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file) {
         // 校验文件是否为空
@@ -49,7 +49,7 @@ public class UploadController {
             throw new BusinessException("文件读取失败");
         }
 
-        // 上传到 OSS
+        // 上传到当前环境配置的存储服务
         String url = storageService.upload(file);
 
         Map<String, String> result = new HashMap<>();

@@ -25,13 +25,13 @@ RUN apk add --no-cache tzdata && \
 WORKDIR /app
 
 # 创建非 root 用户
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN addgroup -S -g 10001 appgroup && adduser -S -u 10001 -G appgroup appuser
 
 # 从构建阶段复制 JAR 包
 COPY --from=builder /build/target/codenow-backend.jar app.jar
 
 # 设置文件权限
-RUN chown appuser:appgroup app.jar
+RUN mkdir -p /app/uploads && chown -R appuser:appgroup app.jar /app/uploads
 
 EXPOSE 8080
 

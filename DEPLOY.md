@@ -222,3 +222,45 @@ docker compose logs frontend
 docker compose logs redis
 # 检查 REDIS_PASSWORD 是否一致
 ```
+
+---
+
+## 发布前部署演练
+
+自定义前端域名或端口时，必须将浏览器实际来源加入精确白名单，例如：
+
+```env
+FRONTEND_PORT=18081
+BACKEND_PORT=18080
+CORS_ALLOWED_ORIGINS=http://localhost:18081
+STORAGE_TYPE=local
+```
+
+`STORAGE_TYPE=local` 适合本地/测试演练，上传文件保存在 `uploads_data` 卷中；生产环境建议使用 `STORAGE_TYPE=oss` 并配置 OSS 凭据。
+
+```bash
+docker compose config --quiet
+docker compose up -d --build
+docker compose ps
+
+# 升级脚本可重复执行
+docker compose exec -T mysql mysql -uroot -p"$DB_PASSWORD" "$DB_NAME" < codenow-backend/migration-medium-priority.sql
+
+# Linux / CI 端到端冒烟
+BACKEND_URL=http://localhost:18080 FRONTEND_URL=http://localhost:18081 bash scripts/smoke-test.sh
+
+# Windows PowerShell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/smoke-test.ps1
+```
+
+## 回滚步骤
+
+回滚必须与旧应用镜像切换在同一维护窗口内进行：
+
+1. 使用 `mysqldump --single-transaction --routines --triggers` 完成全库备份，并验证备份非空。
+2. 停止写流量，保留当前镜像标签和 Compose 配置。
+3. 执行 `codenow-backend/rollback-medium-priority.sql`，再切换到旧应用镜像。
+4. 若回滚异常，优先从全库备份恢复，再重新部署已验证的新镜像。
+5. 恢复后重新运行冒烟脚本，核对文章、评论和上传文件。
+
+警告：不要使用 `docker compose down -v` 进行普通回滚，该命令会删除数据库、Redis 和本地上传卷。

@@ -39,6 +39,8 @@ node_modules/
 # 构建产物
 dist/
 out/
+.playwright-cli/
+output/playwright/
 
 # Maven
 .mvn/wrapper/maven-wrapper.jar
