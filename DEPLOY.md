@@ -72,6 +72,32 @@ sudo docker compose version
 
 ## 4. 获取代码
 
+当前仓库为私有仓库，生产服务器应使用该仓库专属的只读 Deploy Key，不要把个人 GitHub 密码或长期访问令牌保存到服务器。
+
+在生产服务器生成专用 SSH 密钥：
+
+```bash
+install -d -m 700 ~/.ssh
+ssh-keygen -t ed25519 -C "codenow-production-deploy" -f ~/.ssh/id_ed25519 -N ""
+cat ~/.ssh/id_ed25519.pub
+```
+
+复制最后一条命令输出的完整公钥，进入 GitHub 仓库：
+
+```text
+Settings → Deploy keys → Add deploy key
+```
+
+标题可填写 `CodeNow production server`，Key 粘贴完整公钥。保持 `Allow write access` 未勾选，只授予只读权限。GitHub 对 Deploy Key 的说明参见 [Managing deploy keys](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys)。
+
+回到服务器验证 SSH：
+
+```bash
+ssh -T git@github.com
+```
+
+第一次连接时核对提示中的主机为 `github.com`，输入 `yes`。验证成功后再克隆：
+
 ```bash
 sudo mkdir -p /opt/codenow
 sudo chown "$USER":"$USER" /opt/codenow
