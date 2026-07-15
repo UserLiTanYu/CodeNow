@@ -2,6 +2,7 @@ package com.codenow.aspect;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.codenow.annotation.OperationLog;
+import com.codenow.common.IpUtils;
 import com.codenow.entity.SysOperationLog;
 import com.codenow.service.OperationLogService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -119,23 +120,9 @@ public class OperationLogAspect {
     }
 
     /**
-     * 获取客户端真实 IP（兼容代理）
+     * 获取客户端 IP（日志专用，信任 Nginx 传递的 X-Forwarded-For）
      */
     private String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("Proxy-Client-IP");
-        }
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("WL-Proxy-Client-IP");
-        }
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        // 多个代理时取第一个
-        if (ip != null && ip.contains(",")) {
-            ip = ip.split(",")[0].trim();
-        }
-        return ip;
+        return IpUtils.getProxyIp(request);
     }
 }

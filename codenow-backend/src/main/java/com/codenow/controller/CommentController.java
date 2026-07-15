@@ -3,6 +3,7 @@ package com.codenow.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.codenow.annotation.OperationLog;
 import com.codenow.annotation.RateLimit;
+import com.codenow.common.IpUtils;
 import com.codenow.common.R;
 import com.codenow.dto.CommentDTO;
 import com.codenow.entity.BlogComment;
@@ -67,13 +68,6 @@ public class CommentController {
     }
 
     private String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        if (ip != null && ip.contains(",")) {
-            ip = ip.split(",")[0].trim();
-        }
-        return ip;
+        return IpUtils.getRealIp(request);
     }
 }

@@ -62,6 +62,7 @@ import { useRoute } from 'vue-router'
 import { Folder, Clock, View } from '@element-plus/icons-vue'
 import { marked } from 'marked'
 import { markedHighlight } from 'marked-highlight'
+import DOMPurify from 'dompurify'
 import CommentForm from '@/components/CommentForm.vue'
 import CommentTree from '@/components/CommentTree.vue'
 import hljs from 'highlight.js'
@@ -90,7 +91,9 @@ const loading = ref(true)
 
 const renderedContent = computed(() => {
   if (!article.value?.content) return ''
-  return marked(article.value.content)
+  const html = marked(article.value.content)
+  // 使用 DOMPurify 过滤 XSS，允许代码高亮的 class 属性
+  return DOMPurify.sanitize(html, { ADD_ATTR: ['class'] })
 })
 
 async function fetchArticle(id) {

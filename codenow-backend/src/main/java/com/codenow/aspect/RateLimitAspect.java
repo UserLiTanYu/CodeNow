@@ -1,9 +1,9 @@
 package com.codenow.aspect;
 
 import com.codenow.annotation.RateLimit;
+import com.codenow.common.IpUtils;
 import com.codenow.exception.RateLimitException;
 import jakarta.annotation.PostConstruct;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
@@ -98,18 +98,8 @@ public class RateLimitAspect {
         try {
             ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             if (attributes == null) return "unknown";
-            HttpServletRequest request = attributes.getRequest();
-            String ip = request.getHeader("X-Forwarded-For");
-            if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-                ip = request.getHeader("X-Real-IP");
-            }
-            if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-                ip = request.getRemoteAddr();
-            }
-            if (ip != null && ip.contains(",")) {
-                ip = ip.split(",")[0].trim();
-            }
-            return ip;
+            // 限流场景：直接使用 getRemoteAddr()，不信任客户端伪造的 X-Forwarded-For
+            return IpUtils.getRealIp(attributes.getRequest());
         } catch (Exception e) {
             return "unknown";
         }
