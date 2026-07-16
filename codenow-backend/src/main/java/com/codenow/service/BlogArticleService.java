@@ -51,7 +51,8 @@ public interface BlogArticleService extends IService<BlogArticle> {
     /**
      * 分页查询已发布文章（用户端，仅 status=1）
      */
-    Page<ArticleVO> pagePublishedArticles(Integer pageNum, Integer pageSize, Long categoryId, Long tagId);
+    Page<ArticleVO> pagePublishedArticles(Integer pageNum, Integer pageSize, Long categoryId, Long tagId,
+                                          String keyword);
 
     /**
      * 查询已发布文章详情（用户端），同时浏览量 +1

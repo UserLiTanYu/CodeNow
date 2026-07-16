@@ -160,12 +160,35 @@ class BlogArticleServiceImplTest {
         mockPage.setTotal(0);
         mockPage.setRecords(Collections.emptyList());
 
-        when(articleMapper.selectPage(any(Page.class), any(LambdaQueryWrapper.class))).thenReturn(mockPage);
+        when(articleMapper.selectPublishedArticlePage(any(Page.class), isNull(), isNull(), isNull()))
+                .thenReturn(mockPage);
 
-        Page<ArticleVO> result = articleService.pagePublishedArticles(1, 10, null, null);
+        Page<ArticleVO> result = articleService.pagePublishedArticles(1, 10, null, null, null);
 
         assertNotNull(result);
         assertEquals(0, result.getTotal());
+    }
+
+    @Test
+    void pagePublishedArticles_shouldTrimSearchKeyword() {
+        Page<BlogArticle> mockPage = new Page<>(1, 10);
+        mockPage.setTotal(0);
+        mockPage.setRecords(Collections.emptyList());
+        when(articleMapper.selectPublishedArticlePage(any(Page.class), isNull(), isNull(), eq("Spring Boot")))
+                .thenReturn(mockPage);
+
+        articleService.pagePublishedArticles(1, 10, null, null, "  Spring Boot  ");
+
+        verify(articleMapper).selectPublishedArticlePage(any(Page.class), isNull(), isNull(), eq("Spring Boot"));
+    }
+
+    @Test
+    void pagePublishedArticles_shouldRejectOverlongKeyword() {
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> articleService.pagePublishedArticles(1, 10, null, null, "x".repeat(101)));
+
+        assertEquals(400, exception.getCode());
+        verify(articleMapper, never()).selectPublishedArticlePage(any(), any(), any(), any());
     }
 
     @Test
