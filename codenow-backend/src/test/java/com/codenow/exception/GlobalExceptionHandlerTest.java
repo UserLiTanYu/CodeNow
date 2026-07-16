@@ -1,5 +1,7 @@
 package com.codenow.exception;
 
+import cn.dev33.satoken.exception.NotLoginException;
+import cn.dev33.satoken.exception.NotPermissionException;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -7,6 +9,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.mock;
 
 class GlobalExceptionHandlerTest {
 
@@ -40,6 +43,24 @@ class GlobalExceptionHandlerTest {
         var exception = new HttpRequestMethodNotSupportedException("TRACE");
 
         assertEquals(HttpStatus.METHOD_NOT_ALLOWED, handler.handleMethodNotAllowed(exception).getStatusCode());
+    }
+
+    @Test
+    void notLogin_shouldReturn401() {
+        var response = handler.handleNotLoginException(mock(NotLoginException.class));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("登录已失效，请重新登录", response.getBody().getMessage());
+    }
+
+    @Test
+    void notPermission_shouldReturn403() {
+        var response = handler.handleNotPermissionException(mock(NotPermissionException.class));
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("没有权限执行此操作", response.getBody().getMessage());
     }
 
     @Test

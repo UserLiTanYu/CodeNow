@@ -576,6 +576,25 @@ docker stats --no-stream codenow-mysql
 
 项目对 2 GB 服务器默认使用 128 MB InnoDB 缓冲池、50 个最大连接、400 个打开表缓存和 1 个表缓存实例。调整 `MYSQL_MAX_CONNECTIONS` 前，应保证它明显高于长期观测到的 `Max_used_connections`。这些参数只在 MySQL 容器启动时生效，修改后需要重建 MySQL 容器；数据保存在 `mysql_data` 卷中，不要添加 `-v`。
 
+### 14.6 管理后台没有自动跳转登录页
+
+浏览器会按来源保存 `localStorage`，重启容器或替换数据库不会自动删除 `http://localhost:5173`、公网 IP 或域名下的旧 Token。当前版本首次进入管理路由时会调用 `/api/auth/me` 校验 Token；后端返回 401/403 时，前端会清除 Token 并跳转到登录页，同时用 `redirect` 参数保留原目标页面。
+
+检查浏览器当前来源是否残留 Token：
+
+```javascript
+localStorage.getItem('token')
+```
+
+需要手动清理时执行：
+
+```javascript
+localStorage.removeItem('token')
+location.href = '/login'
+```
+
+如果认证接口因网络或服务启动过程暂时不可达，路由守卫不会删除可能仍有效的 Token；此时应先检查后端状态和 `/api/auth/me` 响应。后端正常但 Token 失效时，预期 HTTP 状态为 401；无权限时预期为 403，不应返回通用 500。
+
 ## 15. 上线检查清单
 
 - [ ] 使用已通过 CI 的固定 Tag

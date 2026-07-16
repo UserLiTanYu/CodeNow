@@ -1,5 +1,7 @@
 package com.codenow.exception;
 
+import cn.dev33.satoken.exception.NotLoginException;
+import cn.dev33.satoken.exception.NotPermissionException;
 import com.codenow.common.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -24,6 +26,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RateLimitException.class)
     public ResponseEntity<R<Void>> handleRateLimitException(RateLimitException e) {
         return response(e.getCode(), e.getMessage());
+    }
+
+    @ExceptionHandler(NotLoginException.class)
+    public ResponseEntity<R<Void>> handleNotLoginException(NotLoginException e) {
+        return response(401, "登录已失效，请重新登录");
+    }
+
+    @ExceptionHandler(NotPermissionException.class)
+    public ResponseEntity<R<Void>> handleNotPermissionException(NotPermissionException e) {
+        return response(403, "没有权限执行此操作");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

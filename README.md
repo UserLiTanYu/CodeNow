@@ -230,7 +230,7 @@ http://localhost:8080/doc.html
 - [x] 标签 CRUD
 - [x] 全局异常处理（统一 `{code, message, data}` 返回格式）
 - [x] 参数校验（`@NotBlank` + `@Valid`）
-- [x] Sa-Token 登录认证 + 路由守卫
+- [x] Sa-Token 登录认证 + 路由守卫（首次进入管理路由校验 Token，401/403 自动清理会话并返回登录页）
 - [x] Knife4j API 文档自动生成
 
 ### 博客前台

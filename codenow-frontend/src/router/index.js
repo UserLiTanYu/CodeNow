@@ -94,18 +94,67 @@ router.afterEach((to) => {
   document.title = `${to.meta.title || '页面'} - 码上记`
 })
 
+let verifiedToken = ''
+
+export function resetTokenVerification() {
+  verifiedToken = ''
+}
+
+export async function verifyToken(token) {
+  const response = await fetch('/api/auth/me', {
+    headers: { Authorization: token },
+  })
+
+  if (response.status === 401 || response.status === 403) {
+    return false
+  }
+  if (!response.ok) {
+    throw new Error(`Token verification failed with HTTP ${response.status}`)
+  }
+
+  const result = await response.json()
+  return result.code === 200
+}
+
+function loginLocation(to) {
+  return {
+    name: 'login',
+    query: to.fullPath && to.fullPath !== '/' ? { redirect: to.fullPath } : {},
+  }
+}
+
 // 路由守卫：/blog 路由公开访问，其他路由需要登录
-router.beforeEach((to, from, next) => {
+export async function authGuard(to) {
   const token = localStorage.getItem('token')
   if (to.path.startsWith('/blog')) {
-    next()
-  } else if (to.path === '/login') {
-    next()
-  } else if (!token) {
-    next('/login')
-  } else {
-    next()
+    return true
   }
-})
+  if (to.path === '/login') {
+    return true
+  }
+  if (!token) {
+    resetTokenVerification()
+    return loginLocation(to)
+  }
+  if (token === verifiedToken) {
+    return true
+  }
+
+  try {
+    if (await verifyToken(token)) {
+      verifiedToken = token
+      return true
+    }
+
+    localStorage.removeItem('token')
+    resetTokenVerification()
+    return loginLocation(to)
+  } catch {
+    // 网络或服务临时不可用时保留 Token；后续 API 请求仍由后端执行权限校验。
+    return true
+  }
+}
+
+router.beforeEach(authGuard)
 
 export default router
