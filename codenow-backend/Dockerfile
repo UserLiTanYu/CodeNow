@@ -39,7 +39,7 @@ EXPOSE 8080
 USER appuser
 
 # JVM 参数优化
-ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError"
+ENV JAVA_OPTS="-Xms128m -Xmx384m -XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError"
 
 # 使用 exec 形式确保正确的信号处理（PID 1）
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar --spring.profiles.active=prod"]
