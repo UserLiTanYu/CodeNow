@@ -115,6 +115,12 @@ REDIS_PASSWORD=<另一个独立随机值>
 JWT_SECRET=<另一个至少32字节的随机值>
 JAVA_OPTS=-Xms128m -Xmx384m -XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError
 
+# 2 GB 小型服务器的 MySQL 保守配置
+MYSQL_INNODB_BUFFER_POOL_SIZE=128M
+MYSQL_MAX_CONNECTIONS=50
+MYSQL_TABLE_OPEN_CACHE=400
+MYSQL_TABLE_OPEN_CACHE_INSTANCES=1
+
 # 仅允许宿主机访问容器入口
 BACKEND_PORT=127.0.0.1:8080
 FRONTEND_PORT=127.0.0.1:8081
@@ -141,6 +147,10 @@ OSS_ACCESS_KEY_SECRET=
 | `DB_PASSWORD` | 是 | MySQL root 密码，使用随机强密码 |
 | `DB_NAME` | 否 | 数据库名，默认 `codenow` |
 | `DB_SSL_MODE` | 否 | 数据库 TLS 模式，生产默认 `REQUIRED` |
+| `MYSQL_INNODB_BUFFER_POOL_SIZE` | 否 | InnoDB 缓冲池；2 GB 服务器建议 `128M` |
+| `MYSQL_MAX_CONNECTIONS` | 否 | MySQL 最大连接数；小型博客建议 `50`，扩容前先观察 `Max_used_connections` |
+| `MYSQL_TABLE_OPEN_CACHE` | 否 | 打开表缓存；小型博客建议 `400` |
+| `MYSQL_TABLE_OPEN_CACHE_INSTANCES` | 否 | 表缓存实例数；小型服务器建议 `1` |
 | `REDIS_PASSWORD` | 是 | Redis 密码 |
 | `JWT_SECRET` | 是 | JWT HMAC 密钥，至少 32 字节 |
 | `JAVA_OPTS` | 否 | Java 运行参数；2 GB 服务器建议 `-Xms128m -Xmx384m` |
@@ -456,6 +466,10 @@ docker compose down
 # 查看磁盘占用
 docker system df
 docker volume ls
+
+# 查看容器和宿主机内存
+docker stats --no-stream
+free -h
 ```
 
 不要在未确认数据备份的情况下清理卷。
@@ -506,6 +520,18 @@ docker compose exec -T mysql sh -c \
 ```
 
 不要在不清楚数据影响时手工删除表或数据卷。
+
+### 14.5 2 GB 服务器的 MySQL 内存偏高
+
+先检查实际峰值连接、打开表数量和容器状态，不要直接关闭 `performance_schema`：
+
+```bash
+docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SHOW VARIABLES WHERE Variable_name IN (\"innodb_buffer_pool_size\", \"max_connections\", \"table_open_cache\", \"table_open_cache_instances\", \"performance_schema\"); SHOW GLOBAL STATUS WHERE Variable_name IN (\"Threads_connected\", \"Max_used_connections\", \"Open_tables\", \"Opened_tables\");"'
+docker inspect codenow-mysql --format '状态={{.State.Status}} 重启次数={{.RestartCount}} OOM={{.State.OOMKilled}}'
+docker stats --no-stream codenow-mysql
+```
+
+项目对 2 GB 服务器默认使用 128 MB InnoDB 缓冲池、50 个最大连接、400 个打开表缓存和 1 个表缓存实例。调整 `MYSQL_MAX_CONNECTIONS` 前，应保证它明显高于长期观测到的 `Max_used_connections`。这些参数只在 MySQL 容器启动时生效，修改后需要重建 MySQL 容器；数据保存在 `mysql_data` 卷中，不要添加 `-v`。
 
 ## 15. 上线检查清单
 
