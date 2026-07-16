@@ -64,7 +64,7 @@ function handleReplySuccess() {
 <style scoped>
 .comment-item {
   padding: 16px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--blog-color-border);
 }
 .comment-item:last-child {
   border-bottom: none;
@@ -78,15 +78,15 @@ function handleReplySuccess() {
 .comment-nickname {
   font-size: 15px;
   font-weight: 600;
-  color: #303133;
+  color: var(--blog-color-text);
 }
 .comment-time {
   font-size: 12px;
-  color: #909399;
+  color: var(--blog-color-text-muted);
 }
 .comment-content {
   font-size: 14px;
-  color: #606266;
+  color: var(--blog-color-text-secondary);
   line-height: 1.7;
   margin-bottom: 8px;
   white-space: pre-wrap;
@@ -98,18 +98,18 @@ function handleReplySuccess() {
 .btn-reply {
   background: none;
   border: none;
-  color: #409eff;
+  color: var(--blog-color-primary);
   font-size: 13px;
   cursor: pointer;
   padding: 0;
 }
 .btn-reply:hover {
-  color: #66b1ff;
+  color: var(--blog-color-primary-strong);
 }
 .comment-children {
   margin-left: 32px;
   padding-left: 16px;
-  border-left: 2px solid #f0f2f5;
+  border-left: 2px solid var(--blog-color-border);
 }
 .reply-form {
   margin: 12px 0;

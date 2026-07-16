@@ -104,25 +104,25 @@ watch(
 
 <style scoped>
 .page-header {
-  margin-bottom: 16px;
-  padding: 18px 22px;
+  margin-bottom: var(--blog-space-4);
+  padding: var(--blog-space-4) var(--blog-space-5);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  border: 1px solid #ebeef5;
-  border-radius: 10px;
-  background: #fff;
+  gap: var(--blog-space-5);
+  border: 1px solid var(--blog-color-border);
+  border-radius: var(--blog-radius-card);
+  background: var(--blog-color-surface);
 }
 .page-eyebrow {
-  color: #337ecc;
+  color: var(--blog-color-primary);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
 }
 .page-header h1 {
-  margin: 3px 0 0;
-  color: #303133;
+  margin: var(--blog-space-1) 0 0;
+  color: var(--blog-color-text);
   font-size: 21px;
   font-weight: 600;
 }
@@ -130,7 +130,7 @@ watch(
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #7d8592;
+  color: var(--blog-color-text-secondary);
   font-size: 13px;
 }
 .sort-control :deep(.el-select) {
@@ -144,11 +144,12 @@ watch(
 .loading-box,
 .empty-box {
   padding: 40px;
-  border-radius: 10px;
-  background: #fff;
+  border: 1px solid var(--blog-color-border);
+  border-radius: var(--blog-radius-card);
+  background: var(--blog-color-surface);
 }
 .error-alert {
-  margin-bottom: 16px;
+  margin-bottom: var(--blog-space-4);
 }
 @media (max-width: 520px) {
   .page-header {

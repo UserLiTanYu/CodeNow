@@ -195,55 +195,57 @@ watch(
 
 <style scoped>
 .article-header {
-  background: #fff;
-  border-radius: 8px;
-  padding: 32px;
-  margin-bottom: 16px;
+  margin-bottom: var(--blog-space-4);
+  padding: var(--blog-space-6);
+  border: 1px solid var(--blog-color-border);
+  border-radius: var(--blog-radius-card);
+  background: var(--blog-color-surface);
 }
 .article-title {
   font-size: 28px;
   font-weight: 700;
-  margin: 0 0 16px;
-  color: #303133;
+  margin: 0 0 var(--blog-space-4);
+  color: var(--blog-color-text);
   line-height: 1.4;
 }
 .article-meta {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: var(--blog-space-5);
   font-size: 14px;
-  color: #909399;
-  margin-bottom: 12px;
+  color: var(--blog-color-text-muted);
+  margin-bottom: var(--blog-space-3);
 }
 .meta-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--blog-space-1);
 }
 .article-tags {
   display: flex;
-  gap: 8px;
+  gap: var(--blog-space-2);
   flex-wrap: wrap;
 }
 .tag-link {
-  padding: 3px 10px;
-  background: #ecf5ff;
-  color: #409eff;
-  border-radius: 4px;
+  padding: var(--blog-space-1) var(--blog-space-2);
+  background: var(--blog-color-primary-soft);
+  color: var(--blog-color-primary);
+  border-radius: var(--blog-radius-tag);
   font-size: 13px;
   text-decoration: none;
   transition: all 0.2s;
 }
 .tag-link:hover {
-  background: #409eff;
+  background: var(--blog-color-primary);
   color: #fff;
 }
 
 /* 文章内容 */
 .article-body {
-  background: #fff;
-  border-radius: 8px;
-  padding: 32px;
+  padding: var(--blog-space-6);
+  border: 1px solid var(--blog-color-border);
+  border-radius: var(--blog-radius-card);
+  background: var(--blog-color-surface);
 }
 
 /* Markdown 样式 */
@@ -260,18 +262,18 @@ watch(
 .markdown-body :deep(p) {
   line-height: 1.8;
   margin: 0 0 12px;
-  color: #303133;
+  color: var(--blog-color-text);
 }
 .markdown-body :deep(code) {
-  background: #f0f2f5;
+  background: var(--blog-color-background);
   padding: 2px 6px;
-  border-radius: 3px;
+  border-radius: var(--blog-radius-tag);
   font-size: 13px;
   font-family: 'Courier New', Courier, monospace;
 }
 .markdown-body :deep(pre) {
-  background: #f6f8fa;
-  border-radius: 6px;
+  background: var(--blog-color-background);
+  border-radius: var(--blog-radius-button);
   padding: 16px;
   overflow-x: auto;
   margin: 0 0 16px;
@@ -283,11 +285,11 @@ watch(
   line-height: 1.6;
 }
 .markdown-body :deep(blockquote) {
-  border-left: 4px solid #409eff;
+  border-left: 4px solid var(--blog-color-primary);
   margin: 0 0 16px;
   padding: 12px 16px;
-  background: #f0f7ff;
-  color: #606266;
+  background: var(--blog-color-primary-soft);
+  color: var(--blog-color-text-secondary);
 }
 .markdown-body :deep(ul),
 .markdown-body :deep(ol) {
@@ -304,38 +306,40 @@ watch(
 }
 .markdown-body :deep(th),
 .markdown-body :deep(td) {
-  border: 1px solid #e4e7ed;
+  border: 1px solid var(--blog-color-border);
   padding: 8px 12px;
   text-align: left;
 }
 .markdown-body :deep(th) {
-  background: #f5f7fa;
+  background: var(--blog-color-background);
   font-weight: 600;
 }
 .markdown-body :deep(img) {
   max-width: 100%;
-  border-radius: 4px;
+  border-radius: var(--blog-radius-tag);
 }
 
 .loading-box,
 .empty-box {
-  background: #fff;
-  border-radius: 8px;
   padding: 40px;
+  border: 1px solid var(--blog-color-border);
+  border-radius: var(--blog-radius-card);
+  background: var(--blog-color-surface);
 }
 
 /* 评论区 */
 .comment-section {
-  background: #fff;
-  border-radius: 8px;
-  padding: 32px;
-  margin-top: 16px;
+  margin-top: var(--blog-space-4);
+  padding: var(--blog-space-6);
+  border: 1px solid var(--blog-color-border);
+  border-radius: var(--blog-radius-card);
+  background: var(--blog-color-surface);
 }
 .section-title {
   margin: 0 0 20px;
   font-size: 18px;
   font-weight: 600;
-  color: #303133;
+  color: var(--blog-color-text);
 }
 .comment-list {
   margin-top: 24px;
@@ -343,7 +347,7 @@ watch(
 .no-comments {
   margin-top: 24px;
   text-align: center;
-  color: #909399;
+  color: var(--blog-color-text-muted);
   font-size: 14px;
 }
 .comment-pagination {

@@ -76,24 +76,24 @@ const hiddenTagNames = computed(() => tags.value.slice(2).map((tag) => tag.name)
 <style scoped>
 .article-card {
   position: relative;
-  margin-bottom: 16px;
-  padding: 24px 26px;
+  margin-bottom: var(--blog-space-4);
+  padding: var(--blog-space-5);
   display: flex;
-  gap: 24px;
+  gap: var(--blog-space-5);
   overflow: hidden;
-  border: 1px solid #ebeef5;
-  border-radius: 10px;
-  background: #fff;
+  border: 1px solid var(--blog-color-border);
+  border-radius: var(--blog-radius-card);
+  background: var(--blog-color-surface);
   cursor: pointer;
   transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 .article-card:hover {
-  border-color: #c6e2ff;
+  border-color: var(--blog-color-border-hover);
   transform: translateY(-2px);
-  box-shadow: 0 7px 18px rgba(31, 45, 61, 0.08);
+  box-shadow: var(--blog-shadow-hover);
 }
 .article-card:hover .card-title {
-  color: #337ecc;
+  color: var(--blog-color-primary);
 }
 .card-hit-area {
   position: absolute;
@@ -102,7 +102,7 @@ const hiddenTagNames = computed(() => tags.value.slice(2).map((tag) => tag.name)
   border-radius: inherit;
 }
 .card-hit-area:focus-visible {
-  outline: 3px solid rgba(64, 158, 255, 0.35);
+  outline: 3px solid rgba(51, 126, 204, 0.28);
   outline-offset: -3px;
 }
 .card-content {
@@ -113,11 +113,11 @@ const hiddenTagNames = computed(() => tags.value.slice(2).map((tag) => tag.name)
   margin-bottom: 10px;
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: var(--blog-space-2);
 }
 .card-title {
   margin: 0;
-  color: #252b33;
+  color: var(--blog-color-text);
   font-size: 21px;
   font-weight: 600;
   line-height: 1.45;
@@ -125,12 +125,13 @@ const hiddenTagNames = computed(() => tags.value.slice(2).map((tag) => tag.name)
 }
 .top-tag {
   flex-shrink: 0;
+  border-radius: var(--blog-radius-tag);
 }
 .card-summary {
-  margin: 0 0 15px;
+  margin: 0 0 var(--blog-space-4);
   overflow: hidden;
   display: -webkit-box;
-  color: #606873;
+  color: var(--blog-color-text-secondary);
   font-size: 15px;
   line-height: 1.7;
   -webkit-box-orient: vertical;
@@ -140,8 +141,8 @@ const hiddenTagNames = computed(() => tags.value.slice(2).map((tag) => tag.name)
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 9px 14px;
-  color: #9098a3;
+  gap: var(--blog-space-2) var(--blog-space-4);
+  color: var(--blog-color-text-muted);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -154,12 +155,12 @@ const hiddenTagNames = computed(() => tags.value.slice(2).map((tag) => tag.name)
 .meta-link {
   position: relative;
   z-index: 2;
-  color: #7c8795;
+  color: var(--blog-color-text-secondary);
   text-decoration: none;
   transition: color 0.16s ease, background-color 0.16s ease;
 }
 .meta-link:hover {
-  color: #337ecc;
+  color: var(--blog-color-primary);
 }
 .meta-link:focus-visible {
   outline: 3px solid rgba(64, 158, 255, 0.3);
@@ -167,24 +168,24 @@ const hiddenTagNames = computed(() => tags.value.slice(2).map((tag) => tag.name)
 }
 .tag-link,
 .more-tags {
-  padding: 3px 8px;
-  border-radius: 5px;
-  background: #f2f4f7;
+  padding: var(--blog-space-1) var(--blog-space-2);
+  border-radius: var(--blog-radius-tag);
+  background: var(--blog-color-background);
   font-size: 12px;
 }
 .tag-link:hover {
-  background: #eaf4ff;
+  background: var(--blog-color-primary-soft);
 }
 .more-tags {
-  color: #9098a3;
+  color: var(--blog-color-text-muted);
 }
 .card-cover {
   width: 180px;
   height: 110px;
   flex-shrink: 0;
   overflow: hidden;
-  border-radius: 8px;
-  background: #f5f7fa;
+  border-radius: var(--blog-radius-card);
+  background: var(--blog-color-background);
 }
 .card-cover img {
   width: 100%;
@@ -199,8 +200,8 @@ const hiddenTagNames = computed(() => tags.value.slice(2).map((tag) => tag.name)
 
 @media (max-width: 640px) {
   .article-card {
-    padding: 19px;
-    gap: 14px;
+    padding: var(--blog-space-4);
+    gap: var(--blog-space-4);
   }
   .card-title {
     font-size: 18px;
