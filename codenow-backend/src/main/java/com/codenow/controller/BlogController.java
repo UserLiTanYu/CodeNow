@@ -51,11 +51,10 @@ public class BlogController {
     }
 
     @RateLimit(maxCount = 20, timeWindow = 10, message = "请求过于频繁，请稍后再试")
-    @Operation(summary = "查询热门文章", description = "返回浏览量 Top 10 的已发布文章，数据来自 Redis 缓存")
+    @Operation(summary = "查询热门文章", description = "固定返回浏览量 Top 3 的已发布文章；Redis 为空时从数据库重建缓存")
     @GetMapping("/articles/hot")
-    public R<List<ArticleVO>> hotArticles(
-            @Parameter(description = "返回数量", example = "10") @RequestParam(defaultValue = "10") Integer topN) {
-        List<Long> ids = hotArticleService.getHotArticleIds(topN);
+    public R<List<ArticleVO>> hotArticles() {
+        List<Long> ids = hotArticleService.getHotArticleIds();
         if (ids.isEmpty()) {
             return R.ok(Collections.emptyList());
         }

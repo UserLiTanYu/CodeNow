@@ -200,8 +200,14 @@ watch(
 
 watch(
   () => route.fullPath,
-  () => {
+  async () => {
     mobileMenuOpen.value = false
+    try {
+      const hotRes = await getHotArticles()
+      hotArticles.value = (hotRes.data || []).slice(0, 3)
+    } catch {
+      // 热门榜刷新失败时保留上一次成功结果。
+    }
   },
 )
 
@@ -210,11 +216,11 @@ onMounted(async () => {
     const [catRes, tagRes, hotRes] = await Promise.all([
       getBlogCategories(),
       getBlogTags(),
-      getHotArticles({ topN: 10 }),
+      getHotArticles(),
     ])
     categories.value = catRes.data
     tags.value = tagRes.data
-    hotArticles.value = hotRes.data
+    hotArticles.value = (hotRes.data || []).slice(0, 3)
   } catch {
     // 辅助内容加载失败不影响文章主列表。
   }

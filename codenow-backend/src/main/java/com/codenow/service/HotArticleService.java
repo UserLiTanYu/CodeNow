@@ -12,7 +12,7 @@ public interface HotArticleService {
     /**
      * 获取热门文章 ID 列表（Top N）
      */
-    List<Long> getHotArticleIds(int topN);
+    List<Long> getHotArticleIds();
 
     /**
      * 检查缓存是否存在
