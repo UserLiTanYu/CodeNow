@@ -17,17 +17,24 @@ CREATE TABLE `sys_user` (
     `nickname`    VARCHAR(50)  DEFAULT NULL            COMMENT '昵称',
     `avatar`      VARCHAR(255) DEFAULT NULL            COMMENT '头像 URL',
     `email`       VARCHAR(100) DEFAULT NULL            COMMENT '邮箱',
-    `role`        VARCHAR(20)  DEFAULT 'admin'         COMMENT '角色（admin/user）',
+    `role`        VARCHAR(20)  NOT NULL DEFAULT 'USER' COMMENT '角色（ADMIN/USER）',
+    `status`      VARCHAR(20)  NOT NULL DEFAULT 'ACTIVE' COMMENT '状态（ACTIVE/BANNED）',
+    `email_verified` TINYINT   NOT NULL DEFAULT 0      COMMENT '邮箱是否已验证',
+    `last_login_time` DATETIME DEFAULT NULL            COMMENT '最后登录时间',
+    `last_login_ip` VARCHAR(64) DEFAULT NULL            COMMENT '最后登录 IP',
+    `agreement_version` VARCHAR(32) DEFAULT NULL        COMMENT '已接受的协议版本',
+    `agreement_accepted_at` DATETIME DEFAULT NULL       COMMENT '接受协议时间',
     `create_time` DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `is_deleted`  TINYINT      DEFAULT 0               COMMENT '逻辑删除（0=正常, 1=已删）',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_username` (`username`)
+    UNIQUE KEY `uk_username` (`username`),
+    UNIQUE KEY `uk_email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
 
 -- 默认管理员账号：admin / 123456（BCrypt 加密）
-INSERT INTO `sys_user` (`username`, `password`, `nickname`, `role`)
-VALUES ('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '管理员', 'admin');
+INSERT INTO `sys_user` (`username`, `password`, `nickname`, `role`, `status`, `email_verified`)
+VALUES ('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '管理员', 'ADMIN', 'ACTIVE', 1);
 
 -- -------------------------------------------
 -- 2. 分类表
@@ -128,6 +135,7 @@ CREATE TABLE `blog_comment` (
     `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
     `article_id`  BIGINT       NOT NULL                COMMENT '文章 ID',
     `parent_id`   BIGINT       DEFAULT 0                COMMENT '父评论 ID（顶级评论为 0）',
+    `user_id`     BIGINT       DEFAULT NULL             COMMENT '评论用户 ID',
     `content`     TEXT         NOT NULL                COMMENT '评论内容',
     `nickname`    VARCHAR(50)  NOT NULL                COMMENT '昵称',
     `email`       VARCHAR(100) DEFAULT NULL            COMMENT '邮箱（不公开显示）',
@@ -137,5 +145,23 @@ CREATE TABLE `blog_comment` (
     PRIMARY KEY (`id`),
     KEY `idx_article_id` (`article_id`),
     KEY `idx_parent_id` (`parent_id`),
-    CONSTRAINT `fk_comment_article` FOREIGN KEY (`article_id`) REFERENCES `blog_article` (`id`) ON DELETE CASCADE
+    KEY `idx_comment_user_id` (`user_id`),
+    CONSTRAINT `fk_comment_article` FOREIGN KEY (`article_id`) REFERENCES `blog_article` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_comment_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='评论表';
+
+-- -------------------------------------------
+-- 8. 文章收藏表
+-- -------------------------------------------
+DROP TABLE IF EXISTS `article_favorite`;
+CREATE TABLE `article_favorite` (
+    `id`          BIGINT   NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `user_id`     BIGINT   NOT NULL                COMMENT '用户 ID',
+    `article_id`  BIGINT   NOT NULL                COMMENT '文章 ID',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '收藏时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_favorite_user_article` (`user_id`, `article_id`),
+    KEY `idx_favorite_article_id` (`article_id`),
+    CONSTRAINT `fk_favorite_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_favorite_article` FOREIGN KEY (`article_id`) REFERENCES `blog_article` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='文章收藏表';

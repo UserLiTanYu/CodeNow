@@ -26,6 +26,8 @@ public class BlogComment {
      */
     private Long parentId;
 
+    private Long userId;
+
     /**
      * 评论内容
      */

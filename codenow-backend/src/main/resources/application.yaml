@@ -2,6 +2,9 @@ server:
   port: 8080
 
 spring:
+  profiles:
+    # 本地直接启动默认加载 application-local.yml；生产环境通过环境变量切换为 prod。
+    active: ${SPRING_PROFILES_ACTIVE:local}
   application:
     name: codenow-backend
   # 数据源配置
@@ -17,6 +20,23 @@ spring:
       port: 6379
       database: 1
       password: ${REDIS_PASSWORD:123456}
+  mail:
+    host: ${MAIL_HOST:smtp.example.com}
+    port: ${MAIL_PORT:465}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: ${MAIL_SSL:true}
+
+app:
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+    from: ${MAIL_FROM:${MAIL_USERNAME:}}
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
 
 # MyBatis-Plus 配置
 mybatis-plus:

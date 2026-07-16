@@ -2,6 +2,7 @@ package com.codenow.exception;
 
 import cn.dev33.satoken.exception.NotLoginException;
 import cn.dev33.satoken.exception.NotPermissionException;
+import cn.dev33.satoken.exception.NotRoleException;
 import com.codenow.common.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -35,6 +36,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(NotPermissionException.class)
     public ResponseEntity<R<Void>> handleNotPermissionException(NotPermissionException e) {
+        return response(403, "没有权限执行此操作");
+    }
+
+    @ExceptionHandler(NotRoleException.class)
+    public ResponseEntity<R<Void>> handleNotRoleException(NotRoleException e) {
         return response(403, "没有权限执行此操作");
     }
 

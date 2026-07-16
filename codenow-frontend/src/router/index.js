@@ -13,6 +13,7 @@ const router = createRouter({
       path: '/',
       component: () => import('@/layout/MainLayout.vue'),
       redirect: '/articles',
+      meta: { requiresAdmin: true },
       children: [
         {
           path: 'articles',
@@ -50,6 +51,12 @@ const router = createRouter({
           meta: { title: '操作日志' },
           component: () => import('@/views/log/LogList.vue'),
         },
+        {
+          path: 'users',
+          name: 'users',
+          meta: { title: '用户管理' },
+          component: () => import('@/views/user/UserList.vue'),
+        },
       ],
     },
     {
@@ -80,6 +87,30 @@ const router = createRouter({
           meta: { title: '标签文章' },
           component: () => import('@/views/blog/BlogTag.vue'),
         },
+        {
+          path: 'profile',
+          name: 'member-profile',
+          meta: { title: '个人中心', requiresAuth: true },
+          component: () => import('@/views/member/MemberProfile.vue'),
+        },
+        {
+          path: 'favorites',
+          name: 'member-favorites',
+          meta: { title: '我的收藏', requiresAuth: true },
+          component: () => import('@/views/member/MemberFavorites.vue'),
+        },
+        {
+          path: 'terms',
+          name: 'terms',
+          meta: { title: '用户协议' },
+          component: () => import('@/views/blog/PolicyView.vue'),
+        },
+        {
+          path: 'privacy',
+          name: 'privacy',
+          meta: { title: '隐私政策' },
+          component: () => import('@/views/blog/PolicyView.vue'),
+        },
       ],
     },
     {
@@ -95,9 +126,11 @@ router.afterEach((to) => {
 })
 
 let verifiedToken = ''
+let verifiedRole = ''
 
 export function resetTokenVerification() {
   verifiedToken = ''
+  verifiedRole = ''
 }
 
 export async function verifyToken(token) {
@@ -113,7 +146,7 @@ export async function verifyToken(token) {
   }
 
   const result = await response.json()
-  return result.code === 200
+  return result.code === 200 ? result.data : false
 }
 
 function loginLocation(to) {
@@ -126,7 +159,9 @@ function loginLocation(to) {
 // 路由守卫：/blog 路由公开访问，其他路由需要登录
 export async function authGuard(to) {
   const token = localStorage.getItem('token')
-  if (to.path.startsWith('/blog')) {
+  const requiresAuth = Boolean(to.meta?.requiresAuth)
+  const requiresAdmin = Boolean(to.meta?.requiresAdmin) || !to.path.startsWith('/blog') && to.path !== '/login'
+  if (to.path.startsWith('/blog') && !requiresAuth) {
     return true
   }
   if (to.path === '/login') {
@@ -137,12 +172,16 @@ export async function authGuard(to) {
     return loginLocation(to)
   }
   if (token === verifiedToken) {
+    if (requiresAdmin && verifiedRole !== 'ADMIN') return { path: '/blog' }
     return true
   }
 
   try {
-    if (await verifyToken(token)) {
+    const user = await verifyToken(token)
+    if (user) {
       verifiedToken = token
+      verifiedRole = user.role?.toUpperCase() || ''
+      if (requiresAdmin && verifiedRole !== 'ADMIN') return { path: '/blog' }
       return true
     }
 

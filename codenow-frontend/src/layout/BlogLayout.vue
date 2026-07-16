@@ -29,10 +29,24 @@
             />
           </form>
 
-          <router-link to="/" class="admin-link">
-            <el-icon><UserFilled /></el-icon>
-            <span>管理后台</span>
+          <router-link v-if="!userStore.isLoggedIn" :to="loginTarget" class="login-link">
+            <el-icon><User /></el-icon>
+            <span>登录</span>
           </router-link>
+          <el-dropdown v-else trigger="click" @command="handleUserCommand">
+            <button type="button" class="login-link user-trigger">
+              <el-icon><User /></el-icon>
+              <span>{{ userStore.userInfo?.nickname || userStore.userInfo?.username || '个人中心' }}</span>
+            </button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="profile">个人中心</el-dropdown-item>
+                <el-dropdown-item command="favorites">我的收藏</el-dropdown-item>
+                <el-dropdown-item v-if="userStore.isAdmin" command="admin" divided>进入后台</el-dropdown-item>
+                <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
 
           <button
             type="button"
@@ -105,13 +119,16 @@
           <h3 class="sidebar-title">热门文章</h3>
           <div v-if="hotArticles.length > 0" class="hot-list">
             <router-link
-              v-for="item in hotArticles"
+              v-for="(item, index) in hotArticles"
               :key="item.article.id"
               :to="`/blog/article/${item.article.id}`"
               class="hot-item"
             >
-              <span class="hot-title">{{ item.article.title }}</span>
-              <span class="hot-views">{{ item.article.viewCount }} 阅读</span>
+              <span class="hot-rank">{{ String(index + 1).padStart(2, '0') }}</span>
+              <span class="hot-content">
+                <span class="hot-title">{{ item.article.title }}</span>
+                <span class="hot-views"><el-icon><View /></el-icon>{{ item.article.viewCount }} 阅读</span>
+              </span>
             </router-link>
           </div>
           <p v-else class="empty-text">暂无热门文章</p>
@@ -123,7 +140,7 @@
               v-for="tag in tags"
               :key="tag.id"
               :to="`/blog/tag/${tag.id}`"
-              class="tag-item"
+              :class="['tag-item', tagTone(tag.name)]"
             >
               {{ tag.name }}
             </router-link>
@@ -143,13 +160,16 @@
 </template>
 
 <script setup>
-import { nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Close, Menu, Search, UserFilled } from '@element-plus/icons-vue'
+import { Close, Menu, Search, User, View } from '@element-plus/icons-vue'
 import { getBlogCategories, getBlogTags, getHotArticles } from '@/api/blog'
+import { useUserStore } from '@/stores/user'
+import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 const categories = ref([])
 const tags = ref([])
 const hotArticles = ref([])
@@ -157,6 +177,7 @@ const searchKeyword = ref(typeof route.query.keyword === 'string' ? route.query.
 const mobileMenuOpen = ref(false)
 const mobileSearchOpen = ref(false)
 const mobileSearchInput = ref()
+const loginTarget = computed(() => ({ path: '/login', query: { redirect: route.fullPath } }))
 
 function normalizedKeyword() {
   return searchKeyword.value.trim().slice(0, 100)
@@ -191,6 +212,27 @@ function toggleMobileMenu() {
   mobileSearchOpen.value = false
 }
 
+async function handleUserCommand(command) {
+  if (command === 'profile') return router.push('/blog/profile')
+  if (command === 'favorites') return router.push('/blog/favorites')
+  if (command === 'admin') return router.push('/')
+  if (command === 'logout') {
+    await userStore.logout()
+    ElMessage.success('已退出登录')
+    router.push('/blog')
+  }
+}
+
+function tagTone(name = '') {
+  const value = name.toLowerCase()
+  if (value.includes('java')) return 'tag-java'
+  if (value.includes('spring')) return 'tag-spring'
+  if (value.includes('mysql') || value.includes('redis') || value.includes('mybatis') || value.includes('数据库')) return 'tag-database'
+  if (value.includes('vue') || value.includes('javascript') || value.includes('前端')) return 'tag-frontend'
+  if (value.includes('设计')) return 'tag-design'
+  return 'tag-default'
+}
+
 watch(
   () => route.query.keyword,
   (keyword) => {
@@ -212,6 +254,9 @@ watch(
 )
 
 onMounted(async () => {
+  if (userStore.token && !userStore.userInfo) {
+    userStore.fetchUserInfo().catch(() => {})
+  }
   try {
     const [catRes, tagRes, hotRes] = await Promise.all([
       getBlogCategories(),
@@ -229,9 +274,10 @@ onMounted(async () => {
 
 <style scoped>
 .blog-layout {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   background: var(--blog-color-background);
 }
 .blog-layout :deep(.el-button),
@@ -254,6 +300,7 @@ onMounted(async () => {
   z-index: 100;
   background: rgba(255, 255, 255, 0.96);
   border-bottom: 1px solid var(--blog-color-border);
+  box-shadow: 0 2px 10px rgba(31, 45, 61, 0.035);
   backdrop-filter: blur(12px);
 }
 .header-inner {
@@ -278,7 +325,7 @@ onMounted(async () => {
 .logo:focus-visible,
 .nav-item:focus-visible,
 .mobile-nav-item:focus-visible,
-.admin-link:focus-visible,
+.login-link:focus-visible,
 .header-icon-button:focus-visible,
 .tag-item:focus-visible,
 .hot-item:focus-visible {
@@ -338,29 +385,35 @@ onMounted(async () => {
 .mobile-search-panel :deep(.el-input__wrapper.is-focus) {
   box-shadow: 0 0 0 2px rgba(51, 126, 204, 0.28) inset;
 }
-.admin-link {
+.desktop-search :deep(.el-input__inner::placeholder),
+.mobile-search-panel :deep(.el-input__inner::placeholder) {
+  color: #8b95a3;
+}
+.login-link {
   min-height: 36px;
   padding: 0 14px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--blog-space-2);
-  border: 1px solid var(--blog-color-border-hover);
+  border: 1px solid var(--blog-color-border);
   border-radius: var(--blog-radius-button);
-  color: var(--blog-color-primary);
+  color: var(--blog-color-text-secondary);
   background: var(--blog-color-surface);
   font-size: 13px;
   font-weight: 550;
   text-decoration: none;
   white-space: nowrap;
+  font: inherit;
   transition: color 0.18s ease, border-color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
 }
-.admin-link:hover {
-  color: #fff;
-  border-color: var(--blog-color-primary);
-  background: var(--blog-color-primary);
+.user-trigger { cursor: pointer; }
+.login-link:hover {
+  color: var(--blog-color-primary);
+  border-color: var(--blog-color-border-hover);
+  background: var(--blog-color-primary-soft);
 }
-.admin-link:active,
+.login-link:active,
 .header-icon-button:active {
   transform: translateY(1px);
 }
@@ -408,14 +461,55 @@ onMounted(async () => {
   grid-template-columns: minmax(0, 1fr) var(--blog-sidebar-width);
   flex: 1;
   gap: var(--blog-layout-gap);
+  min-height: 0;
+  overflow: hidden;
   box-sizing: border-box;
 }
 .blog-main {
   min-width: 0;
-  flex: 1;
+  min-height: 0;
+  padding-right: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-color: transparent transparent;
+  scrollbar-width: thin;
 }
 .blog-sidebar {
   min-width: 0;
+  min-height: 0;
+  padding-right: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-color: transparent transparent;
+  scrollbar-width: thin;
+}
+.blog-main:hover,
+.blog-sidebar:hover {
+  scrollbar-color: rgba(144, 152, 163, 0.32) transparent;
+}
+.blog-main::-webkit-scrollbar,
+.blog-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+.blog-main::-webkit-scrollbar-track,
+.blog-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.blog-main::-webkit-scrollbar-thumb,
+.blog-sidebar::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: transparent;
+  transition: background-color 0.18s ease;
+}
+.blog-main:hover::-webkit-scrollbar-thumb,
+.blog-sidebar:hover::-webkit-scrollbar-thumb {
+  background: rgba(144, 152, 163, 0.28);
+}
+.blog-main::-webkit-scrollbar-thumb:hover,
+.blog-sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(112, 121, 134, 0.48);
 }
 .sidebar-section {
   margin-bottom: var(--blog-space-4);
@@ -447,9 +541,15 @@ onMounted(async () => {
 }
 .tag-item:hover,
 .tag-item.router-link-exact-active {
-  color: #fff;
-  background: var(--blog-color-primary);
+  color: var(--blog-color-primary);
+  box-shadow: 0 0 0 1px currentColor inset;
 }
+.tag-java { color: #9a5b13; background: #fff4e5; }
+.tag-spring { color: #3e7b43; background: #edf8ee; }
+.tag-database { color: #7155a4; background: #f3effb; }
+.tag-frontend { color: #28719c; background: #eaf6fb; }
+.tag-design { color: #8a6a16; background: #fff8dc; }
+.tag-default { color: var(--blog-color-text-secondary); background: var(--blog-color-background); }
 .about-text {
   margin: 0;
   color: var(--blog-color-text-secondary);
@@ -463,10 +563,26 @@ onMounted(async () => {
 }
 .hot-item {
   padding: var(--blog-space-2) 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 8px;
   border-bottom: 1px solid var(--blog-color-border);
   text-decoration: none;
+}
+.hot-rank {
+  padding-top: 1px;
+  color: var(--blog-color-text-muted);
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.hot-item:nth-child(-n + 3) .hot-rank {
+  color: var(--blog-color-primary);
+}
+.hot-content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 .hot-item:last-child {
   border-bottom: none;
@@ -487,6 +603,10 @@ onMounted(async () => {
   margin-top: 4px;
   color: var(--blog-color-text-muted);
   font-size: 12px;
+}
+.hot-views .el-icon {
+  margin-right: 4px;
+  vertical-align: -2px;
 }
 .empty-text {
   margin: 0;
@@ -545,6 +665,11 @@ onMounted(async () => {
 }
 
 @media (max-width: 768px) {
+  .blog-layout {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
   .header-inner {
     height: 60px;
     padding: 0 16px;
@@ -569,6 +694,12 @@ onMounted(async () => {
     margin: 16px auto;
     padding: 0 var(--blog-space-4);
     grid-template-columns: minmax(0, 1fr);
+    overflow: visible;
+  }
+  .blog-main {
+    padding-right: 0;
+    overflow: visible;
+    scrollbar-gutter: auto;
   }
   .blog-sidebar {
     display: none;
@@ -576,13 +707,13 @@ onMounted(async () => {
 }
 
 @media (max-width: 480px) {
-  .admin-link {
+  .login-link {
     width: 38px;
     height: 38px;
     min-height: 38px;
     padding: 0;
   }
-  .admin-link span {
+  .login-link span {
     position: absolute;
     width: 1px;
     height: 1px;

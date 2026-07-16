@@ -22,18 +22,36 @@ describe('authGuard', () => {
     })
   })
 
+  it('requires login for the member profile', async () => {
+    await expect(authGuard({ path: '/blog/profile', fullPath: '/blog/profile', meta: { requiresAuth: true } })).resolves.toEqual({
+      name: 'login',
+      query: { redirect: '/blog/profile' },
+    })
+  })
+
   it('allows a valid token after checking the current user', async () => {
     localStorage.setItem('token', 'valid-token')
     globalThis.fetch = vi.fn().mockResolvedValue({
       status: 200,
       ok: true,
-      json: vi.fn().mockResolvedValue({ code: 200, data: { id: 1 } }),
+      json: vi.fn().mockResolvedValue({ code: 200, data: { id: 1, role: 'ADMIN' } }),
     })
 
     await expect(authGuard({ path: '/articles', fullPath: '/articles' })).resolves.toBe(true)
     expect(fetch).toHaveBeenCalledWith('/api/auth/me', {
       headers: { Authorization: 'valid-token' },
     })
+  })
+
+  it('prevents ordinary users from entering the admin area', async () => {
+    localStorage.setItem('token', 'member-token')
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      json: vi.fn().mockResolvedValue({ code: 200, data: { id: 2, role: 'USER' } }),
+    })
+
+    await expect(authGuard({ path: '/users', fullPath: '/users', meta: { requiresAdmin: true } })).resolves.toEqual({ path: '/blog' })
   })
 
   it('clears an invalid token and redirects to login', async () => {

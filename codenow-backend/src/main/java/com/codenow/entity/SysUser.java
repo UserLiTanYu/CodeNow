@@ -27,6 +27,18 @@ public class SysUser {
 
     private String role;
 
+    private String status;
+
+    private Integer emailVerified;
+
+    private LocalDateTime lastLoginTime;
+
+    private String lastLoginIp;
+
+    private String agreementVersion;
+
+    private LocalDateTime agreementAcceptedAt;
+
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;

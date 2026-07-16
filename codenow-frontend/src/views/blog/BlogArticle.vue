@@ -27,6 +27,10 @@
             {{ tag.name }}
           </router-link>
         </div>
+        <button type="button" :class="['favorite-button', { active: favorited }]" :disabled="favoriteLoading" @click="toggleFavorite">
+          <el-icon><StarFilled v-if="favorited" /><Star v-else /></el-icon>
+          {{ favorited ? '已收藏' : '收藏文章' }}
+        </button>
       </div>
       <div class="article-body markdown-body" v-html="renderedContent"></div>
 
@@ -55,7 +59,7 @@
           />
         </div>
         <el-alert v-if="commentError" :title="commentError" type="error" show-icon :closable="false" />
-        <div v-else class="no-comments">
+        <div v-else-if="comments.length === 0" class="no-comments">
           <p>暂无评论，快来发表第一条评论吧</p>
         </div>
       </div>
@@ -69,8 +73,8 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import { Folder, Clock, View } from '@element-plus/icons-vue'
+import { useRoute, useRouter } from 'vue-router'
+import { Folder, Clock, Star, StarFilled, View } from '@element-plus/icons-vue'
 import { marked } from 'marked'
 import { markedHighlight } from 'marked-highlight'
 import DOMPurify from 'dompurify'
@@ -112,6 +116,9 @@ hljs.registerLanguage('cpp', cpp)
 import { getBlogArticle } from '@/api/blog'
 import { getCommentTree } from '@/api/comment'
 import { formatDate } from '@/utils/format'
+import { addFavorite, getFavoriteStatus, removeFavorite } from '@/api/member'
+import { useUserStore } from '@/stores/user'
+import { ElMessage } from 'element-plus'
 
 // 配置 marked 使用 highlight.js（v18 使用 marked-highlight 扩展）
 marked.use(markedHighlight({
@@ -125,6 +132,8 @@ marked.use(markedHighlight({
 }))
 
 const route = useRoute()
+const router = useRouter()
+const userStore = useUserStore()
 const article = ref(null)
 const categoryName = ref('')
 const tags = ref([])
@@ -136,6 +145,8 @@ const commentPageNum = ref(1)
 const commentPageSize = 20
 const commentRootTotal = ref(0)
 const commentTotalCount = ref(0)
+const favorited = ref(false)
+const favoriteLoading = ref(false)
 
 const renderedContent = computed(() => {
   if (!article.value?.content) return ''
@@ -155,11 +166,44 @@ async function fetchArticle(id) {
     document.title = `${article.value.title} - 码上记`
     commentPageNum.value = 1
     fetchComments()
+    fetchFavoriteStatus()
   } catch {
     article.value = null
     articleError.value = '文章加载失败，请稍后重试'
   } finally {
     loading.value = false
+  }
+}
+
+async function fetchFavoriteStatus() {
+  favorited.value = false
+  if (!userStore.isLoggedIn) return
+  try {
+    const res = await getFavoriteStatus(route.params.id)
+    favorited.value = Boolean(res.data.favorited)
+  } catch {
+    favorited.value = false
+  }
+}
+
+async function toggleFavorite() {
+  if (!userStore.isLoggedIn) {
+    router.push({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
+  favoriteLoading.value = true
+  try {
+    if (favorited.value) {
+      await removeFavorite(route.params.id)
+      favorited.value = false
+      ElMessage.success('已取消收藏')
+    } else {
+      await addFavorite(route.params.id)
+      favorited.value = true
+      ElMessage.success('收藏成功')
+    }
+  } finally {
+    favoriteLoading.value = false
   }
 }
 
@@ -226,6 +270,9 @@ watch(
   gap: var(--blog-space-2);
   flex-wrap: wrap;
 }
+.favorite-button { margin-top: 16px; padding: 8px 14px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--blog-color-border); border-radius: var(--blog-radius-button); color: var(--blog-color-text-secondary); background: #fff; cursor: pointer; }
+.favorite-button:hover, .favorite-button.active { color: var(--blog-color-primary); border-color: var(--blog-color-border-hover); background: var(--blog-color-primary-soft); }
+.favorite-button:disabled { cursor: wait; opacity: 0.65; }
 .tag-link {
   padding: var(--blog-space-1) var(--blog-space-2);
   background: var(--blog-color-primary-soft);

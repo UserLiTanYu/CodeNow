@@ -26,6 +26,10 @@ public class SaTokenConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(
                         "/api/auth/login",
+                        "/api/auth/register",
+                        "/api/auth/register/code",
+                        "/api/auth/password/code",
+                        "/api/auth/password/reset",
                         "/api/blog/**",
                         "/api/comments/article/**",
                         "/doc.html",
@@ -33,6 +37,16 @@ public class SaTokenConfig implements WebMvcConfigurer {
                         "/v3/api-docs/**",
                         "/swagger-ui/**",
                         "/swagger-resources/**"
+                );
+
+        registry.addInterceptor(new SaInterceptor(handle -> StpUtil.checkRole("ADMIN")))
+                .addPathPatterns(
+                        "/api/articles/**",
+                        "/api/categories/**",
+                        "/api/tags/**",
+                        "/api/upload/**",
+                        "/api/logs/**",
+                        "/api/admin/**"
                 );
     }
 }

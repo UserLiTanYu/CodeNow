@@ -20,7 +20,6 @@ public class CommentDTO {
     @Schema(description = "评论内容", example = "这篇文章写得很好！")
     private String content;
 
-    @NotBlank(message = "昵称不能为空")
     @Schema(description = "昵称", example = "访客小明")
     private String nickname;
 

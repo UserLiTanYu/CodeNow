@@ -3,7 +3,7 @@
     <section class="list-toolbar" aria-label="文章列表筛选与排序">
       <div class="toolbar-heading">
         <span class="toolbar-title">{{ toolbarTitle }}</span>
-        <span class="toolbar-count">{{ total }} 篇</span>
+        <span class="toolbar-count">共 {{ total }} 篇</span>
       </div>
       <div class="toolbar-controls">
         <label class="control-group">
@@ -13,13 +13,21 @@
             <el-option v-for="category in categories" :key="category.id" :label="category.name" :value="String(category.id)" />
           </el-select>
         </label>
-        <label class="control-group">
+        <div class="control-group sort-control">
           <span>排序</span>
-          <el-select v-model="selectedSort" aria-label="文章排序" @change="applyFilters">
-            <el-option label="最新发布" value="latest" />
-            <el-option label="最多阅读" value="mostViewed" />
-          </el-select>
-        </label>
+          <div class="sort-switch" role="group" aria-label="文章排序">
+            <button
+              v-for="option in sortOptions"
+              :key="option.value"
+              type="button"
+              :class="['sort-option', { active: selectedSort === option.value }]"
+              :aria-pressed="selectedSort === option.value"
+              @click="selectSort(option.value)"
+            >
+              {{ option.label }}
+            </button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -74,6 +82,10 @@ const errorMessage = ref('')
 const activeKeyword = ref('')
 const selectedCategory = ref('')
 const selectedSort = ref('latest')
+const sortOptions = [
+  { label: '最新发布', value: 'latest' },
+  { label: '阅读最多', value: 'mostViewed' },
+]
 const toolbarTitle = computed(() => {
   if (!selectedCategory.value) return '全部文章'
   return categories.value.find((category) => String(category.id) === selectedCategory.value)?.name || '分类文章'
@@ -115,6 +127,12 @@ function applyFilters() {
   router.push({ path: '/blog', query: buildQuery() })
 }
 
+function selectSort(sort) {
+  if (selectedSort.value === sort) return
+  selectedSort.value = sort
+  applyFilters()
+}
+
 function clearSearch() {
   router.push({ path: '/blog', query: buildQuery({ includeKeyword: false }) })
 }
@@ -146,7 +164,7 @@ onMounted(fetchCategories)
 <style scoped>
 .list-toolbar {
   margin-bottom: var(--blog-space-4);
-  padding: var(--blog-space-4);
+  padding: 14px var(--blog-space-4);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -167,7 +185,10 @@ onMounted(fetchCategories)
   font-weight: 600;
 }
 .toolbar-count {
+  padding: 3px 9px;
+  border-radius: 999px;
   color: var(--blog-color-text-muted);
+  background: var(--blog-color-background);
   font-size: 13px;
 }
 .toolbar-controls {
@@ -184,6 +205,41 @@ onMounted(fetchCategories)
 }
 .control-group :deep(.el-select) {
   width: 132px;
+}
+.control-group :deep(.el-select__wrapper) {
+  min-height: 38px;
+}
+.sort-switch {
+  padding: 3px;
+  display: inline-flex;
+  border: 1px solid var(--blog-color-border);
+  border-radius: 8px;
+  background: var(--blog-color-background);
+}
+.sort-option {
+  min-height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 5px;
+  color: var(--blog-color-text-muted);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  white-space: nowrap;
+  transition: color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
+}
+.sort-option:hover {
+  color: var(--blog-color-primary);
+}
+.sort-option.active {
+  color: var(--blog-color-primary);
+  background: var(--blog-color-surface);
+  box-shadow: 0 1px 4px rgba(31, 45, 61, 0.1);
+  font-weight: 600;
+}
+.sort-option:focus-visible {
+  outline: 3px solid rgba(51, 126, 204, 0.24);
+  outline-offset: 1px;
 }
 .loading-box,
 .empty-box {
@@ -262,6 +318,8 @@ onMounted(fetchCategories)
   }
   .toolbar-controls {
     width: 100%;
+    align-items: stretch;
+    flex-direction: column;
   }
   .control-group {
     min-width: 0;
@@ -271,13 +329,15 @@ onMounted(fetchCategories)
     min-width: 0;
     width: 100%;
   }
+  .sort-switch {
+    flex: 1;
+  }
+  .sort-option {
+    flex: 1;
+  }
 }
 
 @media (max-width: 430px) {
-  .toolbar-controls {
-    align-items: stretch;
-    flex-direction: column;
-  }
   .control-group span {
     width: 32px;
   }

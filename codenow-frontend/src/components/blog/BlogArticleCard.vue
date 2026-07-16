@@ -35,7 +35,7 @@
           v-for="tag in visibleTags"
           :key="tag.id"
           :to="`/blog/tag/${tag.id}`"
-          class="meta-link tag-link"
+          :class="['meta-link', 'tag-link', tagTone(tag.name)]"
           @click.stop
         >
           {{ tag.name }}
@@ -71,13 +71,23 @@ const tags = computed(() => props.item.tags || [])
 const visibleTags = computed(() => tags.value.slice(0, 2))
 const hiddenTagCount = computed(() => Math.max(tags.value.length - visibleTags.value.length, 0))
 const hiddenTagNames = computed(() => tags.value.slice(2).map((tag) => tag.name).join('、'))
+
+function tagTone(name = '') {
+  const value = name.toLowerCase()
+  if (value.includes('java')) return 'tag-java'
+  if (value.includes('spring')) return 'tag-spring'
+  if (value.includes('mysql') || value.includes('redis') || value.includes('mybatis') || value.includes('数据库')) return 'tag-database'
+  if (value.includes('vue') || value.includes('javascript') || value.includes('前端')) return 'tag-frontend'
+  if (value.includes('设计')) return 'tag-design'
+  return 'tag-default'
+}
 </script>
 
 <style scoped>
 .article-card {
   position: relative;
   margin-bottom: var(--blog-space-4);
-  padding: var(--blog-space-5);
+  padding: 20px 24px;
   display: flex;
   gap: var(--blog-space-5);
   overflow: hidden;
@@ -110,7 +120,7 @@ const hiddenTagNames = computed(() => tags.value.slice(2).map((tag) => tag.name)
   flex: 1;
 }
 .title-row {
-  margin-bottom: 10px;
+  margin-bottom: 7px;
   display: flex;
   align-items: center;
   gap: var(--blog-space-2);
@@ -121,6 +131,10 @@ const hiddenTagNames = computed(() => tags.value.slice(2).map((tag) => tag.name)
   font-size: 21px;
   font-weight: 600;
   line-height: 1.45;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   transition: color 0.18s ease;
 }
 .top-tag {
@@ -128,14 +142,14 @@ const hiddenTagNames = computed(() => tags.value.slice(2).map((tag) => tag.name)
   border-radius: var(--blog-radius-tag);
 }
 .card-summary {
-  margin: 0 0 var(--blog-space-4);
+  margin: 0 0 12px;
   overflow: hidden;
   display: -webkit-box;
-  color: var(--blog-color-text-secondary);
+  color: #707986;
   font-size: 15px;
-  line-height: 1.7;
+  line-height: 1.6;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
 }
 .card-meta {
   display: flex;
@@ -176,6 +190,17 @@ const hiddenTagNames = computed(() => tags.value.slice(2).map((tag) => tag.name)
 .tag-link:hover {
   background: var(--blog-color-primary-soft);
 }
+.tag-java { color: #9a5b13; background: #fff4e5; }
+.tag-spring { color: #3e7b43; background: #edf8ee; }
+.tag-database { color: #7155a4; background: #f3effb; }
+.tag-frontend { color: #28719c; background: #eaf6fb; }
+.tag-design { color: #8a6a16; background: #fff8dc; }
+.tag-default { color: var(--blog-color-text-secondary); background: var(--blog-color-background); }
+.tag-java:hover { background: #ffe8c7; }
+.tag-spring:hover { background: #dcf1de; }
+.tag-database:hover { background: #e8dff7; }
+.tag-frontend:hover { background: #d8eef8; }
+.tag-design:hover { background: #f9edb8; }
 .more-tags {
   color: var(--blog-color-text-muted);
 }
