@@ -18,6 +18,15 @@
         <el-form-item prop="password">
           <el-input v-model="loginForm.password" placeholder="密码" type="password" size="large" show-password />
         </el-form-item>
+        <el-form-item prop="captchaCode">
+          <div class="captcha-row">
+            <el-input v-model="loginForm.captchaCode" placeholder="计算图形验证码" size="large" maxlength="4" />
+            <button type="button" class="captcha-image" title="点击刷新验证码" @click="loadCaptcha">
+              <img v-if="captchaImage" :src="captchaImage" alt="图形验证码" />
+              <span v-else>加载中</span>
+            </button>
+          </div>
+        </el-form-item>
         <div class="form-helper"><button type="button" @click="mode = 'reset'">忘记密码？</button></div>
         <el-button type="primary" size="large" class="submit-button" :loading="loading" @click="handleLogin">登录</el-button>
       </el-form>
@@ -80,10 +89,10 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { register, resetPassword, sendRegisterCode, sendResetCode } from '@/api/auth'
+import { getCaptcha, register, resetPassword, sendRegisterCode, sendResetCode } from '@/api/auth'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
@@ -98,7 +107,8 @@ const registerFormRef = ref()
 const resetFormRef = ref()
 let timer
 
-const loginForm = reactive({ account: '', password: '' })
+const loginForm = reactive({ account: '', password: '', captchaId: '', captchaCode: '' })
+const captchaImage = ref('')
 const registerForm = reactive({ username: '', email: '', verificationCode: '', password: '', confirmPassword: '', agreementAccepted: false })
 const resetForm = reactive({ email: '', verificationCode: '', newPassword: '', confirmPassword: '' })
 const emailRule = { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
@@ -106,6 +116,7 @@ const emailRule = { type: 'email', message: '请输入正确的邮箱地址', tr
 const loginRules = {
   account: [{ required: true, message: '请输入用户名或邮箱', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+  captchaCode: [{ required: true, message: '请输入图形验证码', trigger: 'blur' }],
 }
 const registerRules = {
   username: [
@@ -163,14 +174,28 @@ async function handleLogin() {
   if (!await loginFormRef.value.validate().catch(() => false)) return
   loading.value = true
   try {
-    const res = await userStore.login(loginForm.account.trim(), loginForm.password)
+    const res = await userStore.login(loginForm.account.trim(), loginForm.password, loginForm.captchaId, loginForm.captchaCode)
     ElMessage.success('登录成功')
     const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/') && !route.query.redirect.startsWith('//')
       ? route.query.redirect
       : res.data.role === 'ADMIN' ? '/' : '/blog'
     router.replace(redirect)
+  } catch {
+    loginForm.captchaCode = ''
+    await loadCaptcha()
   } finally {
     loading.value = false
+  }
+}
+
+async function loadCaptcha() {
+  captchaImage.value = ''
+  try {
+    const res = await getCaptcha()
+    loginForm.captchaId = res.data.captchaId
+    captchaImage.value = res.data.image
+  } catch {
+    loginForm.captchaId = ''
   }
 }
 
@@ -208,6 +233,7 @@ async function handleReset() {
 }
 
 onBeforeUnmount(() => clearInterval(timer))
+onMounted(loadCaptcha)
 </script>
 
 <style scoped>
@@ -219,6 +245,9 @@ onBeforeUnmount(() => clearInterval(timer))
 h1 { margin: 14px 0 6px; color: var(--blog-color-text); font-size: 25px; text-align: center; }
 .subtitle { margin: 0 0 22px; color: var(--blog-color-text-muted); font-size: 14px; text-align: center; }
 .code-row { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 124px; gap: 10px; }
+.captcha-row { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 10px; }
+.captcha-image { height: 40px; padding: 0; overflow: hidden; border: 1px solid #dcdfe6; border-radius: 6px; background: #f4f7fb; cursor: pointer; }
+.captcha-image img { width: 100%; height: 100%; display: block; }
 .submit-button { width: 100%; }
 .form-helper { margin: -4px 0 14px; text-align: right; }
 .form-helper button, .return-login { border: 0; color: var(--blog-color-primary); background: transparent; cursor: pointer; }

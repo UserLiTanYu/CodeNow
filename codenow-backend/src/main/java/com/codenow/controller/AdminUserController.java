@@ -8,7 +8,9 @@ import com.codenow.common.UserRole;
 import com.codenow.common.UserStatus;
 import com.codenow.dto.UserStatusDTO;
 import com.codenow.entity.SysUser;
+import com.codenow.entity.LoginLog;
 import com.codenow.service.SysUserService;
+import com.codenow.service.LoginLogService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AdminUserController {
     private final SysUserService userService;
+    private final LoginLogService loginLogService;
 
     @GetMapping
     public R<Page<SysUser>> list(
@@ -47,11 +50,31 @@ public class AdminUserController {
         if (UserRole.ADMIN.equalsIgnoreCase(user.getRole())) {
             return R.error(400, "不能通过此接口禁用管理员");
         }
+        if (UserStatus.BANNED.equals(dto.getStatus()) && (dto.getReason() == null || dto.getReason().trim().isBlank())) {
+            return R.error(400, "禁用用户时必须填写原因");
+        }
         user.setStatus(dto.getStatus());
+        user.setBanReason(UserStatus.BANNED.equals(dto.getStatus()) ? dto.getReason().trim() : null);
+        user.setBannedAt(UserStatus.BANNED.equals(dto.getStatus()) ? java.time.LocalDateTime.now() : null);
         userService.updateById(user);
         if (UserStatus.BANNED.equals(dto.getStatus())) {
             StpUtil.kickout(id);
         }
         return R.ok();
+    }
+
+    @GetMapping("/login-logs")
+    public R<Page<LoginLog>> loginLogs(
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String account,
+            @RequestParam(required = false) Integer success) {
+        return R.ok(loginLogService.page(new Page<>(pageNum, Math.min(pageSize, 100)),
+                new LambdaQueryWrapper<LoginLog>()
+                        .eq(userId != null, LoginLog::getUserId, userId)
+                        .like(account != null && !account.isBlank(), LoginLog::getAccount, account == null ? null : account.trim())
+                        .eq(success != null, LoginLog::getSuccess, success)
+                        .orderByDesc(LoginLog::getCreateTime)));
     }
 }

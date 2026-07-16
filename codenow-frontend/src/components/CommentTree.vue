@@ -7,7 +7,9 @@
       </div>
       <div class="comment-content">{{ comment.content }}</div>
       <div class="comment-actions">
-        <button class="btn-reply" @click="handleReply(comment)">回复</button>
+        <button class="action-button" :class="{ active: comment.liked }" @click="toggleLike(comment)">{{ comment.liked ? '已赞' : '点赞' }} {{ comment.likeCount || '' }}</button>
+        <button class="action-button" @click="handleReply(comment)">回复</button>
+        <button v-if="comment.ownedByCurrentUser" class="action-button danger" @click="removeComment(comment)">删除</button>
       </div>
 
       <!-- 回复表单（当前评论下方） -->
@@ -35,7 +37,12 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import CommentForm from './CommentForm.vue'
+import { likeComment, unlikeComment } from '@/api/comment'
+import { deleteMyComment } from '@/api/member'
+import { useUserStore } from '@/stores/user'
 
 defineProps({
   comments: { type: Array, required: true },
@@ -43,6 +50,9 @@ defineProps({
 })
 
 const emit = defineEmits(['reply', 'refresh'])
+const route = useRoute()
+const router = useRouter()
+const userStore = useUserStore()
 
 const replyTo = ref(0)
 
@@ -52,7 +62,21 @@ function formatTime(timeStr) {
 }
 
 function handleReply(comment) {
+  if (!userStore.isLoggedIn) return router.push({ path: '/login', query: { redirect: route.fullPath } })
   replyTo.value = replyTo.value === comment.id ? 0 : comment.id
+}
+
+async function toggleLike(comment) {
+  if (!userStore.isLoggedIn) return router.push({ path: '/login', query: { redirect: route.fullPath } })
+  if (comment.liked) { await unlikeComment(comment.id); comment.liked = false; comment.likeCount = Math.max(0, (comment.likeCount || 0) - 1) }
+  else { await likeComment(comment.id); comment.liked = true; comment.likeCount = (comment.likeCount || 0) + 1 }
+}
+
+async function removeComment(comment) {
+  await ElMessageBox.confirm('删除后会保留回复关系，确定继续吗？', '删除评论', { type: 'warning' })
+  await deleteMyComment(comment.id)
+  ElMessage.success('评论已删除')
+  emit('refresh')
 }
 
 function handleReplySuccess() {
@@ -95,7 +119,7 @@ function handleReplySuccess() {
 .comment-actions {
   margin-bottom: 8px;
 }
-.btn-reply {
+.action-button {
   background: none;
   border: none;
   color: var(--blog-color-primary);
@@ -103,9 +127,11 @@ function handleReplySuccess() {
   cursor: pointer;
   padding: 0;
 }
-.btn-reply:hover {
+.action-button:hover, .action-button.active {
   color: var(--blog-color-primary-strong);
 }
+.action-button + .action-button { margin-left: 14px; }
+.action-button.danger { color: #f56c6c; }
 .comment-children {
   margin-left: 32px;
   padding-left: 16px;

@@ -18,6 +18,12 @@ public class LoginDTO {
     @Schema(description = "密码", example = "123456")
     private String password;
 
+    @NotBlank(message = "验证码标识不能为空")
+    private String captchaId;
+
+    @NotBlank(message = "图形验证码不能为空")
+    private String captchaCode;
+
     public String resolvedAccount() {
         return account != null && !account.isBlank() ? account : username;
     }

@@ -2,6 +2,7 @@ package com.codenow.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.codenow.annotation.OperationLog;
 import com.codenow.annotation.RateLimit;
 import com.codenow.common.IpUtils;
@@ -11,10 +12,14 @@ import com.codenow.common.UserStatus;
 import com.codenow.dto.CommentDTO;
 import com.codenow.dto.CommentPageVO;
 import com.codenow.entity.BlogComment;
+import com.codenow.entity.CommentLike;
+import com.codenow.entity.UserNotification;
 import com.codenow.entity.SysUser;
 import com.codenow.service.CommentService;
 import com.codenow.service.BlogArticleService;
 import com.codenow.service.SysUserService;
+import com.codenow.service.CommentLikeService;
+import com.codenow.service.UserNotificationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,6 +29,9 @@ import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.dao.DuplicateKeyException;
+
+import java.time.LocalDateTime;
 
 @Tag(name = "评论管理")
 @RestController
@@ -34,6 +42,8 @@ public class CommentController {
     private final CommentService commentService;
     private final BlogArticleService articleService;
     private final SysUserService userService;
+    private final CommentLikeService commentLikeService;
+    private final UserNotificationService notificationService;
 
     @Operation(summary = "获取文章评论树", description = "返回指定文章的树形评论列表（仅已通过审核）")
     @GetMapping("/article/{articleId}")
@@ -42,7 +52,7 @@ public class CommentController {
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "20") Integer pageSize) {
         Page<BlogComment> page = commentService.getCommentTree(articleId, pageNum, Math.min(pageSize, 100));
-        page.getRecords().forEach(this::removePrivateFields);
+        page.getRecords().forEach(this::enrichPublicFields);
         return R.ok(new CommentPageVO(page, commentService.countApproved(articleId)));
     }
 
@@ -59,8 +69,9 @@ public class CommentController {
             return R.error(404, "文章不存在");
         }
         long parentId = dto.getParentId() != null ? dto.getParentId() : CommentStatus.ROOT_PARENT_ID;
+        BlogComment parent = null;
         if (parentId != CommentStatus.ROOT_PARENT_ID) {
-            BlogComment parent = commentService.getById(parentId);
+            parent = commentService.getById(parentId);
             if (parent == null || !dto.getArticleId().equals(parent.getArticleId())) {
                 return R.error(400, "父评论不存在或不属于当前文章");
             }
@@ -78,6 +89,42 @@ public class CommentController {
         comment.setIp(IpUtils.getRealIp(request));
         comment.setStatus(CommentStatus.APPROVED);
         commentService.save(comment);
+        if (parent != null && parent.getUserId() != null && !parent.getUserId().equals(user.getId())) {
+            UserNotification notification = new UserNotification();
+            notification.setUserId(parent.getUserId());
+            notification.setType("COMMENT_REPLY");
+            notification.setTitle("你的评论收到了新回复");
+            String content = comment.getContent();
+            notification.setContent(content.substring(0, Math.min(content.length(), 200)));
+            notification.setArticleId(comment.getArticleId());
+            notification.setCommentId(comment.getId());
+            notification.setIsRead(0);
+            notification.setCreateTime(LocalDateTime.now());
+            notificationService.save(notification);
+        }
+        return R.ok();
+    }
+
+    @PostMapping("/{id}/likes")
+    public R<Void> like(@PathVariable Long id) {
+        if (commentService.getById(id) == null) return R.error(404, "评论不存在");
+        CommentLike like = new CommentLike();
+        like.setCommentId(id);
+        like.setUserId(StpUtil.getLoginIdAsLong());
+        like.setCreateTime(LocalDateTime.now());
+        try {
+            commentLikeService.save(like);
+        } catch (DuplicateKeyException ignored) {
+            // 重复点赞按幂等成功处理。
+        }
+        return R.ok();
+    }
+
+    @DeleteMapping("/{id}/likes")
+    public R<Void> unlike(@PathVariable Long id) {
+        commentLikeService.remove(new LambdaQueryWrapper<CommentLike>()
+                .eq(CommentLike::getCommentId, id)
+                .eq(CommentLike::getUserId, StpUtil.getLoginIdAsLong()));
         return R.ok();
     }
 
@@ -101,11 +148,23 @@ public class CommentController {
         return R.ok();
     }
 
-    private void removePrivateFields(BlogComment comment) {
+    private void enrichPublicFields(BlogComment comment) {
         comment.setEmail(null);
         comment.setIp(null);
+        comment.setLikeCount(commentLikeService.count(new LambdaQueryWrapper<CommentLike>()
+                .eq(CommentLike::getCommentId, comment.getId())));
+        if (StpUtil.isLogin()) {
+            long userId = StpUtil.getLoginIdAsLong();
+            comment.setLiked(commentLikeService.count(new LambdaQueryWrapper<CommentLike>()
+                    .eq(CommentLike::getCommentId, comment.getId())
+                    .eq(CommentLike::getUserId, userId)) > 0);
+            comment.setOwnedByCurrentUser(comment.getUserId() != null && userId == comment.getUserId());
+        } else {
+            comment.setLiked(false);
+            comment.setOwnedByCurrentUser(false);
+        }
         if (comment.getChildren() != null) {
-            comment.getChildren().forEach(this::removePrivateFields);
+            comment.getChildren().forEach(this::enrichPublicFields);
         }
     }
 }

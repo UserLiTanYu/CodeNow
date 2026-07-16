@@ -9,13 +9,17 @@ import com.codenow.common.R;
 import com.codenow.common.UserRole;
 import com.codenow.common.UserStatus;
 import com.codenow.dto.EmailCodeDTO;
+import com.codenow.dto.CaptchaVO;
 import com.codenow.dto.LoginDTO;
 import com.codenow.dto.RegisterDTO;
 import com.codenow.dto.ResetPasswordDTO;
 import com.codenow.entity.SysUser;
+import com.codenow.entity.LoginLog;
 import com.codenow.exception.BusinessException;
 import com.codenow.service.EmailCodeService;
 import com.codenow.service.SysUserService;
+import com.codenow.service.LoginLogService;
+import com.codenow.service.LoginSecurityService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -37,6 +41,13 @@ public class AuthController {
     private final SysUserService userService;
     private final BCryptPasswordEncoder passwordEncoder;
     private final EmailCodeService emailCodeService;
+    private final LoginSecurityService loginSecurityService;
+    private final LoginLogService loginLogService;
+
+    @GetMapping("/captcha")
+    public R<CaptchaVO> captcha() {
+        return R.ok(loginSecurityService.createCaptcha());
+    }
 
     @RateLimit(maxCount = 5, timeWindow = 60, message = "登录尝试过于频繁，请 1 分钟后再试")
     @OperationLog("用户登录")
@@ -48,22 +59,37 @@ public class AuthController {
             return R.error(400, "请输入用户名或邮箱");
         }
         String normalizedAccount = account.trim();
+        try {
+            loginSecurityService.verifyCaptcha(dto.getCaptchaId(), dto.getCaptchaCode());
+        } catch (BusinessException e) {
+            saveLoginLog(null, normalizedAccount, request, false, "图形验证码错误");
+            throw e;
+        }
+        if (loginSecurityService.isLocked(normalizedAccount)) {
+            saveLoginLog(null, normalizedAccount, request, false, "连续登录失败，账号暂时锁定");
+            return R.error(423, "登录失败次数过多，请 15 分钟后再试");
+        }
         SysUser user = userService.getOne(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getUsername, normalizedAccount)
                 .or()
                 .eq(SysUser::getEmail, normalizedAccount.toLowerCase()));
         if (user == null || !passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
+            loginSecurityService.recordFailure(normalizedAccount);
+            saveLoginLog(user, normalizedAccount, request, false, "账号或密码错误");
             return R.error(401, "账号或密码错误");
         }
         if (UserStatus.BANNED.equalsIgnoreCase(user.getStatus())) {
+            saveLoginLog(user, normalizedAccount, request, false, "账号已被禁用");
             return R.error(403, "账号已被禁用");
         }
 
+        loginSecurityService.clearFailures(normalizedAccount);
         StpUtil.login(user.getId());
         StpUtil.getSession().set("username", user.getUsername());
         user.setLastLoginTime(LocalDateTime.now());
         user.setLastLoginIp(IpUtils.getRealIp(request));
         userService.updateById(user);
+        saveLoginLog(user, normalizedAccount, request, true, null);
         return R.ok(loginResult(user));
     }
 
@@ -171,5 +197,19 @@ public class AuthController {
 
     private String normalizeEmail(String email) {
         return email.trim().toLowerCase();
+    }
+
+    private void saveLoginLog(SysUser user, String account, HttpServletRequest request,
+                              boolean success, String failureReason) {
+        LoginLog log = new LoginLog();
+        log.setUserId(user == null ? null : user.getId());
+        log.setAccount(account.length() > 100 ? account.substring(0, 100) : account);
+        log.setIp(IpUtils.getRealIp(request));
+        String userAgent = request.getHeader("User-Agent");
+        log.setUserAgent(userAgent == null ? null : userAgent.substring(0, Math.min(userAgent.length(), 255)));
+        log.setSuccess(success ? 1 : 0);
+        log.setFailureReason(failureReason);
+        log.setCreateTime(LocalDateTime.now());
+        loginLogService.save(log);
     }
 }

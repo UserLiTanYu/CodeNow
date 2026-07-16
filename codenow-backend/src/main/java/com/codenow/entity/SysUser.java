@@ -35,6 +35,10 @@ public class SysUser {
 
     private String lastLoginIp;
 
+    private String banReason;
+
+    private LocalDateTime bannedAt;
+
     private String agreementVersion;
 
     private LocalDateTime agreementAcceptedAt;

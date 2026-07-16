@@ -17,6 +17,7 @@
       </el-table-column>
       <el-table-column prop="createTime" label="注册时间" width="170" />
       <el-table-column prop="lastLoginTime" label="最后登录" width="170" />
+      <el-table-column prop="banReason" label="封禁原因" min-width="160" show-overflow-tooltip />
       <el-table-column label="操作" width="110" fixed="right">
         <template #default="{ row }">
           <el-button v-if="row.role !== 'ADMIN'" size="small" :type="row.status === 'BANNED' ? 'success' : 'danger'" @click="toggleStatus(row)">
@@ -52,8 +53,16 @@ async function loadUsers() {
 function search() { pageNum.value = 1; loadUsers() }
 async function toggleStatus(user) {
   const nextStatus = user.status === 'BANNED' ? 'ACTIVE' : 'BANNED'
-  await ElMessageBox.confirm(`确定${nextStatus === 'BANNED' ? '禁用' : '恢复'}用户“${user.username}”吗？`, '用户状态', { type: 'warning' })
-  await updateUserStatus(user.id, nextStatus)
+  let reason
+  if (nextStatus === 'BANNED') {
+    const result = await ElMessageBox.prompt(`请输入禁用用户“${user.username}”的原因`, '禁用用户', {
+      type: 'warning', inputPattern: /\S+/, inputErrorMessage: '封禁原因不能为空', inputPlaceholder: '例如：发布违规内容',
+    })
+    reason = result.value.trim()
+  } else {
+    await ElMessageBox.confirm(`确定恢复用户“${user.username}”吗？`, '恢复用户', { type: 'warning' })
+  }
+  await updateUserStatus(user.id, nextStatus, reason)
   ElMessage.success(nextStatus === 'BANNED' ? '用户已禁用' : '用户已恢复')
   loadUsers()
 }

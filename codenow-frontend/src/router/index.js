@@ -57,6 +57,12 @@ const router = createRouter({
           meta: { title: '用户管理' },
           component: () => import('@/views/user/UserList.vue'),
         },
+        {
+          path: 'login-logs',
+          name: 'login-logs',
+          meta: { title: '登录日志' },
+          component: () => import('@/views/user/LoginLogList.vue'),
+        },
       ],
     },
     {
@@ -98,6 +104,18 @@ const router = createRouter({
           name: 'member-favorites',
           meta: { title: '我的收藏', requiresAuth: true },
           component: () => import('@/views/member/MemberFavorites.vue'),
+        },
+        {
+          path: 'comments',
+          name: 'member-comments',
+          meta: { title: '我的评论', requiresAuth: true },
+          component: () => import('@/views/member/MemberComments.vue'),
+        },
+        {
+          path: 'notifications',
+          name: 'member-notifications',
+          meta: { title: '消息中心', requiresAuth: true },
+          component: () => import('@/views/member/MemberNotifications.vue'),
         },
         {
           path: 'terms',

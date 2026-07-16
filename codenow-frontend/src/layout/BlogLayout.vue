@@ -41,7 +41,9 @@
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="profile">个人中心</el-dropdown-item>
+                <el-dropdown-item command="comments">我的评论</el-dropdown-item>
                 <el-dropdown-item command="favorites">我的收藏</el-dropdown-item>
+                <el-dropdown-item command="notifications">消息中心<span v-if="unreadCount" class="unread-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span></el-dropdown-item>
                 <el-dropdown-item v-if="userStore.isAdmin" command="admin" divided>进入后台</el-dropdown-item>
                 <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
               </el-dropdown-menu>
@@ -164,6 +166,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Close, Menu, Search, User, View } from '@element-plus/icons-vue'
 import { getBlogCategories, getBlogTags, getHotArticles } from '@/api/blog'
+import { getUnreadNotificationCount } from '@/api/member'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 
@@ -178,6 +181,7 @@ const mobileMenuOpen = ref(false)
 const mobileSearchOpen = ref(false)
 const mobileSearchInput = ref()
 const loginTarget = computed(() => ({ path: '/login', query: { redirect: route.fullPath } }))
+const unreadCount = ref(0)
 
 function normalizedKeyword() {
   return searchKeyword.value.trim().slice(0, 100)
@@ -214,7 +218,9 @@ function toggleMobileMenu() {
 
 async function handleUserCommand(command) {
   if (command === 'profile') return router.push('/blog/profile')
+  if (command === 'comments') return router.push('/blog/comments')
   if (command === 'favorites') return router.push('/blog/favorites')
+  if (command === 'notifications') return router.push('/blog/notifications')
   if (command === 'admin') return router.push('/')
   if (command === 'logout') {
     await userStore.logout()
@@ -250,12 +256,18 @@ watch(
     } catch {
       // 热门榜刷新失败时保留上一次成功结果。
     }
+    if (userStore.token) {
+      getUnreadNotificationCount().then(res => { unreadCount.value = res.data.count || 0 }).catch(() => {})
+    }
   },
 )
 
 onMounted(async () => {
   if (userStore.token && !userStore.userInfo) {
     userStore.fetchUserInfo().catch(() => {})
+  }
+  if (userStore.token) {
+    getUnreadNotificationCount().then(res => { unreadCount.value = res.data.count || 0 }).catch(() => {})
   }
   try {
     const [catRes, tagRes, hotRes] = await Promise.all([
@@ -408,6 +420,7 @@ onMounted(async () => {
   transition: color 0.18s ease, border-color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
 }
 .user-trigger { cursor: pointer; }
+.unread-badge { min-width: 18px; height: 18px; margin-left: 8px; padding: 0 5px; display: inline-flex; align-items: center; justify-content: center; border-radius: 9px; color: #fff; background: #f56c6c; font-size: 11px; }
 .login-link:hover {
   color: var(--blog-color-primary);
   border-color: var(--blog-color-border-hover);

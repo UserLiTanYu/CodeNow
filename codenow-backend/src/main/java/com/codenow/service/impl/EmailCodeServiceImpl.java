@@ -50,6 +50,16 @@ public class EmailCodeServiceImpl implements EmailCodeService {
         verifyCode("reset", email, code);
     }
 
+    @Override
+    public void sendChangeEmailCode(String email) {
+        sendCode("change-email", email, "码上记邮箱变更验证码");
+    }
+
+    @Override
+    public void verifyChangeEmailCode(String email, String code) {
+        verifyCode("change-email", email, code);
+    }
+
     private void sendCode(String scene, String email, String subject) {
         String normalizedEmail = normalize(email);
         String cooldownKey = cooldownKey(scene, normalizedEmail);

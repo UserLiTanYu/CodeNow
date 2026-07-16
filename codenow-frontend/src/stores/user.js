@@ -8,8 +8,8 @@ export const useUserStore = defineStore('user', () => {
   const isLoggedIn = computed(() => Boolean(token.value))
   const isAdmin = computed(() => userInfo.value?.role?.toUpperCase() === 'ADMIN')
 
-  async function login(account, password) {
-    const res = await loginApi({ account, password })
+  async function login(account, password, captchaId, captchaCode) {
+    const res = await loginApi({ account, password, captchaId, captchaCode })
     token.value = res.data.token
     userInfo.value = res.data
     localStorage.setItem('token', res.data.token)
