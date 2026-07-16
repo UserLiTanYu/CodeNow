@@ -368,6 +368,49 @@ docker compose start backend frontend
 
 恢复后必须重新运行核心冒烟测试。
 
+### 10.4 从本地 MySQL 同步业务数据
+
+如果生产环境已经修改管理员密码，不要直接用本地数据库整体覆盖生产库。可只迁移以下业务表，保留生产环境的 `sys_user` 和 `sys_operation_log`：
+
+```text
+blog_category
+blog_tag
+blog_article
+blog_article_tag
+blog_comment
+```
+
+在 Windows 本地使用 `--result-file` 生成 UTF-8 数据文件，避免 PowerShell 重定向改变 SQL 文件编码：
+
+```powershell
+mysqldump --default-character-set=utf8mb4 -uroot -p `
+  --single-transaction --no-create-info --complete-insert `
+  --skip-triggers --set-gtid-purged=OFF --no-tablespaces `
+  --result-file="C:\path\codenow-business-data.sql" `
+  codenow blog_category blog_tag blog_article blog_article_tag blog_comment
+
+Get-FileHash "C:\path\codenow-business-data.sql" -Algorithm SHA256
+```
+
+上传后必须在服务器再次计算 SHA-256，并在导入前完成以下检查：
+
+1. `INSERT INTO` 只涉及上述五张表。
+2. 文件不包含 `DROP`、`CREATE`、`DELETE`、`UPDATE`、`REPLACE` 或 `TRUNCATE`。
+3. 本地文章的 `author_id` 在生产 `sys_user` 中存在。
+4. 创建生产库即时回滚备份并确认文件非空。
+5. 停止后端，删除旧业务数据后导入；导入失败时保持后端停止并恢复备份。
+
+新版 `mysqldump` 可能输出 `LOCK TABLES`、`UNLOCK TABLES` 和 `ALTER TABLE ... DISABLE/ENABLE KEYS`。这些语句会干扰事务边界，应先从用于导入的副本中移除，再把业务表清理与导入包装在同一事务中。原始导出文件必须保留，用于审计和重新生成。
+
+导入后检查五张业务表行数、管理员数量和中文编码。终端显示 `????` 不一定代表数据损坏，可用以下查询确认 UTF-8 字节：
+
+```sql
+SELECT id, HEX(title), CHAR_LENGTH(title), LENGTH(title)
+FROM blog_article ORDER BY id LIMIT 3;
+```
+
+正常中文的 `HEX(title)` 会包含大量以 `E` 开头的 UTF-8 字节，且 `LENGTH(title)` 大于 `CHAR_LENGTH(title)`。最后清理应用使用的 Redis 数据库、启动后端并通过只读文章接口验收；不要运行会再次创建测试文章的完整冒烟脚本。
+
 ## 11. 版本升级
 
 ### 11.1 升级前

@@ -22,6 +22,9 @@ build/
 logs/
 log/
 
+# 本地数据库与上传文件备份（可能包含敏感数据）
+backups/
+
 # 操作系统
 .DS_Store
 Thumbs.db
