@@ -36,7 +36,7 @@ public class BlogController {
     private final HotArticleService hotArticleService;
 
     @RateLimit(maxCount = 30, timeWindow = 10, message = "请求过于频繁，请稍后再试")
-    @Operation(summary = "分页查询已发布文章", description = "仅返回已发布文章，置顶优先，支持按分类、标签和关键词筛选")
+    @Operation(summary = "分页查询已发布文章", description = "仅返回已发布文章，置顶优先，支持按分类、标签和关键词筛选，并可按发布时间或阅读量排序")
     @GetMapping("/articles")
     public R<Page<ArticleVO>> listArticles(
             @Parameter(description = "当前页码", example = "1") @RequestParam(defaultValue = "1") Integer pageNum,
@@ -44,8 +44,10 @@ public class BlogController {
             @Parameter(description = "分类 ID（可选）") @RequestParam(required = false) Long categoryId,
             @Parameter(description = "标签 ID（可选）") @RequestParam(required = false) Long tagId,
             @Parameter(description = "搜索关键词，匹配标题、摘要、分类和标签（可选）")
-            @RequestParam(required = false) String keyword) {
-        return R.ok(articleService.pagePublishedArticles(pageNum, pageSize, categoryId, tagId, keyword));
+            @RequestParam(required = false) String keyword,
+            @Parameter(description = "排序方式：latest（最新发布）或 mostViewed（最多阅读）")
+            @RequestParam(defaultValue = "latest") String sort) {
+        return R.ok(articleService.pagePublishedArticles(pageNum, pageSize, categoryId, tagId, keyword, sort));
     }
 
     @RateLimit(maxCount = 20, timeWindow = 10, message = "请求过于频繁，请稍后再试")

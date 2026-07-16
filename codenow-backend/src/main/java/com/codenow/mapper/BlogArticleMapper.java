@@ -53,12 +53,21 @@ public interface BlogArticleMapper extends BaseMapper<BlogArticle> {
                 )
               )
             </if>
-            ORDER BY a.is_top DESC, a.create_time DESC
+            ORDER BY a.is_top DESC,
+            <choose>
+              <when test="sort == 'mostViewed'">
+                a.view_count DESC, a.create_time DESC
+              </when>
+              <otherwise>
+                a.create_time DESC
+              </otherwise>
+            </choose>
             </script>
             """)
     Page<BlogArticle> selectPublishedArticlePage(
             Page<BlogArticle> page,
             @Param("categoryId") Long categoryId,
             @Param("tagId") Long tagId,
-            @Param("keyword") String keyword);
+            @Param("keyword") String keyword,
+            @Param("sort") String sort);
 }

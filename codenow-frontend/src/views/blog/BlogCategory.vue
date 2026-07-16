@@ -1,8 +1,18 @@
 <template>
   <div class="blog-category">
-    <div class="page-header">
-      <h2>分类：{{ categoryName }}</h2>
-    </div>
+    <header class="page-header">
+      <div>
+        <span class="page-eyebrow">分类</span>
+        <h1>{{ categoryName }}</h1>
+      </div>
+      <label class="sort-control">
+        <span>排序</span>
+        <el-select v-model="selectedSort" aria-label="分类文章排序" @change="changeSort">
+          <el-option label="最新发布" value="latest" />
+          <el-option label="最多阅读" value="mostViewed" />
+        </el-select>
+      </label>
+    </header>
     <div v-if="loading" class="loading-box">
       <el-skeleton :rows="5" animated />
     </div>
@@ -11,32 +21,9 @@
       <div v-if="articles.length === 0" class="empty-box">
         <el-empty description="该分类下暂无文章" />
       </div>
-      <div v-else>
-        <div
-          v-for="item in articles"
-          :key="item.article.id"
-          class="article-card"
-          @click="goDetail(item.article.id)"
-        >
-          <div class="card-content">
-            <h2 class="card-title">
-              <el-tag v-if="item.article.isTop" size="small" type="danger" effect="dark" class="top-tag">置顶</el-tag>
-              {{ item.article.title }}
-            </h2>
-            <p class="card-summary">{{ item.article.summary || '暂无摘要' }}</p>
-            <div class="card-meta">
-              <span class="meta-item">
-                <el-icon><Clock /></el-icon> {{ formatDate(item.article.createTime) }}
-              </span>
-              <span class="meta-item">
-                <el-icon><View /></el-icon> {{ item.article.viewCount || 0 }} 阅读
-              </span>
-              <span v-for="tag in item.tags" :key="tag.id" class="meta-tag">{{ tag.name }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="pagination-box">
+      <template v-else>
+        <BlogArticleCard v-for="item in articles" :key="item.article.id" :item="item" :show-category="false" />
+        <nav v-if="total > pageSize" class="pagination-box" aria-label="分类文章分页">
           <el-pagination
             v-model:current-page="pageNum"
             :page-size="pageSize"
@@ -44,18 +31,17 @@
             layout="prev, pager, next"
             @current-change="fetchArticles"
           />
-        </div>
-      </div>
+        </nav>
+      </template>
     </template>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Clock, View } from '@element-plus/icons-vue'
+import BlogArticleCard from '@/components/blog/BlogArticleCard.vue'
 import { getBlogArticles, getBlogCategories } from '@/api/blog'
-import { formatDate } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
@@ -66,16 +52,18 @@ const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const errorMessage = ref('')
-
-function goDetail(id) {
-  router.push(`/blog/article/${id}`)
-}
+const selectedSort = ref(route.query.sort === 'mostViewed' ? 'mostViewed' : 'latest')
 
 async function fetchArticles() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const res = await getBlogArticles({ pageNum: pageNum.value, pageSize: pageSize.value, categoryId: route.params.id })
+    const res = await getBlogArticles({
+      pageNum: pageNum.value,
+      pageSize: pageSize.value,
+      categoryId: route.params.id,
+      sort: selectedSort.value,
+    })
     articles.value = res.data.records
     total.value = res.data.total
   } catch {
@@ -90,101 +78,86 @@ async function fetchArticles() {
 async function fetchCategoryName() {
   try {
     const res = await getBlogCategories()
-    const cat = res.data.find((c) => c.id === Number(route.params.id))
-    categoryName.value = cat ? cat.name : '未知分类'
+    const category = res.data.find((item) => item.id === Number(route.params.id))
+    categoryName.value = category ? category.name : '未知分类'
   } catch {
     categoryName.value = '未知分类'
   }
 }
 
-onMounted(() => {
-  fetchCategoryName()
-  fetchArticles()
-})
+function changeSort() {
+  const query = selectedSort.value === 'latest' ? {} : { sort: selectedSort.value }
+  router.push({ path: route.path, query })
+}
 
 watch(
-  () => route.params.id,
-  () => {
+  () => [route.params.id, route.query.sort],
+  ([, sort]) => {
+    selectedSort.value = sort === 'mostViewed' ? 'mostViewed' : 'latest'
     pageNum.value = 1
     fetchCategoryName()
     fetchArticles()
   },
+  { immediate: true },
 )
 </script>
 
 <style scoped>
 .page-header {
-  background: #fff;
-  border-radius: 8px;
-  padding: 20px 24px;
   margin-bottom: 16px;
-}
-.page-header h2 {
-  margin: 0;
-  font-size: 20px;
-  color: #303133;
-}
-.article-card {
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border: 1px solid #ebeef5;
+  border-radius: 10px;
   background: #fff;
-  border-radius: 8px;
-  padding: 20px 24px;
-  margin-bottom: 16px;
-  cursor: pointer;
-  transition: box-shadow 0.2s;
 }
-.article-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-.card-title {
-  font-size: 18px;
+.page-eyebrow {
+  color: #337ecc;
+  font-size: 12px;
   font-weight: 600;
-  margin: 0 0 10px;
+  letter-spacing: 0.08em;
+}
+.page-header h1 {
+  margin: 3px 0 0;
   color: #303133;
+  font-size: 21px;
+  font-weight: 600;
+}
+.sort-control {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-.card-summary {
-  font-size: 14px;
-  color: #606266;
-  line-height: 1.6;
-  margin: 0 0 12px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.card-meta {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 14px;
+  color: #7d8592;
   font-size: 13px;
-  color: #909399;
 }
-.meta-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.meta-tag {
-  background: #f0f2f5;
-  padding: 2px 8px;
-  border-radius: 3px;
-  font-size: 12px;
+.sort-control :deep(.el-select) {
+  width: 132px;
 }
 .pagination-box {
+  padding: 24px 0;
   display: flex;
   justify-content: center;
-  padding: 24px 0;
 }
 .loading-box,
 .empty-box {
-  background: #fff;
-  border-radius: 8px;
   padding: 40px;
+  border-radius: 10px;
+  background: #fff;
 }
 .error-alert {
   margin-bottom: 16px;
+}
+@media (max-width: 520px) {
+  .page-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .sort-control :deep(.el-select) {
+    flex: 1;
+    width: auto;
+  }
 }
 </style>
