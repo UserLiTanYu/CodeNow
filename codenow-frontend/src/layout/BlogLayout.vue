@@ -33,7 +33,11 @@
             <el-icon><User /></el-icon>
             <span>登录</span>
           </router-link>
-          <el-dropdown v-else trigger="click" @command="handleUserCommand">
+          <router-link v-if="userStore.isAdmin" to="/" class="login-link admin-link">
+            <el-icon><Setting /></el-icon>
+            <span>前往后台</span>
+          </router-link>
+          <el-dropdown v-if="userStore.isLoggedIn" trigger="click" @command="handleUserCommand">
             <button type="button" class="login-link user-trigger">
               <el-icon><User /></el-icon>
               <span>{{ userStore.userInfo?.nickname || userStore.userInfo?.username || '个人中心' }}</span>
@@ -44,7 +48,6 @@
                 <el-dropdown-item command="comments">我的评论</el-dropdown-item>
                 <el-dropdown-item command="favorites">我的收藏</el-dropdown-item>
                 <el-dropdown-item command="notifications">消息中心<span v-if="unreadCount" class="unread-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span></el-dropdown-item>
-                <el-dropdown-item v-if="userStore.isAdmin" command="admin" divided>进入后台</el-dropdown-item>
                 <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -164,7 +167,7 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Close, Menu, Search, User, View } from '@element-plus/icons-vue'
+import { Close, Menu, Search, Setting, User, View } from '@element-plus/icons-vue'
 import { getBlogCategories, getBlogTags, getHotArticles } from '@/api/blog'
 import { getUnreadNotificationCount } from '@/api/member'
 import { useUserStore } from '@/stores/user'
@@ -221,7 +224,6 @@ async function handleUserCommand(command) {
   if (command === 'comments') return router.push('/blog/comments')
   if (command === 'favorites') return router.push('/blog/favorites')
   if (command === 'notifications') return router.push('/blog/notifications')
-  if (command === 'admin') return router.push('/')
   if (command === 'logout') {
     await userStore.logout()
     ElMessage.success('已退出登录')

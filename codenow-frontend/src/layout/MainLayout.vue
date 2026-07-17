@@ -42,17 +42,23 @@
     <el-container>
       <el-header class="header">
         <span class="title">{{ routeTitle }}</span>
-        <el-dropdown @command="handleCommand">
-          <span class="user-info">
-            {{ userStore.userInfo?.nickname || '管理员' }}
-            <el-icon><ArrowDown /></el-icon>
-          </span>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="logout">退出登录</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
+        <div class="header-actions">
+          <el-button type="primary" plain @click="router.push('/blog')">
+            <el-icon><House /></el-icon>
+            访问前台
+          </el-button>
+          <el-dropdown @command="handleCommand">
+            <span class="user-info">
+              {{ userStore.userInfo?.nickname || '管理员' }}
+              <el-icon><ArrowDown /></el-icon>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="logout">退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
       </el-header>
       <el-main class="main">
         <router-view />
@@ -65,7 +71,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { Document, Folder, PriceTag, ArrowDown, Notebook, ChatDotRound, User, Key } from '@element-plus/icons-vue'
+import { Document, Folder, PriceTag, ArrowDown, Notebook, ChatDotRound, User, Key, House } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 
 const route = useRoute()
@@ -127,6 +133,11 @@ function handleCommand(cmd) {
 .title {
   font-size: 18px;
   font-weight: 600;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
 }
 .user-info {
   display: flex;
