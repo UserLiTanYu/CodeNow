@@ -10,6 +10,11 @@ public interface StorageService {
     String upload(MultipartFile file);
 
     /**
+     * 上传内存中的文件内容，供文章包导入等服务端生成场景使用。
+     */
+    String upload(String originalFilename, byte[] content);
+
+    /**
      * 删除文件
      */
     void delete(String url);

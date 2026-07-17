@@ -10,8 +10,8 @@ spring:
   servlet:
     multipart:
       # 与业务层图片校验保持一致，避免 Spring 默认 1MB 限制提前中断上传。
-      max-file-size: ${UPLOAD_MAX_FILE_SIZE:5MB}
-      max-request-size: ${UPLOAD_MAX_REQUEST_SIZE:6MB}
+      max-file-size: ${UPLOAD_MAX_FILE_SIZE:25MB}
+      max-request-size: ${UPLOAD_MAX_REQUEST_SIZE:26MB}
   # 数据源配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver

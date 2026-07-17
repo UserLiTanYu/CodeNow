@@ -22,9 +22,30 @@
       </el-form-item>
       <el-form-item label="内容" prop="content">
         <div class="editor-toolbar">
+          <input
+            ref="documentInputRef"
+            class="document-input"
+            type="file"
+            accept=".md,.txt,text/markdown,text/plain"
+            @change="handleDocumentSelected"
+          />
+          <input
+            ref="packageInputRef"
+            class="document-input"
+            type="file"
+            accept=".zip,application/zip,application/x-zip-compressed"
+            @change="handlePackageSelected"
+          />
+          <el-button size="small" :loading="importing" @click="documentInputRef?.click()">
+            <el-icon><Upload /></el-icon> 导入文档
+          </el-button>
+          <el-button size="small" :loading="packageImporting" @click="packageInputRef?.click()">
+            <el-icon><FolderOpened /></el-icon> 导入 ZIP 文章包
+          </el-button>
           <el-button size="small" @click="showImageUpload = true">
             <el-icon><Picture /></el-icon> 插入图片
           </el-button>
+          <span class="import-tip">.md/.txt 最大 2MB；含本地图片请使用 ZIP 包，最大 25MB</span>
         </div>
         <md-editor v-model="form.content" style="height: 500px" />
       </el-form-item>
@@ -50,13 +71,15 @@
 import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Picture } from '@element-plus/icons-vue'
+import { FolderOpened, Picture, Upload } from '@element-plus/icons-vue'
 import { getArticle, createArticle, updateArticle } from '@/api/article'
 import { getCategories } from '@/api/category'
 import { getTags } from '@/api/tag'
 import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 import ImageUpload from '@/components/ImageUpload.vue'
+import { importArticlePackage } from '@/api/upload'
+import { DOCUMENT_IMPORT_EXTENSIONS, DOCUMENT_IMPORT_MAX_SIZE, documentExtension, parseTextDocument } from '@/utils/documentImport'
 
 const route = useRoute()
 const router = useRouter()
@@ -69,6 +92,10 @@ const showImageUpload = ref(false)
 const insertImageUrl = ref('')
 const initialSnapshot = ref('')
 const allowLeave = ref(false)
+const documentInputRef = ref()
+const importing = ref(false)
+const packageInputRef = ref()
+const packageImporting = ref(false)
 
 const form = reactive({
   title: '',
@@ -164,6 +191,81 @@ function handleInsertImage() {
   insertImageUrl.value = ''
 }
 
+async function handleDocumentSelected(event) {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file) return
+
+  const extension = documentExtension(file.name)
+  if (!DOCUMENT_IMPORT_EXTENSIONS.includes(extension)) {
+    return ElMessage.error('仅支持导入 .md 和 .txt 文档')
+  }
+  if (file.size > DOCUMENT_IMPORT_MAX_SIZE) {
+    return ElMessage.error('文档大小不能超过 2MB')
+  }
+  if (form.content.trim()) {
+    try {
+      await ElMessageBox.confirm('导入文档会覆盖当前正文，确定继续吗？', '导入文档', {
+        type: 'warning',
+        confirmButtonText: '继续导入',
+        cancelButtonText: '取消',
+      })
+    } catch {
+      return
+    }
+  }
+
+  importing.value = true
+  try {
+    const imported = parseTextDocument(file.name, await file.text())
+    if (!imported.content.trim()) return ElMessage.warning('文档内容为空')
+    form.content = imported.content
+    if (!form.title.trim() && imported.title) form.title = imported.title.slice(0, 200)
+    ElMessage.success(`已导入 ${file.name}，请检查内容后再保存`)
+  } catch {
+    ElMessage.error('文档读取失败，请确认文件为 UTF-8 编码')
+  } finally {
+    importing.value = false
+  }
+}
+
+async function handlePackageSelected(event) {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file) return
+
+  if (!file.name.toLowerCase().endsWith('.zip')) {
+    return ElMessage.error('仅支持导入 .zip 文章包')
+  }
+  if (file.size > 25 * 1024 * 1024) {
+    return ElMessage.error('ZIP 文章包不能超过 25MB')
+  }
+  if (form.content.trim()) {
+    try {
+      await ElMessageBox.confirm('导入 ZIP 文章包会覆盖当前正文，确定继续吗？', '导入 ZIP 文章包', {
+        type: 'warning',
+        confirmButtonText: '继续导入',
+        cancelButtonText: '取消',
+      })
+    } catch {
+      return
+    }
+  }
+
+  packageImporting.value = true
+  try {
+    const data = new FormData()
+    data.append('file', file)
+    const res = await importArticlePackage(data)
+    const imported = res.data
+    form.content = imported.content
+    if (!form.title.trim() && imported.title) form.title = imported.title.slice(0, 200)
+    ElMessage.success(`文章包导入成功，已处理 ${imported.imageCount} 张图片，请检查后再保存`)
+  } finally {
+    packageImporting.value = false
+  }
+}
+
 onMounted(async () => {
   window.addEventListener('beforeunload', handleBeforeUnload)
   await Promise.all([loadOptions(), loadArticle()])
@@ -179,5 +281,11 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', handleBeforeUnl
 }
 .editor-toolbar {
   margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
+.document-input { display: none; }
+.import-tip { color: #909399; font-size: 12px; }
 </style>

@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ByteArrayInputStream;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
@@ -51,19 +52,27 @@ public class OssStorageServiceImpl implements StorageService {
 
     @Override
     public String upload(MultipartFile file) {
+        try {
+            return upload(file.getOriginalFilename(), file.getBytes());
+        } catch (IOException e) {
+            throw new BusinessException("文件读取失败");
+        }
+    }
+
+    @Override
+    public String upload(String originalFilename, byte[] content) {
         if (ossClient == null) {
             throw new BusinessException("OSS 服务未初始化，请检查配置");
         }
 
         try {
-            String originalFilename = file.getOriginalFilename();
             String extension = getExtension(originalFilename);
 
             // 按日期组织目录
             String datePath = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
             String objectName = "codenow/" + datePath + "/" + UUID.randomUUID() + "." + extension;
 
-            try (InputStream inputStream = file.getInputStream()) {
+            try (InputStream inputStream = new ByteArrayInputStream(content)) {
                 ossClient.putObject(
                         storageProperties.getBucketName(),
                         objectName,
@@ -75,7 +84,7 @@ public class OssStorageServiceImpl implements StorageService {
             String url = "https://" + storageProperties.getBucketName() + "." + storageProperties.getEndpoint() + "/" + objectName;
             log.info("文件上传成功: {}", url);
             return url;
-        } catch (IOException e) {
+        } catch (RuntimeException | IOException e) {
             log.error("文件上传失败: {}", e.getMessage());
             throw new BusinessException("文件上传失败: " + e.getMessage());
         }

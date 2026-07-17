@@ -27,14 +27,23 @@ public class LocalStorageServiceImpl implements StorageService {
 
     @Override
     public String upload(MultipartFile file) {
-        String extension = extension(file.getOriginalFilename());
+        try {
+            return upload(file.getOriginalFilename(), file.getBytes());
+        } catch (IOException e) {
+            throw new BusinessException("本地文件保存失败");
+        }
+    }
+
+    @Override
+    public String upload(String originalFilename, byte[] content) {
+        String extension = extension(originalFilename);
         String datePath = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
         String filename = UUID.randomUUID() + "." + extension;
         Path destination = storageRoot.resolve(datePath).resolve(filename).normalize();
         ensureWithinStorage(destination);
         try {
             Files.createDirectories(destination.getParent());
-            try (var inputStream = file.getInputStream()) {
+            try (var inputStream = new java.io.ByteArrayInputStream(content)) {
                 Files.copy(inputStream, destination, StandardCopyOption.REPLACE_EXISTING);
             }
             return "/api/blog/files/" + datePath + "/" + filename;

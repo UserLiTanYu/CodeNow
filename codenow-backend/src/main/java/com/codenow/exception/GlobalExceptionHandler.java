@@ -68,7 +68,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<R<Void>> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException e) {
-        return response(413, "图片不能超过 5MB");
+        return response(413, "上传文件不能超过 25MB");
     }
 
     @ExceptionHandler(Exception.class)

@@ -79,6 +79,6 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(HttpStatus.PAYLOAD_TOO_LARGE, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals("图片不能超过 5MB", response.getBody().getMessage());
+        assertEquals("上传文件不能超过 25MB", response.getBody().getMessage());
     }
 }
