@@ -27,6 +27,10 @@
             {{ tag.name }}
           </router-link>
         </div>
+        <button type="button" :class="['favorite-button', { active: favorited }]" :disabled="favoriteLoading" @click="toggleFavorite">
+          <el-icon><StarFilled v-if="favorited" /><Star v-else /></el-icon>
+          {{ favorited ? '已收藏' : '收藏文章' }}
+        </button>
       </div>
       <div class="article-body markdown-body" v-html="renderedContent"></div>
 
@@ -55,7 +59,7 @@
           />
         </div>
         <el-alert v-if="commentError" :title="commentError" type="error" show-icon :closable="false" />
-        <div v-else class="no-comments">
+        <div v-else-if="comments.length === 0" class="no-comments">
           <p>暂无评论，快来发表第一条评论吧</p>
         </div>
       </div>
@@ -69,8 +73,8 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import { Folder, Clock, View } from '@element-plus/icons-vue'
+import { useRoute, useRouter } from 'vue-router'
+import { Folder, Clock, Star, StarFilled, View } from '@element-plus/icons-vue'
 import { marked } from 'marked'
 import { markedHighlight } from 'marked-highlight'
 import DOMPurify from 'dompurify'
@@ -112,6 +116,9 @@ hljs.registerLanguage('cpp', cpp)
 import { getBlogArticle } from '@/api/blog'
 import { getCommentTree } from '@/api/comment'
 import { formatDate } from '@/utils/format'
+import { addFavorite, getFavoriteStatus, removeFavorite } from '@/api/member'
+import { useUserStore } from '@/stores/user'
+import { ElMessage } from 'element-plus'
 
 // 配置 marked 使用 highlight.js（v18 使用 marked-highlight 扩展）
 marked.use(markedHighlight({
@@ -125,6 +132,8 @@ marked.use(markedHighlight({
 }))
 
 const route = useRoute()
+const router = useRouter()
+const userStore = useUserStore()
 const article = ref(null)
 const categoryName = ref('')
 const tags = ref([])
@@ -136,6 +145,8 @@ const commentPageNum = ref(1)
 const commentPageSize = 20
 const commentRootTotal = ref(0)
 const commentTotalCount = ref(0)
+const favorited = ref(false)
+const favoriteLoading = ref(false)
 
 const renderedContent = computed(() => {
   if (!article.value?.content) return ''
@@ -155,11 +166,44 @@ async function fetchArticle(id) {
     document.title = `${article.value.title} - 码上记`
     commentPageNum.value = 1
     fetchComments()
+    fetchFavoriteStatus()
   } catch {
     article.value = null
     articleError.value = '文章加载失败，请稍后重试'
   } finally {
     loading.value = false
+  }
+}
+
+async function fetchFavoriteStatus() {
+  favorited.value = false
+  if (!userStore.isLoggedIn) return
+  try {
+    const res = await getFavoriteStatus(route.params.id)
+    favorited.value = Boolean(res.data.favorited)
+  } catch {
+    favorited.value = false
+  }
+}
+
+async function toggleFavorite() {
+  if (!userStore.isLoggedIn) {
+    router.push({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
+  favoriteLoading.value = true
+  try {
+    if (favorited.value) {
+      await removeFavorite(route.params.id)
+      favorited.value = false
+      ElMessage.success('已取消收藏')
+    } else {
+      await addFavorite(route.params.id)
+      favorited.value = true
+      ElMessage.success('收藏成功')
+    }
+  } finally {
+    favoriteLoading.value = false
   }
 }
 
@@ -195,55 +239,60 @@ watch(
 
 <style scoped>
 .article-header {
-  background: #fff;
-  border-radius: 8px;
-  padding: 32px;
-  margin-bottom: 16px;
+  margin-bottom: var(--blog-space-4);
+  padding: var(--blog-space-6);
+  border: 1px solid var(--blog-color-border);
+  border-radius: var(--blog-radius-card);
+  background: var(--blog-color-surface);
 }
 .article-title {
   font-size: 28px;
   font-weight: 700;
-  margin: 0 0 16px;
-  color: #303133;
+  margin: 0 0 var(--blog-space-4);
+  color: var(--blog-color-text);
   line-height: 1.4;
 }
 .article-meta {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: var(--blog-space-5);
   font-size: 14px;
-  color: #909399;
-  margin-bottom: 12px;
+  color: var(--blog-color-text-muted);
+  margin-bottom: var(--blog-space-3);
 }
 .meta-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--blog-space-1);
 }
 .article-tags {
   display: flex;
-  gap: 8px;
+  gap: var(--blog-space-2);
   flex-wrap: wrap;
 }
+.favorite-button { margin-top: 16px; padding: 8px 14px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--blog-color-border); border-radius: var(--blog-radius-button); color: var(--blog-color-text-secondary); background: #fff; cursor: pointer; }
+.favorite-button:hover, .favorite-button.active { color: var(--blog-color-primary); border-color: var(--blog-color-border-hover); background: var(--blog-color-primary-soft); }
+.favorite-button:disabled { cursor: wait; opacity: 0.65; }
 .tag-link {
-  padding: 3px 10px;
-  background: #ecf5ff;
-  color: #409eff;
-  border-radius: 4px;
+  padding: var(--blog-space-1) var(--blog-space-2);
+  background: var(--blog-color-primary-soft);
+  color: var(--blog-color-primary);
+  border-radius: var(--blog-radius-tag);
   font-size: 13px;
   text-decoration: none;
   transition: all 0.2s;
 }
 .tag-link:hover {
-  background: #409eff;
+  background: var(--blog-color-primary);
   color: #fff;
 }
 
 /* 文章内容 */
 .article-body {
-  background: #fff;
-  border-radius: 8px;
-  padding: 32px;
+  padding: var(--blog-space-6);
+  border: 1px solid var(--blog-color-border);
+  border-radius: var(--blog-radius-card);
+  background: var(--blog-color-surface);
 }
 
 /* Markdown 样式 */
@@ -260,18 +309,18 @@ watch(
 .markdown-body :deep(p) {
   line-height: 1.8;
   margin: 0 0 12px;
-  color: #303133;
+  color: var(--blog-color-text);
 }
 .markdown-body :deep(code) {
-  background: #f0f2f5;
+  background: var(--blog-color-background);
   padding: 2px 6px;
-  border-radius: 3px;
+  border-radius: var(--blog-radius-tag);
   font-size: 13px;
   font-family: 'Courier New', Courier, monospace;
 }
 .markdown-body :deep(pre) {
-  background: #f6f8fa;
-  border-radius: 6px;
+  background: var(--blog-color-background);
+  border-radius: var(--blog-radius-button);
   padding: 16px;
   overflow-x: auto;
   margin: 0 0 16px;
@@ -283,11 +332,11 @@ watch(
   line-height: 1.6;
 }
 .markdown-body :deep(blockquote) {
-  border-left: 4px solid #409eff;
+  border-left: 4px solid var(--blog-color-primary);
   margin: 0 0 16px;
   padding: 12px 16px;
-  background: #f0f7ff;
-  color: #606266;
+  background: var(--blog-color-primary-soft);
+  color: var(--blog-color-text-secondary);
 }
 .markdown-body :deep(ul),
 .markdown-body :deep(ol) {
@@ -304,38 +353,40 @@ watch(
 }
 .markdown-body :deep(th),
 .markdown-body :deep(td) {
-  border: 1px solid #e4e7ed;
+  border: 1px solid var(--blog-color-border);
   padding: 8px 12px;
   text-align: left;
 }
 .markdown-body :deep(th) {
-  background: #f5f7fa;
+  background: var(--blog-color-background);
   font-weight: 600;
 }
 .markdown-body :deep(img) {
   max-width: 100%;
-  border-radius: 4px;
+  border-radius: var(--blog-radius-tag);
 }
 
 .loading-box,
 .empty-box {
-  background: #fff;
-  border-radius: 8px;
   padding: 40px;
+  border: 1px solid var(--blog-color-border);
+  border-radius: var(--blog-radius-card);
+  background: var(--blog-color-surface);
 }
 
 /* 评论区 */
 .comment-section {
-  background: #fff;
-  border-radius: 8px;
-  padding: 32px;
-  margin-top: 16px;
+  margin-top: var(--blog-space-4);
+  padding: var(--blog-space-6);
+  border: 1px solid var(--blog-color-border);
+  border-radius: var(--blog-radius-card);
+  background: var(--blog-color-surface);
 }
 .section-title {
   margin: 0 0 20px;
   font-size: 18px;
   font-weight: 600;
-  color: #303133;
+  color: var(--blog-color-text);
 }
 .comment-list {
   margin-top: 24px;
@@ -343,7 +394,7 @@ watch(
 .no-comments {
   margin-top: 24px;
   text-align: center;
-  color: #909399;
+  color: var(--blog-color-text-muted);
   font-size: 14px;
 }
 .comment-pagination {

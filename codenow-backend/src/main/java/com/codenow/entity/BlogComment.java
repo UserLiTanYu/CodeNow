@@ -26,6 +26,8 @@ public class BlogComment {
      */
     private Long parentId;
 
+    private Long userId;
+
     /**
      * 评论内容
      */
@@ -61,4 +63,16 @@ public class BlogComment {
      */
     @TableField(exist = false)
     private List<BlogComment> children;
+
+    @TableField(exist = false)
+    private Long likeCount;
+
+    @TableField(exist = false)
+    private Boolean liked;
+
+    @TableField(exist = false)
+    private Boolean ownedByCurrentUser;
+
+    @TableField(exist = false)
+    private String articleTitle;
 }

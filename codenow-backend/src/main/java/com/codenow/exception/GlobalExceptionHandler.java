@@ -1,5 +1,8 @@
 package com.codenow.exception;
 
+import cn.dev33.satoken.exception.NotLoginException;
+import cn.dev33.satoken.exception.NotPermissionException;
+import cn.dev33.satoken.exception.NotRoleException;
 import com.codenow.common.R;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -9,6 +12,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -24,6 +28,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RateLimitException.class)
     public ResponseEntity<R<Void>> handleRateLimitException(RateLimitException e) {
         return response(e.getCode(), e.getMessage());
+    }
+
+    @ExceptionHandler(NotLoginException.class)
+    public ResponseEntity<R<Void>> handleNotLoginException(NotLoginException e) {
+        return response(401, "登录已失效，请重新登录");
+    }
+
+    @ExceptionHandler(NotPermissionException.class)
+    public ResponseEntity<R<Void>> handleNotPermissionException(NotPermissionException e) {
+        return response(403, "没有权限执行此操作");
+    }
+
+    @ExceptionHandler(NotRoleException.class)
+    public ResponseEntity<R<Void>> handleNotRoleException(NotRoleException e) {
+        return response(403, "没有权限执行此操作");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -45,6 +64,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<R<Void>> handleMethodNotAllowed(HttpRequestMethodNotSupportedException e) {
         return response(405, "请求方法不支持");
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<R<Void>> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException e) {
+        return response(413, "图片不能超过 5MB");
     }
 
     @ExceptionHandler(Exception.class)

@@ -29,22 +29,36 @@
           <el-icon><Notebook /></el-icon>
           <span>操作日志</span>
         </el-menu-item>
+        <el-menu-item index="/users">
+          <el-icon><User /></el-icon>
+          <span>用户管理</span>
+        </el-menu-item>
+        <el-menu-item index="/login-logs">
+          <el-icon><Key /></el-icon>
+          <span>登录日志</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
     <el-container>
       <el-header class="header">
         <span class="title">{{ routeTitle }}</span>
-        <el-dropdown @command="handleCommand">
-          <span class="user-info">
-            {{ userStore.userInfo?.nickname || '管理员' }}
-            <el-icon><ArrowDown /></el-icon>
-          </span>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="logout">退出登录</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
+        <div class="header-actions">
+          <el-button type="primary" plain @click="router.push('/blog')">
+            <el-icon><House /></el-icon>
+            访问前台
+          </el-button>
+          <el-dropdown @command="handleCommand">
+            <span class="user-info">
+              {{ userStore.userInfo?.nickname || '管理员' }}
+              <el-icon><ArrowDown /></el-icon>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="logout">退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
       </el-header>
       <el-main class="main">
         <router-view />
@@ -57,7 +71,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { Document, Folder, PriceTag, ArrowDown, Notebook, ChatDotRound } from '@element-plus/icons-vue'
+import { Document, Folder, PriceTag, ArrowDown, Notebook, ChatDotRound, User, Key, House } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 
 const route = useRoute()
@@ -71,6 +85,8 @@ const routeTitle = computed(() => {
     '/tags': '标签管理',
     '/comments': '评论管理',
     '/logs': '操作日志',
+    '/users': '用户管理',
+    '/login-logs': '登录日志',
   }
   return map[route.path] || '文章管理'
 })
@@ -117,6 +133,11 @@ function handleCommand(cmd) {
 .title {
   font-size: 18px;
   font-weight: 600;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
 }
 .user-info {
   display: flex;

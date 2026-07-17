@@ -36,22 +36,25 @@ public class BlogController {
     private final HotArticleService hotArticleService;
 
     @RateLimit(maxCount = 30, timeWindow = 10, message = "请求过于频繁，请稍后再试")
-    @Operation(summary = "分页查询已发布文章", description = "仅返回已发布文章，置顶优先，支持按分类和标签筛选")
+    @Operation(summary = "分页查询已发布文章", description = "仅返回已发布文章，置顶优先，支持按分类、标签和关键词筛选，并可按发布时间或阅读量排序")
     @GetMapping("/articles")
     public R<Page<ArticleVO>> listArticles(
             @Parameter(description = "当前页码", example = "1") @RequestParam(defaultValue = "1") Integer pageNum,
             @Parameter(description = "每页条数", example = "10") @RequestParam(defaultValue = "10") Integer pageSize,
             @Parameter(description = "分类 ID（可选）") @RequestParam(required = false) Long categoryId,
-            @Parameter(description = "标签 ID（可选）") @RequestParam(required = false) Long tagId) {
-        return R.ok(articleService.pagePublishedArticles(pageNum, pageSize, categoryId, tagId));
+            @Parameter(description = "标签 ID（可选）") @RequestParam(required = false) Long tagId,
+            @Parameter(description = "搜索关键词，匹配标题、摘要、分类和标签（可选）")
+            @RequestParam(required = false) String keyword,
+            @Parameter(description = "排序方式：latest（最新发布）或 mostViewed（最多阅读）")
+            @RequestParam(defaultValue = "latest") String sort) {
+        return R.ok(articleService.pagePublishedArticles(pageNum, pageSize, categoryId, tagId, keyword, sort));
     }
 
     @RateLimit(maxCount = 20, timeWindow = 10, message = "请求过于频繁，请稍后再试")
-    @Operation(summary = "查询热门文章", description = "返回浏览量 Top 10 的已发布文章，数据来自 Redis 缓存")
+    @Operation(summary = "查询热门文章", description = "固定返回浏览量 Top 3 的已发布文章；Redis 为空时从数据库重建缓存")
     @GetMapping("/articles/hot")
-    public R<List<ArticleVO>> hotArticles(
-            @Parameter(description = "返回数量", example = "10") @RequestParam(defaultValue = "10") Integer topN) {
-        List<Long> ids = hotArticleService.getHotArticleIds(topN);
+    public R<List<ArticleVO>> hotArticles() {
+        List<Long> ids = hotArticleService.getHotArticleIds();
         if (ids.isEmpty()) {
             return R.ok(Collections.emptyList());
         }

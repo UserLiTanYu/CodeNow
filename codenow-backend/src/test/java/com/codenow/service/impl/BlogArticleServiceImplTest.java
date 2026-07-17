@@ -160,12 +160,56 @@ class BlogArticleServiceImplTest {
         mockPage.setTotal(0);
         mockPage.setRecords(Collections.emptyList());
 
-        when(articleMapper.selectPage(any(Page.class), any(LambdaQueryWrapper.class))).thenReturn(mockPage);
+        when(articleMapper.selectPublishedArticlePage(any(Page.class), isNull(), isNull(), isNull(), eq("latest")))
+                .thenReturn(mockPage);
 
-        Page<ArticleVO> result = articleService.pagePublishedArticles(1, 10, null, null);
+        Page<ArticleVO> result = articleService.pagePublishedArticles(1, 10, null, null, null, "latest");
 
         assertNotNull(result);
         assertEquals(0, result.getTotal());
+    }
+
+    @Test
+    void pagePublishedArticles_shouldTrimSearchKeyword() {
+        Page<BlogArticle> mockPage = new Page<>(1, 10);
+        mockPage.setTotal(0);
+        mockPage.setRecords(Collections.emptyList());
+        when(articleMapper.selectPublishedArticlePage(any(Page.class), isNull(), isNull(), eq("Spring Boot"), eq("latest")))
+                .thenReturn(mockPage);
+
+        articleService.pagePublishedArticles(1, 10, null, null, "  Spring Boot  ", null);
+
+        verify(articleMapper).selectPublishedArticlePage(any(Page.class), isNull(), isNull(), eq("Spring Boot"), eq("latest"));
+    }
+
+    @Test
+    void pagePublishedArticles_shouldRejectOverlongKeyword() {
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> articleService.pagePublishedArticles(1, 10, null, null, "x".repeat(101), "latest"));
+
+        assertEquals(400, exception.getCode());
+        verify(articleMapper, never()).selectPublishedArticlePage(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void pagePublishedArticles_shouldPassMostViewedSort() {
+        Page<BlogArticle> mockPage = new Page<>(1, 10);
+        mockPage.setRecords(Collections.emptyList());
+        when(articleMapper.selectPublishedArticlePage(any(Page.class), isNull(), isNull(), isNull(), eq("mostViewed")))
+                .thenReturn(mockPage);
+
+        articleService.pagePublishedArticles(1, 10, null, null, null, "mostViewed");
+
+        verify(articleMapper).selectPublishedArticlePage(any(Page.class), isNull(), isNull(), isNull(), eq("mostViewed"));
+    }
+
+    @Test
+    void pagePublishedArticles_shouldRejectUnknownSort() {
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> articleService.pagePublishedArticles(1, 10, null, null, null, "random"));
+
+        assertEquals(400, exception.getCode());
+        verify(articleMapper, never()).selectPublishedArticlePage(any(), any(), any(), any(), any());
     }
 
     @Test

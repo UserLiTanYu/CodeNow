@@ -13,6 +13,7 @@ const router = createRouter({
       path: '/',
       component: () => import('@/layout/MainLayout.vue'),
       redirect: '/articles',
+      meta: { requiresAdmin: true },
       children: [
         {
           path: 'articles',
@@ -50,6 +51,18 @@ const router = createRouter({
           meta: { title: '操作日志' },
           component: () => import('@/views/log/LogList.vue'),
         },
+        {
+          path: 'users',
+          name: 'users',
+          meta: { title: '用户管理' },
+          component: () => import('@/views/user/UserList.vue'),
+        },
+        {
+          path: 'login-logs',
+          name: 'login-logs',
+          meta: { title: '登录日志' },
+          component: () => import('@/views/user/LoginLogList.vue'),
+        },
       ],
     },
     {
@@ -80,6 +93,42 @@ const router = createRouter({
           meta: { title: '标签文章' },
           component: () => import('@/views/blog/BlogTag.vue'),
         },
+        {
+          path: 'profile',
+          name: 'member-profile',
+          meta: { title: '个人中心', requiresAuth: true },
+          component: () => import('@/views/member/MemberProfile.vue'),
+        },
+        {
+          path: 'favorites',
+          name: 'member-favorites',
+          meta: { title: '我的收藏', requiresAuth: true },
+          component: () => import('@/views/member/MemberFavorites.vue'),
+        },
+        {
+          path: 'comments',
+          name: 'member-comments',
+          meta: { title: '我的评论', requiresAuth: true },
+          component: () => import('@/views/member/MemberComments.vue'),
+        },
+        {
+          path: 'notifications',
+          name: 'member-notifications',
+          meta: { title: '消息中心', requiresAuth: true },
+          component: () => import('@/views/member/MemberNotifications.vue'),
+        },
+        {
+          path: 'terms',
+          name: 'terms',
+          meta: { title: '用户协议' },
+          component: () => import('@/views/blog/PolicyView.vue'),
+        },
+        {
+          path: 'privacy',
+          name: 'privacy',
+          meta: { title: '隐私政策' },
+          component: () => import('@/views/blog/PolicyView.vue'),
+        },
       ],
     },
     {
@@ -94,18 +143,75 @@ router.afterEach((to) => {
   document.title = `${to.meta.title || '页面'} - 码上记`
 })
 
-// 路由守卫：/blog 路由公开访问，其他路由需要登录
-router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token')
-  if (to.path.startsWith('/blog')) {
-    next()
-  } else if (to.path === '/login') {
-    next()
-  } else if (!token) {
-    next('/login')
-  } else {
-    next()
+let verifiedToken = ''
+let verifiedRole = ''
+
+export function resetTokenVerification() {
+  verifiedToken = ''
+  verifiedRole = ''
+}
+
+export async function verifyToken(token) {
+  const response = await fetch('/api/auth/me', {
+    headers: { Authorization: token },
+  })
+
+  if (response.status === 401 || response.status === 403) {
+    return false
   }
-})
+  if (!response.ok) {
+    throw new Error(`Token verification failed with HTTP ${response.status}`)
+  }
+
+  const result = await response.json()
+  return result.code === 200 ? result.data : false
+}
+
+function loginLocation(to) {
+  return {
+    name: 'login',
+    query: to.fullPath && to.fullPath !== '/' ? { redirect: to.fullPath } : {},
+  }
+}
+
+// 路由守卫：/blog 路由公开访问，其他路由需要登录
+export async function authGuard(to) {
+  const token = localStorage.getItem('token')
+  const requiresAuth = Boolean(to.meta?.requiresAuth)
+  const requiresAdmin = Boolean(to.meta?.requiresAdmin) || !to.path.startsWith('/blog') && to.path !== '/login'
+  if (to.path.startsWith('/blog') && !requiresAuth) {
+    return true
+  }
+  if (to.path === '/login') {
+    return true
+  }
+  if (!token) {
+    resetTokenVerification()
+    return loginLocation(to)
+  }
+  if (token === verifiedToken) {
+    if (requiresAdmin && verifiedRole !== 'ADMIN') return { path: '/blog' }
+    return true
+  }
+
+  try {
+    const user = await verifyToken(token)
+    if (user) {
+      verifiedToken = token
+      verifiedRole = user.role?.toUpperCase() || ''
+      if (requiresAdmin && verifiedRole !== 'ADMIN') return { path: '/blog' }
+      return true
+    }
+
+    localStorage.removeItem('token')
+    resetTokenVerification()
+    return loginLocation(to)
+  } catch {
+    // 网络或服务临时不可用时保留 Token；后续 API 请求仍由后端执行权限校验。
+    return true
+  }
+}
+
+router.beforeEach(authGuard)
 
 export default router

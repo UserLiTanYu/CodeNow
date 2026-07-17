@@ -111,25 +111,22 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
     }
 
     @Override
-    public Page<ArticleVO> pagePublishedArticles(Integer pageNum, Integer pageSize, Long categoryId, Long tagId) {
-        List<Long> articleIds = null;
-        if (tagId != null) {
-            List<BlogArticleTag> relations = articleTagMapper.selectList(
-                    new LambdaQueryWrapper<BlogArticleTag>().eq(BlogArticleTag::getTagId, tagId));
-            articleIds = relations.stream().map(BlogArticleTag::getArticleId).collect(Collectors.toList());
-            if (articleIds.isEmpty()) {
-                return new Page<>(pageNum, pageSize);
-            }
+    public Page<ArticleVO> pagePublishedArticles(Integer pageNum, Integer pageSize, Long categoryId, Long tagId,
+                                                 String keyword, String sort) {
+        String normalizedKeyword = keyword == null ? null : keyword.trim();
+        if (normalizedKeyword != null && normalizedKeyword.length() > 100) {
+            throw new BusinessException(400, "搜索关键词不能超过 100 个字符");
+        }
+        if (normalizedKeyword != null && normalizedKeyword.isEmpty()) {
+            normalizedKeyword = null;
+        }
+        String normalizedSort = sort == null || sort.isBlank() ? "latest" : sort.trim();
+        if (!"latest".equals(normalizedSort) && !"mostViewed".equals(normalizedSort)) {
+            throw new BusinessException(400, "不支持的文章排序方式");
         }
 
-        LambdaQueryWrapper<BlogArticle> wrapper = new LambdaQueryWrapper<BlogArticle>()
-                .eq(BlogArticle::getStatus, ArticleStatus.PUBLISHED)
-                .eq(categoryId != null, BlogArticle::getCategoryId, categoryId)
-                .in(articleIds != null && !articleIds.isEmpty(), BlogArticle::getId, articleIds)
-                .orderByDesc(BlogArticle::getIsTop)
-                .orderByDesc(BlogArticle::getCreateTime);
-
-        Page<BlogArticle> articlePage = page(new Page<>(pageNum, pageSize), wrapper);
+        Page<BlogArticle> articlePage = baseMapper.selectPublishedArticlePage(
+                new Page<>(pageNum, pageSize), categoryId, tagId, normalizedKeyword, normalizedSort);
 
         Page<ArticleVO> voPage = new Page<>(articlePage.getCurrent(), articlePage.getSize(), articlePage.getTotal());
         voPage.setRecords(buildArticleVOBatch(articlePage.getRecords()));

@@ -1,28 +1,19 @@
 <template>
   <div class="comment-form">
     <h4 class="form-title">{{ parentId ? '回复评论' : '发表评论' }}</h4>
-    <div class="form-row">
-      <input
-        v-model="form.nickname"
-        class="form-input"
-        placeholder="昵称（必填）"
-        maxlength="50"
-      />
-      <input
-        v-model="form.email"
-        class="form-input"
-        placeholder="邮箱（选填，不会公开）"
-        maxlength="100"
-      />
+    <div v-if="!userStore.isLoggedIn" class="login-required">
+      <span>登录后即可参与评论</span>
+      <button type="button" @click="goLogin">去登录</button>
     </div>
     <textarea
+      v-else
       v-model="form.content"
       class="form-textarea"
       placeholder="写下你的评论..."
       rows="4"
       maxlength="1000"
     ></textarea>
-    <div class="form-actions">
+    <div v-if="userStore.isLoggedIn" class="form-actions">
       <button class="btn-submit" :disabled="submitting" @click="handleSubmit">
         {{ submitting ? '提交中...' : '提交评论' }}
       </button>
@@ -33,8 +24,10 @@
 
 <script setup>
 import { reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { createComment } from '@/api/comment'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
 
 const props = defineProps({
   articleId: { type: Number, required: true },
@@ -42,19 +35,20 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['success', 'cancel'])
+const route = useRoute()
+const router = useRouter()
+const userStore = useUserStore()
 
 const submitting = ref(false)
 const form = reactive({
-  nickname: '',
-  email: '',
   content: '',
 })
 
+function goLogin() {
+  router.push({ path: '/login', query: { redirect: route.fullPath } })
+}
+
 async function handleSubmit() {
-  if (!form.nickname.trim()) {
-    ElMessage.warning('请输入昵称')
-    return
-  }
   if (!form.content.trim()) {
     ElMessage.warning('请输入评论内容')
     return
@@ -66,8 +60,6 @@ async function handleSubmit() {
       articleId: props.articleId,
       parentId: props.parentId || 0,
       content: form.content.trim(),
-      nickname: form.nickname.trim(),
-      email: form.email.trim() || null,
     })
     ElMessage.success('评论成功')
     form.content = ''
@@ -82,37 +74,22 @@ async function handleSubmit() {
 
 <style scoped>
 .comment-form {
-  background: #fff;
-  border-radius: 8px;
+  background: var(--blog-color-surface);
+  border-radius: var(--blog-radius-card);
   padding: 20px;
 }
 .form-title {
   margin: 0 0 16px;
   font-size: 16px;
-  color: #303133;
+  color: var(--blog-color-text);
 }
-.form-row {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-.form-input {
-  flex: 1;
-  padding: 10px 12px;
-  border: 1px solid #dcdfe6;
-  border-radius: 6px;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s;
-}
-.form-input:focus {
-  border-color: #409eff;
-}
+.login-required { padding: 16px; display: flex; align-items: center; justify-content: space-between; border-radius: var(--blog-radius-button); color: var(--blog-color-text-secondary); background: var(--blog-color-background); }
+.login-required button { padding: 7px 14px; border: 0; border-radius: var(--blog-radius-button); color: #fff; background: var(--blog-color-primary); cursor: pointer; }
 .form-textarea {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #dcdfe6;
-  border-radius: 6px;
+  border: 1px solid var(--blog-color-border);
+  border-radius: var(--blog-radius-button);
   font-size: 14px;
   resize: vertical;
   outline: none;
@@ -121,7 +98,7 @@ async function handleSubmit() {
   transition: border-color 0.2s;
 }
 .form-textarea:focus {
-  border-color: #409eff;
+  border-color: var(--blog-color-primary);
 }
 .form-actions {
   margin-top: 12px;
@@ -130,27 +107,27 @@ async function handleSubmit() {
 }
 .btn-submit {
   padding: 8px 24px;
-  background: #409eff;
+  background: var(--blog-color-primary);
   color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--blog-radius-button);
   font-size: 14px;
   cursor: pointer;
   transition: background 0.2s;
 }
 .btn-submit:hover {
-  background: #66b1ff;
+  background: var(--blog-color-primary-strong);
 }
 .btn-submit:disabled {
-  background: #a0cfff;
+  background: var(--blog-color-primary-disabled);
   cursor: not-allowed;
 }
 .btn-cancel {
   padding: 8px 16px;
-  background: #f0f2f5;
-  color: #606266;
+  background: var(--blog-color-background);
+  color: var(--blog-color-text-secondary);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--blog-radius-button);
   font-size: 14px;
   cursor: pointer;
 }
