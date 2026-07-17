@@ -1,6 +1,6 @@
 <template>
   <div class="article-edit">
-    <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
+    <el-form ref="formRef" class="article-form" :model="form" :rules="rules" label-width="80px">
       <el-form-item label="标题" prop="title">
         <el-input v-model="form.title" placeholder="请输入文章标题" />
       </el-form-item>
@@ -29,7 +29,7 @@
       <el-form-item label="封面图">
         <ImageUpload v-model="form.coverImage" />
       </el-form-item>
-      <el-form-item label="内容" prop="content">
+      <el-form-item class="content-form-item" label="内容" prop="content">
         <div class="editor-toolbar">
           <input
             ref="documentInputRef"
@@ -290,8 +290,16 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', handleBeforeUnl
 
 <style scoped>
 .article-edit {
-  max-width: 900px;
+  width: 100%;
+  box-sizing: border-box;
 }
+.article-form > .el-form-item { max-width: 350px; }
+.article-form > .content-form-item {
+  max-width: none;
+  margin-right: 80px;
+}
+.article-edit :deep(.el-form-item__content) { min-width: 0; }
+.article-edit :deep(.md-editor) { width: 100%; }
 .editor-toolbar {
   margin-bottom: 8px;
   display: flex;
@@ -302,4 +310,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', handleBeforeUnl
 .document-input { display: none; }
 .import-tip { color: #909399; font-size: 12px; }
 .sort-tip { margin-left: 10px; color: #909399; font-size: 12px; }
+@media (max-width: 768px) {
+  .article-form > .content-form-item { margin-right: 0; }
+}
 </style>

@@ -3,10 +3,16 @@
     <div class="toolbar">
       <el-button type="primary" @click="router.push('/articles/edit')">新增文章</el-button>
       <div class="filters">
-        <el-select v-model="filterCategoryId" placeholder="按分类筛选" clearable style="width: 160px" @change="loadArticles">
-          <el-option v-for="c in flatCategories" :key="c.id" :label="c.path" :value="c.id" />
-        </el-select>
-        <el-select v-model="filterTagId" placeholder="按标签筛选" clearable style="width: 160px" @change="loadArticles">
+        <el-cascader
+          v-model="filterCategoryId"
+          :options="categoryOptions"
+          :props="{ emitPath: false, checkStrictly: true, expandTrigger: 'hover' }"
+          placeholder="按分类筛选"
+          clearable
+          style="width: 210px"
+          @change="handleFilterChange"
+        />
+        <el-select v-model="filterTagId" placeholder="按标签筛选" clearable style="width: 160px" @change="handleFilterChange">
           <el-option v-for="t in tags" :key="t.id" :label="t.name" :value="t.id" />
         </el-select>
       </div>
@@ -67,19 +73,37 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { getArticles, deleteArticle, toggleArticleStatus, toggleArticleTop } from '@/api/article'
 import { getCategories } from '@/api/category'
 import { getTags } from '@/api/tag'
-import { flattenCategories } from '@/utils/categoryTree'
+import { categoryCascaderOptions } from '@/utils/categoryTree'
 
 const router = useRouter()
+const LIST_STATE_KEY = 'codenow:article-list-state'
+const savedState = readSavedState()
 const articles = ref([])
 const categories = ref([])
 const tags = ref([])
 const loading = ref(false)
 const total = ref(0)
-const pageNum = ref(1)
-const pageSize = ref(10)
-const filterCategoryId = ref(null)
-const filterTagId = ref(null)
-const flatCategories = computed(() => flattenCategories(categories.value))
+const pageNum = ref(savedState.pageNum || 1)
+const pageSize = ref(7)
+const filterCategoryId = ref(savedState.categoryId || null)
+const filterTagId = ref(savedState.tagId || null)
+const categoryOptions = computed(() => categoryCascaderOptions(categories.value))
+
+function readSavedState() {
+  try {
+    return JSON.parse(sessionStorage.getItem(LIST_STATE_KEY)) || {}
+  } catch {
+    return {}
+  }
+}
+
+function saveListState() {
+  sessionStorage.setItem(LIST_STATE_KEY, JSON.stringify({
+    pageNum: pageNum.value,
+    categoryId: filterCategoryId.value,
+    tagId: filterTagId.value,
+  }))
+}
 
 async function loadArticles() {
   loading.value = true
@@ -88,11 +112,21 @@ async function loadArticles() {
     if (filterCategoryId.value) params.categoryId = filterCategoryId.value
     if (filterTagId.value) params.tagId = filterTagId.value
     const res = await getArticles(params)
+    if (res.data.records.length === 0 && pageNum.value > 1 && res.data.total > 0) {
+      pageNum.value = Math.ceil(res.data.total / pageSize.value)
+      return loadArticles()
+    }
     articles.value = res.data.records
     total.value = res.data.total
+    saveListState()
   } finally {
     loading.value = false
   }
+}
+
+function handleFilterChange() {
+  pageNum.value = 1
+  loadArticles()
 }
 
 async function loadFilters() {
@@ -138,6 +172,6 @@ onMounted(() => {
 }
 .pagination {
   margin-top: 16px;
-  justify-content: flex-end;
+  justify-content: center;
 }
 </style>

@@ -6,13 +6,6 @@
         <span class="toolbar-count">共 {{ total }} 篇</span>
       </div>
       <div class="toolbar-controls">
-        <label class="control-group">
-          <span>分类</span>
-          <el-select v-model="selectedCategory" placeholder="全部分类" aria-label="按分类筛选" @change="applyFilters">
-            <el-option label="全部分类" value="" />
-            <el-option v-for="category in flatCategories" :key="category.id" :label="category.path" :value="String(category.id)" />
-          </el-select>
-        </label>
         <div class="control-group sort-control">
           <span>排序</span>
           <div class="sort-switch" role="group" aria-label="文章排序">
@@ -65,34 +58,27 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BlogArticleCard from '@/components/blog/BlogArticleCard.vue'
-import { getBlogArticles, getBlogCategories } from '@/api/blog'
-import { flattenCategories } from '@/utils/categoryTree'
+import { getBlogArticles } from '@/api/blog'
 
 const router = useRouter()
 const route = useRoute()
 const articles = ref([])
-const categories = ref([])
 const loading = ref(true)
 const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const errorMessage = ref('')
 const activeKeyword = ref('')
-const selectedCategory = ref('')
 const selectedSort = ref('learning')
 const sortOptions = [
   { label: '学习顺序', value: 'learning' },
   { label: '最新发布', value: 'latest' },
   { label: '阅读最多', value: 'mostViewed' },
 ]
-const flatCategories = computed(() => flattenCategories(categories.value))
-const toolbarTitle = computed(() => {
-  if (!selectedCategory.value) return '全部文章'
-  return flatCategories.value.find((category) => String(category.id) === selectedCategory.value)?.path || '分类文章'
-})
+const toolbarTitle = '全部文章'
 
 async function fetchArticles() {
   loading.value = true
@@ -104,7 +90,6 @@ async function fetchArticles() {
       sort: selectedSort.value,
     }
     if (activeKeyword.value) params.keyword = activeKeyword.value
-    if (selectedCategory.value) params.categoryId = selectedCategory.value
 
     const res = await getBlogArticles(params)
     articles.value = res.data.records
@@ -121,7 +106,6 @@ async function fetchArticles() {
 function buildQuery({ includeKeyword = true } = {}) {
   const query = {}
   if (includeKeyword && activeKeyword.value) query.keyword = activeKeyword.value
-  if (selectedCategory.value) query.categoryId = selectedCategory.value
   if (selectedSort.value !== 'learning') query.sort = selectedSort.value
   return query
 }
@@ -140,28 +124,16 @@ function clearSearch() {
   router.push({ path: '/blog', query: buildQuery({ includeKeyword: false }) })
 }
 
-async function fetchCategories() {
-  try {
-    const res = await getBlogCategories()
-    categories.value = res.data
-  } catch {
-    categories.value = []
-  }
-}
-
 watch(
-  () => [route.query.keyword, route.query.categoryId, route.query.sort],
-  ([keyword, categoryId, sort]) => {
+  () => [route.query.keyword, route.query.sort],
+  ([keyword, sort]) => {
     activeKeyword.value = typeof keyword === 'string' ? keyword.trim().slice(0, 100) : ''
-    selectedCategory.value = typeof categoryId === 'string' ? categoryId : ''
     selectedSort.value = ['latest', 'mostViewed'].includes(sort) ? sort : 'learning'
     pageNum.value = 1
     fetchArticles()
   },
   { immediate: true },
 )
-
-onMounted(fetchCategories)
 </script>
 
 <style scoped>
