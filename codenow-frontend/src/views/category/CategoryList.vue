@@ -10,13 +10,12 @@
       v-loading="loading"
       row-key="id"
       :tree-props="{ children: 'children' }"
-      default-expand-all
       stripe
     >
       <el-table-column prop="name" label="分类名称" min-width="200" />
       <el-table-column prop="description" label="描述" min-width="260" />
       <el-table-column prop="sort" label="排序" width="90" />
-      <el-table-column prop="createTime" label="创建时间" width="180" />
+      <el-table-column prop="createTime" label="创建时间" width="180" :formatter="formatDateCell" />
       <el-table-column label="操作" width="280" fixed="right">
         <template #default="{ row }">
           <el-button size="small" type="primary" plain @click="openDialog(null, row.id)">新增子分类</el-button>
@@ -61,6 +60,7 @@ import { computed, reactive, ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCategories, createCategory, updateCategory, deleteCategory } from '@/api/category'
 import { categoryCascaderOptions } from '@/utils/categoryTree'
+import { formatDateCell } from '@/utils/format'
 
 const categories = ref([])
 const loading = ref(false)

@@ -151,6 +151,13 @@ public class CommentController {
     private void enrichPublicFields(BlogComment comment) {
         comment.setEmail(null);
         comment.setIp(null);
+        if (comment.getUserId() != null) {
+            SysUser author = userService.getById(comment.getUserId());
+            if (author != null) {
+                comment.setAvatar(author.getAvatar());
+                comment.setUserRole(author.getRole());
+            }
+        }
         comment.setLikeCount(commentLikeService.count(new LambdaQueryWrapper<CommentLike>()
                 .eq(CommentLike::getCommentId, comment.getId())));
         if (StpUtil.isLogin()) {

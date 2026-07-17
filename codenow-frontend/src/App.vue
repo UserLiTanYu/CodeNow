@@ -36,4 +36,8 @@ body {
   margin: 0;
   padding: 0;
 }
+
+#app .el-pagination {
+  justify-content: center;
+}
 </style>

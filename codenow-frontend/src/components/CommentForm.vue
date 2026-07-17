@@ -1,23 +1,24 @@
 <template>
   <div class="comment-form">
-    <h4 class="form-title">{{ parentId ? '回复评论' : '发表评论' }}</h4>
     <div v-if="!userStore.isLoggedIn" class="login-required">
       <span>登录后即可参与评论</span>
       <button type="button" @click="goLogin">去登录</button>
     </div>
-    <textarea
-      v-else
-      v-model="form.content"
-      class="form-textarea"
-      placeholder="写下你的评论..."
-      rows="4"
-      maxlength="1000"
-    ></textarea>
-    <div v-if="userStore.isLoggedIn" class="form-actions">
-      <button class="btn-submit" :disabled="submitting" @click="handleSubmit">
-        {{ submitting ? '提交中...' : '提交评论' }}
-      </button>
-      <button v-if="parentId" class="btn-cancel" @click="$emit('cancel')">取消回复</button>
+    <div v-else class="input-bar">
+      <textarea
+        v-model="form.content"
+        class="form-textarea"
+        :placeholder="parentId ? '输入回复...' : '输入评论'"
+        rows="1"
+        maxlength="1000"
+        @keydown.ctrl.enter.prevent="handleSubmit"
+      ></textarea>
+      <div class="form-actions">
+        <button v-if="parentId" type="button" class="btn-cancel" @click="$emit('cancel')">取消</button>
+        <button type="button" class="btn-submit" :disabled="submitting" @click="handleSubmit">
+          {{ submitting ? '提交中' : '发布' }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -74,61 +75,71 @@ async function handleSubmit() {
 
 <style scoped>
 .comment-form {
-  background: var(--blog-color-surface);
-  border-radius: var(--blog-radius-card);
-  padding: 20px;
-}
-.form-title {
-  margin: 0 0 16px;
-  font-size: 16px;
-  color: var(--blog-color-text);
-}
-.login-required { padding: 16px; display: flex; align-items: center; justify-content: space-between; border-radius: var(--blog-radius-button); color: var(--blog-color-text-secondary); background: var(--blog-color-background); }
-.login-required button { padding: 7px 14px; border: 0; border-radius: var(--blog-radius-button); color: #fff; background: var(--blog-color-primary); cursor: pointer; }
-.form-textarea {
   width: 100%;
-  padding: 10px 12px;
+}
+.login-required { min-height: 48px; padding: 0 14px; display: flex; align-items: center; justify-content: space-between; box-sizing: border-box; border: 1px solid var(--blog-color-border); border-radius: var(--blog-radius-button); color: var(--blog-color-text-secondary); background: var(--blog-color-surface); }
+.login-required button { padding: 7px 14px; border: 0; border-radius: var(--blog-radius-button); color: #fff; background: var(--blog-color-primary); cursor: pointer; }
+.input-bar {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
   border: 1px solid var(--blog-color-border);
   border-radius: var(--blog-radius-button);
+  background: var(--blog-color-surface);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.input-bar:focus-within {
+  border-color: var(--blog-color-primary);
+  box-shadow: var(--blog-focus-ring);
+}
+.form-textarea {
+  flex: 1;
+  min-width: 0;
+  min-height: 24px;
+  max-height: 96px;
+  padding: 12px 14px;
+  border: 0;
   font-size: 14px;
-  resize: vertical;
+  line-height: 24px;
+  resize: none;
+  overflow-y: auto;
   outline: none;
   font-family: inherit;
   box-sizing: border-box;
-  transition: border-color 0.2s;
-}
-.form-textarea:focus {
-  border-color: var(--blog-color-primary);
 }
 .form-actions {
-  margin-top: 12px;
+  padding-right: 8px;
   display: flex;
+  align-items: center;
   gap: 10px;
 }
 .btn-submit {
-  padding: 8px 24px;
-  background: var(--blog-color-primary);
-  color: #fff;
+  padding: 7px 14px;
+  background: var(--blog-color-primary-soft);
+  color: var(--blog-color-primary);
   border: none;
   border-radius: var(--blog-radius-button);
   font-size: 14px;
+  white-space: nowrap;
   cursor: pointer;
   transition: background 0.2s;
 }
 .btn-submit:hover {
-  background: var(--blog-color-primary-strong);
+  color: #fff;
+  background: var(--blog-color-primary);
 }
 .btn-submit:disabled {
-  background: var(--blog-color-primary-disabled);
+  color: var(--blog-color-text-muted);
+  background: var(--blog-color-background);
   cursor: not-allowed;
 }
 .btn-cancel {
-  padding: 8px 16px;
-  background: var(--blog-color-background);
+  padding: 7px 4px;
+  background: transparent;
   color: var(--blog-color-text-secondary);
   border: none;
-  border-radius: var(--blog-radius-button);
   font-size: 14px;
+  white-space: nowrap;
   cursor: pointer;
 }
 </style>

@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { formatDate, formatDateOnly } from '../format'
+import { formatDate, formatDateCell, formatDateOnly } from '../format'
 
 describe('formatDate', () => {
   it('formats an ISO local date-time string', () => {
-    expect(formatDate('2026-07-15T18:30:45')).toBe('2026-07-15 18:30')
+    expect(formatDate('2026-07-15T18:30:45')).toBe('2026-07-15 18:30:45')
+  })
+
+  it('adds missing seconds', () => {
+    expect(formatDate('2026-07-15T18:30')).toBe('2026-07-15 18:30:00')
+  })
+
+  it('formats table cell values', () => {
+    expect(formatDateCell({}, {}, '2026-07-15T18:30:45')).toBe('2026-07-15 18:30:45')
   })
 
   it('returns an empty string for empty values', () => {

@@ -24,7 +24,7 @@
           <span v-else class="text-muted">-</span>
         </template>
       </el-table-column>
-      <el-table-column prop="createTime" label="操作时间" width="180" />
+      <el-table-column prop="createTime" label="操作时间" width="180" :formatter="formatDateCell" />
     </el-table>
 
     <el-pagination
@@ -32,7 +32,7 @@
       background
       layout="total, sizes, prev, pager, next"
       :total="total"
-      :page-sizes="[10, 20, 50]"
+      :page-sizes="[13, 20, 50]"
       v-model:current-page="pageNum"
       v-model:page-size="pageSize"
       @current-change="fetchLogs"
@@ -44,12 +44,13 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import request from '@/utils/request'
+import { formatDateCell } from '@/utils/format'
 
 const logs = ref([])
 const loading = ref(false)
 const total = ref(0)
 const pageNum = ref(1)
-const pageSize = ref(10)
+const pageSize = ref(13)
 
 function formatParams(params) {
   try {
@@ -80,7 +81,7 @@ onMounted(() => {
 <style scoped>
 .pagination {
   margin-top: 16px;
-  justify-content: flex-end;
+  justify-content: center;
 }
 .params-pre {
   margin: 0;

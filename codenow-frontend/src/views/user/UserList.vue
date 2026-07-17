@@ -15,8 +15,8 @@
       <el-table-column prop="status" label="状态" width="100">
         <template #default="{ row }"><el-tag :type="row.status === 'BANNED' ? 'danger' : 'success'">{{ row.status === 'BANNED' ? '已禁用' : '正常' }}</el-tag></template>
       </el-table-column>
-      <el-table-column prop="createTime" label="注册时间" width="170" />
-      <el-table-column prop="lastLoginTime" label="最后登录" width="170" />
+      <el-table-column prop="createTime" label="注册时间" width="180" :formatter="formatDateCell" />
+      <el-table-column prop="lastLoginTime" label="最后登录" width="180" :formatter="formatDateCell" />
       <el-table-column prop="banReason" label="封禁原因" min-width="160" show-overflow-tooltip />
       <el-table-column label="操作" width="110" fixed="right">
         <template #default="{ row }">
@@ -34,6 +34,7 @@
 import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUsers, updateUserStatus } from '@/api/user'
+import { formatDateCell } from '@/utils/format'
 
 const users = ref([])
 const loading = ref(false)

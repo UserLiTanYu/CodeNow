@@ -75,4 +75,10 @@ public class BlogComment {
 
     @TableField(exist = false)
     private String articleTitle;
+
+    @TableField(exist = false)
+    private String avatar;
+
+    @TableField(exist = false)
+    private String userRole;
 }

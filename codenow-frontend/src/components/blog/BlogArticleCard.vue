@@ -25,7 +25,7 @@
         </router-link>
         <time v-if="article.createTime" class="meta-item" :datetime="article.createTime">
           <el-icon><Clock /></el-icon>
-          {{ formatDateOnly(article.createTime) }}
+          {{ formatDate(article.createTime) }}
         </time>
         <span class="meta-item">
           <el-icon><View /></el-icon>
@@ -53,7 +53,7 @@
 <script setup>
 import { computed } from 'vue'
 import { Clock, Folder, View } from '@element-plus/icons-vue'
-import { formatDateOnly } from '@/utils/format'
+import { formatDate } from '@/utils/format'
 
 const props = defineProps({
   item: {

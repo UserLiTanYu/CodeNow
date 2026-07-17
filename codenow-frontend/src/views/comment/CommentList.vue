@@ -11,7 +11,7 @@
         </template>
       </el-table-column>
       <el-table-column prop="ip" label="IP 地址" width="130" />
-      <el-table-column prop="createTime" label="评论时间" width="170" />
+      <el-table-column prop="createTime" label="评论时间" width="180" :formatter="formatDateCell" />
       <el-table-column label="操作" width="80" fixed="right">
         <template #default="{ row }">
           <el-button size="small" type="danger" @click="handleDelete(row.id)">删除</el-button>
@@ -37,6 +37,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getComments, deleteComment } from '@/api/comment'
+import { formatDateCell } from '@/utils/format'
 
 const comments = ref([])
 const loading = ref(false)
