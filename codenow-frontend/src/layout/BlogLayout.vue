@@ -43,7 +43,7 @@
           </router-link>
           <el-dropdown v-if="userStore.isLoggedIn" trigger="click" @command="handleUserCommand">
             <button type="button" class="login-link user-trigger">
-              <el-icon><User /></el-icon>
+              <img class="header-user-avatar" :src="avatarUrl(userStore.userInfo?.avatar)" alt="用户头像" @error="useDefaultAvatar" />
               <span>{{ userStore.userInfo?.nickname || userStore.userInfo?.username || '个人中心' }}</span>
             </button>
             <template #dropdown>
@@ -178,6 +178,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Close, Menu, Search, Setting, User, View } from '@element-plus/icons-vue'
 import { getBlogCategories, getBlogTags, getHotArticles } from '@/api/blog'
+import { avatarUrl, useDefaultAvatar } from '@/utils/avatar'
 import { getUnreadNotificationCount } from '@/api/member'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
@@ -449,6 +450,14 @@ onMounted(async () => {
   transition: color 0.18s ease, border-color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
 }
 .user-trigger { cursor: pointer; }
+.header-user-avatar {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px var(--blog-color-border);
+}
 .unread-badge { min-width: 18px; height: 18px; margin-left: 8px; padding: 0 5px; display: inline-flex; align-items: center; justify-content: center; border-radius: 9px; color: #fff; background: #f56c6c; font-size: 11px; }
 .login-link:hover {
   color: var(--blog-color-primary);

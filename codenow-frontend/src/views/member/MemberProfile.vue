@@ -12,7 +12,7 @@
     <el-tabs v-else v-model="activeTab">
       <el-tab-pane label="个人资料" name="profile">
         <div class="avatar-row">
-          <el-avatar :size="72" :src="profile.avatar || ''">{{ avatarText }}</el-avatar>
+          <el-avatar :size="72" :src="avatarUrl(profile.avatar)" @error="handleProfileAvatarError" />
           <el-upload :show-file-list="false" accept="image/jpeg,image/png,image/gif,image/webp" :http-request="handleAvatarUpload">
             <el-button :loading="avatarLoading">上传头像</el-button>
           </el-upload>
@@ -55,12 +55,13 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getProfile, updateProfile } from '@/api/auth'
 import { changeEmail, changePassword, sendChangeEmailCode, uploadAvatar } from '@/api/member'
 import { useUserStore } from '@/stores/user'
+import { avatarUrl } from '@/utils/avatar'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -75,8 +76,11 @@ const emailSeconds = ref(0)
 const profile = reactive({ username: '', email: '', nickname: '', avatar: '', role: '' })
 const emailForm = reactive({ email: '', verificationCode: '' })
 const passwordForm = reactive({ currentPassword: '', newPassword: '', confirmPassword: '' })
-const avatarText = computed(() => (profile.nickname || profile.username || '用').slice(0, 1))
 let timer
+
+function handleProfileAvatarError() {
+  profile.avatar = ''
+}
 
 async function loadProfile() {
   loading.value = true

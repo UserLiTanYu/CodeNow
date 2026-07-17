@@ -2,7 +2,7 @@
   <div class="comment-tree">
     <article v-for="comment in comments" :key="comment.id" class="comment-item">
       <div class="comment-row">
-        <img v-if="comment.avatar" class="comment-avatar" :src="comment.avatar" alt="" @error="hideBrokenImage" />
+        <img class="comment-avatar" :src="avatarUrl(comment.avatar)" alt="用户头像" @error="useDefaultAvatar" />
 
         <div class="comment-main">
           <div class="comment-header">
@@ -50,7 +50,7 @@
               </div>
 
               <article v-for="item in repliesFor(comment.id)" :key="item.comment.id" class="reply-item">
-                <img v-if="item.comment.avatar" class="comment-avatar reply-avatar" :src="item.comment.avatar" alt="" @error="hideBrokenImage" />
+                <img class="comment-avatar reply-avatar" :src="avatarUrl(item.comment.avatar)" alt="用户头像" @error="useDefaultAvatar" />
                 <div class="comment-main">
                   <div class="comment-header">
                     <strong class="comment-nickname">{{ item.comment.nickname }}</strong>
@@ -94,6 +94,7 @@ import { likeComment, unlikeComment } from '@/api/comment'
 import { deleteMyComment } from '@/api/member'
 import { useUserStore } from '@/stores/user'
 import { formatDate } from '@/utils/format'
+import { avatarUrl, useDefaultAvatar } from '@/utils/avatar'
 
 const props = defineProps({
   comments: { type: Array, required: true },
@@ -133,10 +134,6 @@ function toggleReplies(rootId) {
   if (next.has(rootId)) next.delete(rootId)
   else next.add(rootId)
   expandedRoots.value = next
-}
-
-function hideBrokenImage(event) {
-  event.currentTarget.style.display = 'none'
 }
 
 function handleReply(comment) {
