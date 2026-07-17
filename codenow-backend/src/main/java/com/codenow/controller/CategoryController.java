@@ -1,6 +1,5 @@
 package com.codenow.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.codenow.annotation.OperationLog;
 import com.codenow.common.R;
 import com.codenow.dto.CategoryDTO;
@@ -27,9 +26,7 @@ public class CategoryController {
     @Operation(summary = "查询分类列表", description = "按排序号升序查询全部分类")
     @GetMapping
     public R<List<BlogCategory>> list() {
-        List<BlogCategory> list = categoryService.list(
-                new LambdaQueryWrapper<BlogCategory>().orderByAsc(BlogCategory::getSort));
-        return R.ok(list);
+        return R.ok(categoryService.listTree());
     }
 
     @OperationLog("新增分类")
@@ -38,7 +35,7 @@ public class CategoryController {
     public R<Void> save(@Valid @RequestBody CategoryDTO dto) {
         BlogCategory category = new BlogCategory();
         BeanUtils.copyProperties(dto, category);
-        categoryService.save(category);
+        categoryService.createCategory(category);
         return R.ok();
     }
 
@@ -48,13 +45,9 @@ public class CategoryController {
     public R<Void> update(
             @Parameter(description = "分类 ID", example = "1") @PathVariable Long id,
             @Valid @RequestBody CategoryDTO dto) {
-        BlogCategory category = categoryService.getById(id);
-        if (category == null) {
-            return R.error(404, "分类不存在");
-        }
+        BlogCategory category = new BlogCategory();
         BeanUtils.copyProperties(dto, category);
-        category.setId(id);
-        categoryService.updateById(category);
+        categoryService.updateCategory(id, category);
         return R.ok();
     }
 
@@ -63,7 +56,7 @@ public class CategoryController {
     @DeleteMapping("/{id}")
     public R<Void> delete(
             @Parameter(description = "分类 ID", example = "1") @PathVariable Long id) {
-        categoryService.removeById(id);
+        categoryService.deleteCategory(id);
         return R.ok();
     }
 }

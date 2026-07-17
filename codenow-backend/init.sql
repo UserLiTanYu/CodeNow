@@ -46,12 +46,14 @@ CREATE TABLE `blog_category` (
     `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
     `name`        VARCHAR(50)  NOT NULL                COMMENT '分类名称',
     `description` VARCHAR(200) DEFAULT NULL            COMMENT '分类描述',
+    `parent_id`   BIGINT       NOT NULL DEFAULT 0      COMMENT '父分类 ID（0=一级分类）',
     `sort`        INT          DEFAULT 0               COMMENT '排序号（数字越小越靠前）',
     `create_time` DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `is_deleted`  TINYINT      DEFAULT 0               COMMENT '逻辑删除（0=正常, 1=已删）',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_name` (`name`)
+    UNIQUE KEY `uk_name` (`name`),
+    KEY `idx_parent_sort` (`parent_id`, `sort`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='分类表';
 
 -- -------------------------------------------
@@ -82,6 +84,7 @@ CREATE TABLE `blog_article` (
     `author_id`   BIGINT       DEFAULT NULL            COMMENT '作者 ID',
     `status`      TINYINT      DEFAULT 0               COMMENT '状态（0=草稿, 1=已发布）',
     `is_top`      TINYINT      DEFAULT 0               COMMENT '是否置顶（0=否, 1=是）',
+    `sort`        INT          NOT NULL DEFAULT 0      COMMENT '学习顺序（数字越小越靠前）',
     `view_count`  INT          DEFAULT 0               COMMENT '浏览量',
     `create_time` DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',

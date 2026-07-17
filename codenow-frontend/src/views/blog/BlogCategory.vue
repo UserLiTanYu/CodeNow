@@ -4,10 +4,17 @@
       <div>
         <span class="page-eyebrow">分类</span>
         <h1>{{ categoryName }}</h1>
+        <p v-if="categoryDescription" class="category-description">{{ categoryDescription }}</p>
+        <nav v-if="childCategories.length" class="child-categories" aria-label="子分类">
+          <router-link v-for="child in childCategories" :key="child.id" :to="`/blog/category/${child.id}`">
+            {{ child.name }}
+          </router-link>
+        </nav>
       </div>
       <label class="sort-control">
         <span>排序</span>
         <el-select v-model="selectedSort" aria-label="分类文章排序" @change="changeSort">
+          <el-option label="学习顺序" value="learning" />
           <el-option label="最新发布" value="latest" />
           <el-option label="最多阅读" value="mostViewed" />
         </el-select>
@@ -22,7 +29,7 @@
         <el-empty description="该分类下暂无文章" />
       </div>
       <template v-else>
-        <BlogArticleCard v-for="item in articles" :key="item.article.id" :item="item" :show-category="false" />
+        <BlogArticleCard v-for="item in articles" :key="item.article.id" :item="item" :show-category="childCategories.length > 0" />
         <nav v-if="total > pageSize" class="pagination-box" aria-label="分类文章分页">
           <el-pagination
             v-model:current-page="pageNum"
@@ -42,17 +49,20 @@ import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BlogArticleCard from '@/components/blog/BlogArticleCard.vue'
 import { getBlogArticles, getBlogCategories } from '@/api/blog'
+import { findCategory } from '@/utils/categoryTree'
 
 const route = useRoute()
 const router = useRouter()
 const articles = ref([])
 const categoryName = ref('')
+const categoryDescription = ref('')
+const childCategories = ref([])
 const loading = ref(true)
 const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const errorMessage = ref('')
-const selectedSort = ref(route.query.sort === 'mostViewed' ? 'mostViewed' : 'latest')
+const selectedSort = ref(['latest', 'mostViewed'].includes(route.query.sort) ? route.query.sort : 'learning')
 
 async function fetchArticles() {
   loading.value = true
@@ -78,22 +88,24 @@ async function fetchArticles() {
 async function fetchCategoryName() {
   try {
     const res = await getBlogCategories()
-    const category = res.data.find((item) => item.id === Number(route.params.id))
+    const category = findCategory(res.data, route.params.id)
     categoryName.value = category ? category.name : '未知分类'
+    categoryDescription.value = category?.description || ''
+    childCategories.value = category?.children || []
   } catch {
     categoryName.value = '未知分类'
   }
 }
 
 function changeSort() {
-  const query = selectedSort.value === 'latest' ? {} : { sort: selectedSort.value }
+  const query = selectedSort.value === 'learning' ? {} : { sort: selectedSort.value }
   router.push({ path: route.path, query })
 }
 
 watch(
   () => [route.params.id, route.query.sort],
   ([, sort]) => {
-    selectedSort.value = sort === 'mostViewed' ? 'mostViewed' : 'latest'
+    selectedSort.value = ['latest', 'mostViewed'].includes(sort) ? sort : 'learning'
     pageNum.value = 1
     fetchCategoryName()
     fetchArticles()
@@ -126,6 +138,9 @@ watch(
   font-size: 21px;
   font-weight: 600;
 }
+.category-description { margin: 6px 0 0; color: var(--blog-color-text-secondary); font-size: 13px; }
+.child-categories { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+.child-categories a { padding: 5px 10px; border-radius: var(--blog-radius-tag); color: var(--blog-color-primary); background: var(--blog-color-primary-soft); font-size: 13px; text-decoration: none; }
 .sort-control {
   display: flex;
   align-items: center;

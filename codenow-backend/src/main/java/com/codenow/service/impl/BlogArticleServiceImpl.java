@@ -95,10 +95,12 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         }
 
         // 构建查询条件
+        List<Long> categoryIds = categoryId == null ? Collections.emptyList() : selfAndDescendantCategoryIds(categoryId);
         LambdaQueryWrapper<BlogArticle> wrapper = new LambdaQueryWrapper<BlogArticle>()
-                .eq(categoryId != null, BlogArticle::getCategoryId, categoryId)
+                .in(!categoryIds.isEmpty(), BlogArticle::getCategoryId, categoryIds)
                 .in(articleIds != null && !articleIds.isEmpty(), BlogArticle::getId, articleIds)
                 .orderByDesc(BlogArticle::getIsTop)
+                .orderByAsc(BlogArticle::getSort)
                 .orderByDesc(BlogArticle::getCreateTime);
 
         // 分页查询文章
@@ -120,13 +122,16 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         if (normalizedKeyword != null && normalizedKeyword.isEmpty()) {
             normalizedKeyword = null;
         }
-        String normalizedSort = sort == null || sort.isBlank() ? "latest" : sort.trim();
-        if (!"latest".equals(normalizedSort) && !"mostViewed".equals(normalizedSort)) {
+        String normalizedSort = sort == null || sort.isBlank() ? "learning" : sort.trim();
+        if (!"learning".equals(normalizedSort) && !"latest".equals(normalizedSort)
+                && !"mostViewed".equals(normalizedSort)) {
             throw new BusinessException(400, "不支持的文章排序方式");
         }
 
+        List<Long> categoryIds = categoryId == null ? Collections.emptyList() : selfAndDescendantCategoryIds(categoryId);
+
         Page<BlogArticle> articlePage = baseMapper.selectPublishedArticlePage(
-                new Page<>(pageNum, pageSize), categoryId, tagId, normalizedKeyword, normalizedSort);
+                new Page<>(pageNum, pageSize), categoryIds, tagId, normalizedKeyword, normalizedSort);
 
         Page<ArticleVO> voPage = new Page<>(articlePage.getCurrent(), articlePage.getSize(), articlePage.getTotal());
         voPage.setRecords(buildArticleVOBatch(articlePage.getRecords()));
@@ -193,9 +198,15 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
                 .collect(Collectors.toSet());
         Map<Long, String> categoryNameMap = Collections.emptyMap();
         if (!categoryIds.isEmpty()) {
-            List<BlogCategory> categories = categoryMapper.selectBatchIds(categoryIds);
-            categoryNameMap = categories.stream()
-                    .collect(Collectors.toMap(BlogCategory::getId, BlogCategory::getName, (a, b) -> a));
+            List<BlogCategory> categories = categoryMapper.selectList(null);
+            Map<Long, BlogCategory> byId = categories.stream()
+                    .collect(Collectors.toMap(BlogCategory::getId, item -> item, (a, b) -> a));
+            Map<Long, String> paths = new HashMap<>();
+            for (Long id : categoryIds) {
+                String path = categoryPath(byId.get(id), byId);
+                if (path != null) paths.put(id, path);
+            }
+            categoryNameMap = paths;
         }
 
         // 2. 批量查询文章-标签关联
@@ -229,5 +240,38 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
                     .collect(Collectors.toList()));
             return vo;
         }).collect(Collectors.toList());
+    }
+
+    private List<Long> selfAndDescendantCategoryIds(Long categoryId) {
+        List<BlogCategory> categories = categoryMapper.selectList(null);
+        Map<Long, List<Long>> children = new HashMap<>();
+        for (BlogCategory category : categories) {
+            Long parentId = category.getParentId() == null ? 0L : category.getParentId();
+            children.computeIfAbsent(parentId, ignored -> new ArrayList<>()).add(category.getId());
+        }
+        List<Long> result = new ArrayList<>();
+        Deque<Long> queue = new ArrayDeque<>();
+        queue.add(categoryId);
+        while (!queue.isEmpty()) {
+            Long current = queue.removeFirst();
+            if (result.contains(current)) continue;
+            result.add(current);
+            queue.addAll(children.getOrDefault(current, Collections.emptyList()));
+        }
+        return result;
+    }
+
+    private String categoryPath(BlogCategory category, Map<Long, BlogCategory> byId) {
+        if (category == null) return null;
+        List<String> names = new ArrayList<>();
+        Set<Long> visited = new HashSet<>();
+        BlogCategory current = category;
+        while (current != null && visited.add(current.getId())) {
+            names.add(current.getName());
+            Long parentId = current.getParentId() == null ? 0L : current.getParentId();
+            current = parentId == 0L ? null : byId.get(parentId);
+        }
+        Collections.reverse(names);
+        return String.join(" / ", names);
     }
 }

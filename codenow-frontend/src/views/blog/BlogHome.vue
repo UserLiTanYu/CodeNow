@@ -10,7 +10,7 @@
           <span>分类</span>
           <el-select v-model="selectedCategory" placeholder="全部分类" aria-label="按分类筛选" @change="applyFilters">
             <el-option label="全部分类" value="" />
-            <el-option v-for="category in categories" :key="category.id" :label="category.name" :value="String(category.id)" />
+            <el-option v-for="category in flatCategories" :key="category.id" :label="category.path" :value="String(category.id)" />
           </el-select>
         </label>
         <div class="control-group sort-control">
@@ -69,6 +69,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BlogArticleCard from '@/components/blog/BlogArticleCard.vue'
 import { getBlogArticles, getBlogCategories } from '@/api/blog'
+import { flattenCategories } from '@/utils/categoryTree'
 
 const router = useRouter()
 const route = useRoute()
@@ -81,14 +82,16 @@ const total = ref(0)
 const errorMessage = ref('')
 const activeKeyword = ref('')
 const selectedCategory = ref('')
-const selectedSort = ref('latest')
+const selectedSort = ref('learning')
 const sortOptions = [
+  { label: '学习顺序', value: 'learning' },
   { label: '最新发布', value: 'latest' },
   { label: '阅读最多', value: 'mostViewed' },
 ]
+const flatCategories = computed(() => flattenCategories(categories.value))
 const toolbarTitle = computed(() => {
   if (!selectedCategory.value) return '全部文章'
-  return categories.value.find((category) => String(category.id) === selectedCategory.value)?.name || '分类文章'
+  return flatCategories.value.find((category) => String(category.id) === selectedCategory.value)?.path || '分类文章'
 })
 
 async function fetchArticles() {
@@ -119,7 +122,7 @@ function buildQuery({ includeKeyword = true } = {}) {
   const query = {}
   if (includeKeyword && activeKeyword.value) query.keyword = activeKeyword.value
   if (selectedCategory.value) query.categoryId = selectedCategory.value
-  if (selectedSort.value !== 'latest') query.sort = selectedSort.value
+  if (selectedSort.value !== 'learning') query.sort = selectedSort.value
   return query
 }
 
@@ -151,7 +154,7 @@ watch(
   ([keyword, categoryId, sort]) => {
     activeKeyword.value = typeof keyword === 'string' ? keyword.trim().slice(0, 100) : ''
     selectedCategory.value = typeof categoryId === 'string' ? categoryId : ''
-    selectedSort.value = sort === 'mostViewed' ? 'mostViewed' : 'latest'
+    selectedSort.value = ['latest', 'mostViewed'].includes(sort) ? sort : 'learning'
     pageNum.value = 1
     fetchArticles()
   },

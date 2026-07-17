@@ -160,7 +160,7 @@ class BlogArticleServiceImplTest {
         mockPage.setTotal(0);
         mockPage.setRecords(Collections.emptyList());
 
-        when(articleMapper.selectPublishedArticlePage(any(Page.class), isNull(), isNull(), isNull(), eq("latest")))
+        when(articleMapper.selectPublishedArticlePage(any(Page.class), anyList(), isNull(), isNull(), eq("latest")))
                 .thenReturn(mockPage);
 
         Page<ArticleVO> result = articleService.pagePublishedArticles(1, 10, null, null, null, "latest");
@@ -174,12 +174,12 @@ class BlogArticleServiceImplTest {
         Page<BlogArticle> mockPage = new Page<>(1, 10);
         mockPage.setTotal(0);
         mockPage.setRecords(Collections.emptyList());
-        when(articleMapper.selectPublishedArticlePage(any(Page.class), isNull(), isNull(), eq("Spring Boot"), eq("latest")))
+        when(articleMapper.selectPublishedArticlePage(any(Page.class), anyList(), isNull(), eq("Spring Boot"), eq("learning")))
                 .thenReturn(mockPage);
 
         articleService.pagePublishedArticles(1, 10, null, null, "  Spring Boot  ", null);
 
-        verify(articleMapper).selectPublishedArticlePage(any(Page.class), isNull(), isNull(), eq("Spring Boot"), eq("latest"));
+        verify(articleMapper).selectPublishedArticlePage(any(Page.class), anyList(), isNull(), eq("Spring Boot"), eq("learning"));
     }
 
     @Test
@@ -195,12 +195,12 @@ class BlogArticleServiceImplTest {
     void pagePublishedArticles_shouldPassMostViewedSort() {
         Page<BlogArticle> mockPage = new Page<>(1, 10);
         mockPage.setRecords(Collections.emptyList());
-        when(articleMapper.selectPublishedArticlePage(any(Page.class), isNull(), isNull(), isNull(), eq("mostViewed")))
+        when(articleMapper.selectPublishedArticlePage(any(Page.class), anyList(), isNull(), isNull(), eq("mostViewed")))
                 .thenReturn(mockPage);
 
         articleService.pagePublishedArticles(1, 10, null, null, null, "mostViewed");
 
-        verify(articleMapper).selectPublishedArticlePage(any(Page.class), isNull(), isNull(), isNull(), eq("mostViewed"));
+        verify(articleMapper).selectPublishedArticlePage(any(Page.class), anyList(), isNull(), isNull(), eq("mostViewed"));
     }
 
     @Test

@@ -1,6 +1,5 @@
 package com.codenow.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.codenow.annotation.RateLimit;
 import com.codenow.common.R;
@@ -45,8 +44,8 @@ public class BlogController {
             @Parameter(description = "标签 ID（可选）") @RequestParam(required = false) Long tagId,
             @Parameter(description = "搜索关键词，匹配标题、摘要、分类和标签（可选）")
             @RequestParam(required = false) String keyword,
-            @Parameter(description = "排序方式：latest（最新发布）或 mostViewed（最多阅读）")
-            @RequestParam(defaultValue = "latest") String sort) {
+            @Parameter(description = "排序方式：learning（学习顺序）、latest（最新发布）或 mostViewed（最多阅读）")
+            @RequestParam(defaultValue = "learning") String sort) {
         return R.ok(articleService.pagePublishedArticles(pageNum, pageSize, categoryId, tagId, keyword, sort));
     }
 
@@ -86,8 +85,7 @@ public class BlogController {
     @Operation(summary = "查询所有分类")
     @GetMapping("/categories")
     public R<List<BlogCategory>> listCategories() {
-        return R.ok(categoryService.list(
-                new LambdaQueryWrapper<BlogCategory>().orderByAsc(BlogCategory::getSort)));
+        return R.ok(categoryService.listTree());
     }
 
     @Operation(summary = "查询所有标签")

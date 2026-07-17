@@ -23,10 +23,15 @@ public interface BlogArticleMapper extends BaseMapper<BlogArticle> {
             FROM blog_article a
             LEFT JOIN blog_category c
               ON c.id = a.category_id AND c.is_deleted = 0
+            LEFT JOIN blog_category pc
+              ON pc.id = c.parent_id AND pc.is_deleted = 0
             WHERE a.is_deleted = 0
               AND a.status = 1
-            <if test="categoryId != null">
-              AND a.category_id = #{categoryId}
+            <if test="categoryIds != null and !categoryIds.isEmpty()">
+              AND a.category_id IN
+              <foreach collection="categoryIds" item="categoryId" open="(" separator="," close=")">
+                #{categoryId}
+              </foreach>
             </if>
             <if test="tagId != null">
               AND EXISTS (
@@ -42,6 +47,7 @@ public interface BlogArticleMapper extends BaseMapper<BlogArticle> {
                 LOCATE(#{keyword}, a.title) &gt; 0
                 OR LOCATE(#{keyword}, COALESCE(a.summary, '')) &gt; 0
                 OR LOCATE(#{keyword}, COALESCE(c.name, '')) &gt; 0
+                OR LOCATE(#{keyword}, COALESCE(pc.name, '')) &gt; 0
                 OR EXISTS (
                   SELECT 1
                   FROM blog_article_tag search_rel
@@ -58,15 +64,20 @@ public interface BlogArticleMapper extends BaseMapper<BlogArticle> {
               <when test="sort == 'mostViewed'">
                 a.view_count DESC, a.create_time DESC
               </when>
-              <otherwise>
+              <when test="sort == 'latest'">
                 a.create_time DESC
+              </when>
+              <otherwise>
+                COALESCE(pc.sort, c.sort) ASC,
+                CASE WHEN pc.id IS NULL THEN 0 ELSE c.sort END ASC,
+                a.sort ASC, a.create_time ASC
               </otherwise>
             </choose>
             </script>
             """)
     Page<BlogArticle> selectPublishedArticlePage(
             Page<BlogArticle> page,
-            @Param("categoryId") Long categoryId,
+            @Param("categoryIds") java.util.List<Long> categoryIds,
             @Param("tagId") Long tagId,
             @Param("keyword") String keyword,
             @Param("sort") String sort);

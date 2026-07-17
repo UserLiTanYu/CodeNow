@@ -15,6 +15,9 @@ public class CategoryDTO {
     @Schema(description = "分类描述", example = "Java 技术相关文章")
     private String description;
 
+    @Schema(description = "父分类 ID，0 表示一级分类", example = "0")
+    private Long parentId;
+
     @Schema(description = "排序号（数字越小越靠前）", example = "1")
     private Integer sort;
 }

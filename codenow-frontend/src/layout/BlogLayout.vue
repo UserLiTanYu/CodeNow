@@ -6,14 +6,18 @@
 
         <nav class="nav-categories desktop-nav" aria-label="博客分类导航">
           <router-link to="/blog" class="nav-item">首页</router-link>
-          <router-link
+          <div
             v-for="cat in categories"
             :key="cat.id"
-            :to="`/blog/category/${cat.id}`"
-            class="nav-item"
+            class="nav-category-group"
           >
-            {{ cat.name }}
-          </router-link>
+            <router-link :to="`/blog/category/${cat.id}`" class="nav-item">{{ cat.name }}</router-link>
+            <div v-if="cat.children?.length" class="nav-submenu">
+              <router-link v-for="child in cat.children" :key="child.id" :to="`/blog/category/${child.id}`">
+                {{ child.name }}
+              </router-link>
+            </div>
+          </div>
         </nav>
 
         <div class="header-actions">
@@ -103,14 +107,19 @@
           aria-label="移动端博客分类导航"
         >
           <router-link to="/blog" class="mobile-nav-item">首页</router-link>
-          <router-link
+          <div
             v-for="cat in categories"
             :key="cat.id"
-            :to="`/blog/category/${cat.id}`"
-            class="mobile-nav-item"
+            class="mobile-category-group"
           >
-            {{ cat.name }}
-          </router-link>
+            <router-link :to="`/blog/category/${cat.id}`" class="mobile-nav-item mobile-root-item">{{ cat.name }}</router-link>
+            <router-link
+              v-for="child in cat.children || []"
+              :key="child.id"
+              :to="`/blog/category/${child.id}`"
+              class="mobile-nav-item mobile-child-item"
+            >{{ child.name }}</router-link>
+          </div>
         </nav>
       </Transition>
     </header>
@@ -364,6 +373,24 @@ onMounted(async () => {
   white-space: nowrap;
   transition: color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
 }
+.nav-category-group { position: relative; }
+.nav-submenu {
+  min-width: 160px;
+  padding: 8px;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  display: none;
+  border: 1px solid var(--blog-color-border);
+  border-radius: var(--blog-radius-card);
+  background: var(--blog-color-surface);
+  box-shadow: 0 10px 28px rgba(31, 45, 61, 0.12);
+}
+.nav-category-group:hover .nav-submenu,
+.nav-category-group:focus-within .nav-submenu { display: flex; flex-direction: column; }
+.nav-submenu a { padding: 8px 10px; border-radius: var(--blog-radius-button); color: var(--blog-color-text-secondary); font-size: 13px; text-decoration: none; white-space: nowrap; }
+.nav-submenu a:hover,
+.nav-submenu a.router-link-exact-active { color: var(--blog-color-primary); background: var(--blog-color-primary-soft); }
 .nav-item:hover {
   color: var(--blog-color-primary);
   background: var(--blog-color-primary-soft);
@@ -677,6 +704,9 @@ onMounted(async () => {
     background: var(--blog-color-primary-soft);
     font-weight: 600;
   }
+  .mobile-category-group { display: flex; flex-direction: column; }
+  .mobile-root-item { font-weight: 650; }
+  .mobile-child-item { padding-left: 26px; font-size: 13px; }
 }
 
 @media (max-width: 768px) {

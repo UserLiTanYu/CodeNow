@@ -4,7 +4,7 @@
       <el-button type="primary" @click="router.push('/articles/edit')">新增文章</el-button>
       <div class="filters">
         <el-select v-model="filterCategoryId" placeholder="按分类筛选" clearable style="width: 160px" @change="loadArticles">
-          <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
+          <el-option v-for="c in flatCategories" :key="c.id" :label="c.path" :value="c.id" />
         </el-select>
         <el-select v-model="filterTagId" placeholder="按标签筛选" clearable style="width: 160px" @change="loadArticles">
           <el-option v-for="t in tags" :key="t.id" :label="t.name" :value="t.id" />
@@ -20,6 +20,7 @@
         </template>
       </el-table-column>
       <el-table-column prop="categoryName" label="分类" width="120" />
+      <el-table-column prop="article.sort" label="顺序" width="80" />
       <el-table-column label="标签" width="200">
         <template #default="{ row }">
           <el-tag v-for="tag in row.tags" :key="tag.id" size="small" style="margin: 2px">{{ tag.name }}</el-tag>
@@ -60,12 +61,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getArticles, deleteArticle, toggleArticleStatus, toggleArticleTop } from '@/api/article'
 import { getCategories } from '@/api/category'
 import { getTags } from '@/api/tag'
+import { flattenCategories } from '@/utils/categoryTree'
 
 const router = useRouter()
 const articles = ref([])
@@ -77,6 +79,7 @@ const pageNum = ref(1)
 const pageSize = ref(10)
 const filterCategoryId = ref(null)
 const filterTagId = ref(null)
+const flatCategories = computed(() => flattenCategories(categories.value))
 
 async function loadArticles() {
   loading.value = true

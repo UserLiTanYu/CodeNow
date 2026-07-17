@@ -5,9 +5,14 @@
         <el-input v-model="form.title" placeholder="请输入文章标题" />
       </el-form-item>
       <el-form-item label="分类" prop="categoryId">
-        <el-select v-model="form.categoryId" placeholder="请选择分类" style="width: 100%">
-          <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
-        </el-select>
+        <el-cascader
+          v-model="form.categoryId"
+          :options="categoryOptions"
+          :props="{ emitPath: false, checkStrictly: true }"
+          placeholder="请选择分类或子分类"
+          clearable
+          style="width: 100%"
+        />
       </el-form-item>
       <el-form-item label="标签">
         <el-select v-model="form.tagIds" multiple placeholder="请选择标签" style="width: 100%">
@@ -16,6 +21,10 @@
       </el-form-item>
       <el-form-item label="摘要">
         <el-input v-model="form.summary" type="textarea" :rows="2" placeholder="文章摘要（可选）" />
+      </el-form-item>
+      <el-form-item label="学习顺序">
+        <el-input-number v-model="form.sort" :min="0" :max="9999" />
+        <span class="sort-tip">数字越小越靠前</span>
       </el-form-item>
       <el-form-item label="封面图">
         <ImageUpload v-model="form.coverImage" />
@@ -68,7 +77,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, reactive, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { FolderOpened, Picture, Upload } from '@element-plus/icons-vue'
@@ -80,6 +89,7 @@ import 'md-editor-v3/lib/style.css'
 import ImageUpload from '@/components/ImageUpload.vue'
 import { importArticlePackage } from '@/api/upload'
 import { DOCUMENT_IMPORT_EXTENSIONS, DOCUMENT_IMPORT_MAX_SIZE, documentExtension, parseTextDocument } from '@/utils/documentImport'
+import { categoryCascaderOptions } from '@/utils/categoryTree'
 
 const route = useRoute()
 const router = useRouter()
@@ -96,6 +106,7 @@ const documentInputRef = ref()
 const importing = ref(false)
 const packageInputRef = ref()
 const packageImporting = ref(false)
+const categoryOptions = computed(() => categoryCascaderOptions(categories.value))
 
 const form = reactive({
   title: '',
@@ -105,6 +116,7 @@ const form = reactive({
   categoryId: null,
   tagIds: [],
   status: 0,
+  sort: 0,
 })
 
 const rules = {
@@ -131,6 +143,7 @@ async function loadArticle() {
   form.coverImage = a.coverImage
   form.categoryId = a.categoryId
   form.status = a.status
+  form.sort = a.sort || 0
   form.tagIds = res.data.tags.map((t) => t.id)
   initialSnapshot.value = snapshotForm()
 }
@@ -288,4 +301,5 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', handleBeforeUnl
 }
 .document-input { display: none; }
 .import-tip { color: #909399; font-size: 12px; }
+.sort-tip { margin-left: 10px; color: #909399; font-size: 12px; }
 </style>

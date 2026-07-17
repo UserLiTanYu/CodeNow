@@ -30,6 +30,9 @@ public class ArticleDTO {
     @Schema(description = "文章状态（0=草稿, 1=已发布）", example = "0")
     private Integer status;
 
+    @Schema(description = "学习顺序（数字越小越靠前）", example = "1")
+    private Integer sort;
+
     @Schema(description = "标签 ID 列表", example = "[1, 2]")
     private List<Long> tagIds;
 }

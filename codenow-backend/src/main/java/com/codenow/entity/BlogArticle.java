@@ -33,6 +33,8 @@ public class BlogArticle {
 
     private Integer isTop;
 
+    private Integer sort;
+
     private Integer viewCount;
 
     private LocalDateTime createTime;
