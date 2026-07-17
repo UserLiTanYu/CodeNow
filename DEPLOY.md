@@ -114,6 +114,8 @@ REDIS_PASSWORD=<另一个独立随机值>
 
 JWT_SECRET=<另一个至少32字节的随机值>
 JAVA_OPTS=-Xms128m -Xmx384m -XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError
+UPLOAD_MAX_FILE_SIZE=25MB
+UPLOAD_MAX_REQUEST_SIZE=26MB
 
 # 2 GB 小型服务器的 MySQL 保守配置
 MYSQL_INNODB_BUFFER_POOL_SIZE=128M
@@ -154,6 +156,8 @@ OSS_ACCESS_KEY_SECRET=
 | `REDIS_PASSWORD` | 是 | Redis 密码 |
 | `JWT_SECRET` | 是 | JWT HMAC 密钥，至少 32 字节 |
 | `JAVA_OPTS` | 否 | Java 运行参数；2 GB 服务器建议 `-Xms128m -Xmx384m` |
+| `UPLOAD_MAX_FILE_SIZE` | 否 | 单文件请求上限，默认 `25MB` |
+| `UPLOAD_MAX_REQUEST_SIZE` | 否 | multipart 请求总上限，默认 `26MB` |
 | `BACKEND_PORT` | 否 | 后端宿主机绑定，推荐 `127.0.0.1:8080` |
 | `FRONTEND_PORT` | 否 | 前端宿主机绑定；HTTPS 反代时推荐 `127.0.0.1:8081` |
 | `CORS_ALLOWED_ORIGINS` | 是 | 浏览器实际来源，多个来源使用英文逗号分隔 |
@@ -226,7 +230,8 @@ server {
     listen [::]:80;
     server_name blog.example.com;
 
-    client_max_body_size 10m;
+    # ZIP 文章包最大 25MB，预留 multipart 请求开销
+    client_max_body_size 30m;
 
     location / {
         proxy_pass http://127.0.0.1:8081;
@@ -413,6 +418,8 @@ FROM blog_article ORDER BY id LIMIT 3;
 
 ## 11. 版本升级
 
+需要执行日常项目更新时，优先按照 [项目更新部署流程](UPDATE_DEPLOY.md) 操作；本节保留通用原则。
+
 ### 11.1 升级前
 
 1. 确认新版本 CI 全部通过。
@@ -427,21 +434,18 @@ cd /opt/codenow
 git fetch --tags
 git checkout <新版本Tag>
 docker compose config --quiet
-docker compose build
+docker compose build backend frontend
 ```
 
-已有数据库需要在新后端启动前执行幂等迁移：
+已有数据库需要先根据目标版本检查实际表和字段，再执行对应迁移。不要默认重复运行非幂等脚本，具体判断命令和当前脚本顺序见 `UPDATE_DEPLOY.md`。
+
+确认迁移完成后重新创建应用容器：
 
 ```bash
-docker compose exec -T mysql sh -c \
-  'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' \
-  < codenow-backend/migration-medium-priority.sql
-```
-
-重新创建应用容器：
-
-```bash
-docker compose up -d
+docker compose up -d --no-deps backend
+curl --fail --show-error --silent \
+  'http://127.0.0.1:8080/api/blog/articles?pageNum=1&pageSize=1'
+docker compose up -d --no-deps frontend
 docker compose ps -a
 ```
 
