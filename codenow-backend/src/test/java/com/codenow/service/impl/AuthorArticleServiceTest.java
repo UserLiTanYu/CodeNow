@@ -14,6 +14,7 @@ import com.codenow.mapper.BlogArticleTagMapper;
 import com.codenow.mapper.BlogCategoryMapper;
 import com.codenow.mapper.BlogTagMapper;
 import com.codenow.service.HotArticleService;
+import com.codenow.service.StorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,11 +40,13 @@ class AuthorArticleServiceTest {
     @Mock private BlogCategoryMapper categoryMapper;
     @Mock private BlogTagMapper tagMapper;
     @Mock private HotArticleService hotArticleService;
+    @Mock private StorageService storageService;
 
     @BeforeEach
     void setUp() {
         TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), "test"), BlogArticle.class);
         ReflectionTestUtils.setField(service, "baseMapper", articleMapper);
+        lenient().when(storageService.isManagedUrl(startsWith("/api/blog/files/"))).thenReturn(true);
     }
 
     @Test
@@ -122,10 +125,10 @@ class AuthorArticleServiceTest {
     }
 
     @Test
-    void createOverridesSpoofedOwnerAndTopFlag() {
+    void createOverridesSpoofedOwnerAndTopFlagButKeepsValidatedCover() {
         BlogArticle article = article(null, 999L);
         article.setIsTop(1);
-        article.setCoverImage("https://attacker.example/cover.png");
+        article.setCoverImage("/api/blog/files/2026/07/19/cover.png");
         when(articleMapper.insert(any(BlogArticle.class))).thenAnswer(invocation -> {
             invocation.<BlogArticle>getArgument(0).setId(3L);
             return 1;
@@ -137,7 +140,7 @@ class AuthorArticleServiceTest {
         verify(articleMapper).insert(saved.capture());
         assertEquals(7L, saved.getValue().getAuthorId());
         assertEquals(0, saved.getValue().getIsTop());
-        assertNull(saved.getValue().getCoverImage());
+        assertEquals("/api/blog/files/2026/07/19/cover.png", saved.getValue().getCoverImage());
     }
 
     @Test
@@ -176,7 +179,7 @@ class AuthorArticleServiceTest {
     void ownUpdateDeleteAndStatusAreAllowedAndUpdateCannotSetTop() {
         BlogArticle update = article(1L, 7L);
         update.setIsTop(1);
-        update.setCoverImage("https://attacker.example/cover.png");
+        update.setCoverImage("/api/blog/files/2026/07/19/cover.png");
         when(articleMapper.updateAuthorArticle(any(), eq(7L), eq(false))).thenReturn(1);
         when(articleMapper.deleteAuthorArticle(1L, 7L, false)).thenReturn(1);
         when(articleMapper.toggleAuthorStatus(1L, 7L, false)).thenReturn(1);
@@ -188,9 +191,33 @@ class AuthorArticleServiceTest {
         ArgumentCaptor<BlogArticle> changed = ArgumentCaptor.forClass(BlogArticle.class);
         verify(articleMapper).updateAuthorArticle(changed.capture(), eq(7L), eq(false));
         assertNull(changed.getValue().getIsTop());
-        assertNull(changed.getValue().getCoverImage());
+        assertEquals("/api/blog/files/2026/07/19/cover.png", changed.getValue().getCoverImage());
         verify(articleMapper).deleteAuthorArticle(1L, 7L, false);
         verify(articleMapper).toggleAuthorStatus(1L, 7L, false);
+    }
+
+    @Test
+    void authorCoverRejectsDangerousOrOversizedUrls() {
+        BlogArticle dangerous = article(1L, 7L);
+        dangerous.setCoverImage("javascript:alert(1)");
+        BlogArticle oversized = article(2L, 7L);
+        oversized.setCoverImage("https://example.com/" + "a".repeat(240));
+
+        assertEquals(400, assertThrows(BusinessException.class,
+                () -> service.updateAuthorArticleWithTags(dangerous, List.of(), 7L, false)).getCode());
+        assertEquals(400, assertThrows(BusinessException.class,
+                () -> service.updateAuthorArticleWithTags(oversized, List.of(), 7L, false)).getCode());
+        verify(articleMapper, never()).updateAuthorArticle(any(), anyLong(), anyBoolean());
+    }
+
+    @Test
+    void authorCoverRejectsUnmanagedExternalHttpsUrl() {
+        BlogArticle external = article(1L, 7L);
+        external.setCoverImage("https://tracker.example.com/pixel.png");
+
+        assertEquals(400, assertThrows(BusinessException.class,
+                () -> service.updateAuthorArticleWithTags(external, List.of(), 7L, false)).getCode());
+        verify(articleMapper, never()).updateAuthorArticle(any(), anyLong(), anyBoolean());
     }
 
     @Test

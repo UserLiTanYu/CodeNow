@@ -57,10 +57,12 @@ describe('authGuard', () => {
     const consoleRoute = routes.find((route) => route.path === '/author-console')
     const listRoute = routes.find((route) => route.name === 'author-articles')
     const editRoute = routes.find((route) => route.name === 'author-article-edit')
+    const commentsRoute = routes.find((route) => route.name === 'author-comments')
 
     expect(consoleRoute?.meta.allowedRoles).toEqual(['AUTHOR', 'ADMIN'])
     expect(listRoute?.path).toBe('/author-console/articles')
     expect(editRoute?.path).toBe('/author-console/articles/edit/:id?')
+    expect(commentsRoute?.path).toBe('/author-console/comments')
   })
 
   it('prevents ordinary users from entering the admin area', async () => {

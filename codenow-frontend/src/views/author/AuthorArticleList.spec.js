@@ -1,8 +1,8 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import AuthorArticleList from './AuthorArticleList.vue'
-import { getAuthorArticles } from '@/api/authorConsole'
-import { getBlogCategories, getBlogTags } from '@/api/blog'
+import { getAuthorArticles, getAuthorTags } from '@/api/authorConsole'
+import { getBlogCategories } from '@/api/blog'
 
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('element-plus', () => ({
@@ -11,12 +11,12 @@ vi.mock('element-plus', () => ({
 }))
 vi.mock('@/api/authorConsole', () => ({
   getAuthorArticles: vi.fn(),
+  getAuthorTags: vi.fn(),
   deleteAuthorArticle: vi.fn(),
   toggleAuthorArticleStatus: vi.fn(),
 }))
 vi.mock('@/api/blog', () => ({
   getBlogCategories: vi.fn(),
-  getBlogTags: vi.fn(),
 }))
 
 const ElTable = { name: 'ElTable', props: ['data'], template: '<div><slot /></div>' }
@@ -60,7 +60,7 @@ describe('AuthorArticleList', () => {
     vi.clearAllMocks()
     getAuthorArticles.mockResolvedValue({ data: { records: [], total: 0 } })
     getBlogCategories.mockResolvedValue({ data: [] })
-    getBlogTags.mockResolvedValue({ data: [] })
+    getAuthorTags.mockResolvedValue({ data: [] })
   })
 
   it('keeps desktop table columns within the author content width budget', async () => {

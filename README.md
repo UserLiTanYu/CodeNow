@@ -264,6 +264,14 @@ http://localhost:8080/doc.html
 - [x] 评论管理页（分页 + 删除）
 - [x] 操作日志页（分页查看）
 
+### 作者工作台
+
+- [x] 作者文章列表与编辑（AUTHOR 仅管理本人文章，ADMIN 可治理全部）
+- [x] 读取平台共享标签，标签增删改仍仅限管理员
+- [x] 查看和删除自己文章下的评论
+- [x] 上传封面与正文图片，真实类型校验且最大 5MB
+- [x] 作者不具备文章置顶和 ZIP 文章包导入能力
+
 ### 计划中
 
 - [ ] 基于搜索引擎的正文全文检索与结果高亮
@@ -316,11 +324,11 @@ http://localhost:8080/doc.html
 本项目已接入 JUnit、Vitest 和 GitHub Actions。提交合并前应通过以下检查：
 
 ```bash
-# 后端：26 项单元/集成测试
+# 后端：完整单元/集成测试
 cd codenow-backend
 ./mvnw clean test
 
-# 前端：Lint、7 项测试、覆盖率门槛和生产构建
+# 前端：Lint、完整测试、覆盖率门槛和生产构建
 cd codenow-frontend
 npm ci
 npm run lint:check

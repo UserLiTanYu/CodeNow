@@ -73,8 +73,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { deleteAuthorArticle, getAuthorArticles, toggleAuthorArticleStatus } from '@/api/authorConsole'
-import { getBlogCategories, getBlogTags } from '@/api/blog'
+import { deleteAuthorArticle, getAuthorArticles, getAuthorTags, toggleAuthorArticleStatus } from '@/api/authorConsole'
+import { getBlogCategories } from '@/api/blog'
 import { categoryCascaderOptions } from '@/utils/categoryTree'
 import { formatDateCell } from '@/utils/format'
 
@@ -135,7 +135,7 @@ async function handleDelete(id) {
 
 onMounted(async () => {
   const articlesPromise = loadArticles()
-  const [categoryResult, tagResult] = await Promise.allSettled([getBlogCategories(), getBlogTags()])
+  const [categoryResult, tagResult] = await Promise.allSettled([getBlogCategories(), getAuthorTags()])
   if (categoryResult.status === 'fulfilled') categories.value = categoryResult.value.data
   if (tagResult.status === 'fulfilled') tags.value = tagResult.value.data
   await articlesPromise

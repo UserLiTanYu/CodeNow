@@ -3,6 +3,7 @@ package com.codenow.service.impl;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.codenow.entity.BlogComment;
+import com.codenow.exception.BusinessException;
 import com.codenow.mapper.BlogCommentMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -95,6 +97,47 @@ class CommentServiceImplTest {
 
         assertTrue(result.getRecords().isEmpty());
         verify(commentMapper, never()).selectList(any(Wrapper.class));
+    }
+
+    @Test
+    void pageAuthorCommentsMustBeScopedByArticleOwnerInMapper() {
+        Page<BlogComment> resultPage = new Page<>(1, 10);
+        resultPage.setRecords(List.of());
+        when(commentMapper.selectAuthorCommentPage(any(), eq(9L), eq(7L), eq(false))).thenReturn(resultPage);
+
+        Page<BlogComment> result = commentService.pageAuthorComments(1, 10, 9L, 7L, false);
+
+        assertEquals(resultPage, result);
+        verify(commentMapper).selectAuthorCommentPage(any(), eq(9L), eq(7L), eq(false));
+        verify(commentMapper, never()).selectPage(any(), any());
+    }
+
+    @Test
+    void deleteAuthorCommentRejectsCommentOutsideOwnedArticles() {
+        when(commentMapper.selectAuthorCommentForUpdate(5L, 7L, false)).thenReturn(null);
+
+        BusinessException error = assertThrows(BusinessException.class,
+                () -> commentService.deleteAuthorCommentWithChildren(5L, 7L, false));
+
+        assertEquals(404, error.getCode());
+        verify(commentMapper, never()).deleteById(any(Serializable.class));
+    }
+
+    @Test
+    void deleteAuthorCommentDeletesOwnedThreadChildrenBeforeRoot() {
+        BlogComment root = comment(1L, 0L);
+        BlogComment child = comment(2L, 1L);
+        when(commentMapper.selectAuthorCommentForUpdate(1L, 7L, false)).thenReturn(root);
+        when(commentMapper.selectList(any(Wrapper.class)))
+                .thenReturn(List.of(child))
+                .thenReturn(Collections.emptyList());
+        when(commentMapper.deleteById(any(Serializable.class))).thenReturn(1);
+
+        commentService.deleteAuthorCommentWithChildren(1L, 7L, false);
+
+        var inOrder = inOrder(commentMapper);
+        inOrder.verify(commentMapper).deleteById(2L);
+        inOrder.verify(commentMapper).deleteById(1L);
     }
 
     private BlogComment comment(Long id, Long parentId) {

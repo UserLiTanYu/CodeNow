@@ -21,7 +21,8 @@ public interface BlogArticleMapper extends BaseMapper<BlogArticle> {
             <script>
             UPDATE blog_article
             SET title = #{article.title}, content = #{article.content}, summary = #{article.summary},
-                category_id = #{article.categoryId}, status = #{article.status}, sort = #{article.sort}
+                cover_image = #{article.coverImage}, category_id = #{article.categoryId},
+                status = #{article.status}, sort = #{article.sort}
             WHERE id = #{article.id} AND is_deleted = 0
             <if test="!admin">AND author_id = #{userId}</if>
             </script>

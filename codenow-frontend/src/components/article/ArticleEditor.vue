@@ -39,8 +39,8 @@
         <el-input-number v-model="form.sort" :min="0" :max="9999" />
         <span class="sort-tip">数字越小越靠前</span>
       </el-form-item>
-      <el-form-item v-if="adminTools" label="封面图">
-        <ImageUpload v-model="form.coverImage" />
+      <el-form-item v-if="adminTools || imageTools" label="封面图">
+        <ImageUpload v-model="form.coverImage" :upload-request="uploadImageRequest" />
       </el-form-item>
       <el-form-item v-else label="封面图">
         <span class="stage-tip">作者图片上传将在下一阶段开放</span>
@@ -68,7 +68,7 @@
           <el-button v-if="adminTools" size="small" :loading="packageImporting" @click="packageInputRef?.click()">
             <el-icon><FolderOpened /></el-icon> 导入 ZIP 文章包
           </el-button>
-          <el-button v-if="adminTools" size="small" @click="showImageUpload = true">
+          <el-button v-if="adminTools || imageTools" size="small" @click="showImageUpload = true">
             <el-icon><Picture /></el-icon> 插入图片
           </el-button>
           <span class="import-tip">.md/.txt 最大 2MB{{ adminTools ? '；含本地图片请使用 ZIP 包，最大 25MB' : '' }}</span>
@@ -76,8 +76,8 @@
         <MdEditor v-model="form.content" style="height: 500px" />
       </el-form-item>
 
-      <el-dialog v-if="adminTools" v-model="showImageUpload" title="插入图片" width="450px">
-        <ImageUpload v-model="insertImageUrl" />
+      <el-dialog v-if="adminTools || imageTools" v-model="showImageUpload" title="插入图片" width="450px">
+        <ImageUpload v-model="insertImageUrl" :upload-request="uploadImageRequest" />
         <template #footer>
           <el-button @click="showImageUpload = false">取消</el-button>
           <el-button type="primary" :disabled="!insertImageUrl" @click="handleInsertImage">插入</el-button>
@@ -110,6 +110,8 @@ const props = defineProps({
   loadTags: { type: Function, required: true },
   redirectPath: { type: String, required: true },
   adminTools: { type: Boolean, default: false },
+  imageTools: { type: Boolean, default: false },
+  uploadImageRequest: { type: Function, default: undefined },
 })
 
 const route = useRoute()

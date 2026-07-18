@@ -91,6 +91,16 @@ public class OssStorageServiceImpl implements StorageService {
     }
 
     @Override
+    public boolean isManagedUrl(String url) {
+        if (url == null) {
+            return false;
+        }
+        String prefix = "https://" + storageProperties.getBucketName() + "."
+                + storageProperties.getEndpoint() + "/codenow/";
+        return url.startsWith(prefix) && url.length() > prefix.length();
+    }
+
+    @Override
     public void delete(String url) {
         if (ossClient == null || url == null) {
             return;

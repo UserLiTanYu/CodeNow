@@ -90,6 +90,12 @@ const router = createRouter({
           meta: { title: '编辑文章' },
           component: () => import('@/views/author/AuthorArticleEdit.vue'),
         },
+        {
+          path: 'comments',
+          name: 'author-comments',
+          meta: { title: '文章评论' },
+          component: () => import('@/views/author/AuthorCommentList.vue'),
+        },
       ],
     },
     {

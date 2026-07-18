@@ -16,6 +16,7 @@ import com.codenow.mapper.BlogCategoryMapper;
 import com.codenow.mapper.BlogTagMapper;
 import com.codenow.service.BlogArticleService;
 import com.codenow.service.HotArticleService;
+import com.codenow.service.StorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +32,7 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
     private final BlogCategoryMapper categoryMapper;
     private final BlogTagMapper tagMapper;
     private final HotArticleService hotArticleService;
+    private final StorageService storageService;
 
     @Override
     @Transactional
@@ -194,7 +196,16 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
     }
 
     private void normalizeAuthorArticle(BlogArticle article) {
-        article.setCoverImage(null);
+        String coverImage = article.getCoverImage();
+        if (coverImage != null) {
+            coverImage = coverImage.trim();
+            if (coverImage.isEmpty()) {
+                coverImage = null;
+            } else if (coverImage.length() > 255 || !storageService.isManagedUrl(coverImage)) {
+                throw new BusinessException(400, "封面图片地址不合法");
+            }
+        }
+        article.setCoverImage(coverImage);
         if (article.getStatus() == null) article.setStatus(ArticleStatus.DRAFT);
         if (!Objects.equals(article.getStatus(), ArticleStatus.DRAFT)
                 && !Objects.equals(article.getStatus(), ArticleStatus.PUBLISHED)) {

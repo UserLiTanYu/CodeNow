@@ -17,10 +17,13 @@ vi.mock('element-plus', () => ({
 }))
 vi.mock('md-editor-v3', () => ({ MdEditor: { name: 'MdEditor', template: '<div />' } }))
 vi.mock('md-editor-v3/lib/style.css', () => ({}))
-vi.mock('@/components/ImageUpload.vue', () => ({ default: { name: 'ImageUpload', template: '<div />' } }))
+vi.mock('@/components/ImageUpload.vue', () => ({
+  default: { name: 'ImageUpload', props: ['uploadRequest'], template: '<div />' },
+}))
 vi.mock('@/api/upload', () => ({ importArticlePackage: vi.fn() }))
 
 const ElForm = { name: 'ElForm', props: ['disabled'], template: '<form><slot /></form>' }
+const SlotStub = { template: '<div><slot /></div>' }
 
 function deferred() {
   let resolve
@@ -41,7 +44,7 @@ function mountEditor(overrides = {}) {
       components: { ElForm },
       directives: { loading: () => {} },
       stubs: {
-        ElFormItem: true,
+        ElFormItem: SlotStub,
         ElInput: true,
         ElCascader: true,
         ElSelect: true,
@@ -50,7 +53,7 @@ function mountEditor(overrides = {}) {
         ElButton: true,
         ElIcon: true,
         ElAlert: true,
-        ElDialog: true,
+        ElDialog: SlotStub,
       },
     },
   })
@@ -92,5 +95,16 @@ describe('ArticleEditor initialization', () => {
 
     await leaveGuard()
     expect(mocks.confirm).toHaveBeenCalled()
+  })
+
+  it('enables author cover and inline image upload without enabling ZIP package import', async () => {
+    const uploadImageRequest = vi.fn()
+    const wrapper = mountEditor({ imageTools: true, uploadImageRequest })
+    await flushPromises()
+
+    const uploads = wrapper.findAllComponents({ name: 'ImageUpload' })
+    expect(uploads).toHaveLength(2)
+    expect(uploads.every((upload) => upload.props('uploadRequest') === uploadImageRequest)).toBe(true)
+    expect(wrapper.find('input[accept*="application/zip"]').exists()).toBe(false)
   })
 })

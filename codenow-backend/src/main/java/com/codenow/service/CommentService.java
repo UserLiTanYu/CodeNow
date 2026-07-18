@@ -22,7 +22,18 @@ public interface CommentService extends IService<BlogComment> {
     Page<BlogComment> pageComments(Integer pageNum, Integer pageSize, Long articleId);
 
     /**
+     * 分页查询当前作者文章下的评论；管理员可查询全部文章评论。
+     */
+    Page<BlogComment> pageAuthorComments(Integer pageNum, Integer pageSize, Long articleId,
+                                         Long currentUserId, boolean admin);
+
+    /**
      * 删除评论及其所有子评论
      */
     void deleteWithChildren(Long id);
+
+    /**
+     * 删除作者可管理文章下的评论及其全部回复。
+     */
+    void deleteAuthorCommentWithChildren(Long id, Long currentUserId, boolean admin);
 }

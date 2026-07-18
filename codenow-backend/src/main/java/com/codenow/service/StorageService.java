@@ -15,6 +15,11 @@ public interface StorageService {
     String upload(String originalFilename, byte[] content);
 
     /**
+     * 判断 URL 是否由当前存储实现签发，避免业务字段接受任意第三方资源地址。
+     */
+    boolean isManagedUrl(String url);
+
+    /**
      * 删除文件
      */
     void delete(String url);

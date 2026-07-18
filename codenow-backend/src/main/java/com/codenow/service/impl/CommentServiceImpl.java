@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.codenow.entity.BlogComment;
 import com.codenow.common.CommentStatus;
+import com.codenow.exception.BusinessException;
 import com.codenow.mapper.BlogCommentMapper;
 import com.codenow.service.CommentService;
 import org.springframework.stereotype.Service;
@@ -67,6 +68,15 @@ public class CommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogComme
     }
 
     @Override
+    public Page<BlogComment> pageAuthorComments(Integer pageNum, Integer pageSize, Long articleId,
+                                                Long currentUserId, boolean admin) {
+        if (pageNum == null || pageNum < 1 || pageSize == null || pageSize < 1 || pageSize > 100) {
+            throw new BusinessException(400, "分页参数不合法");
+        }
+        return baseMapper.selectAuthorCommentPage(new Page<>(pageNum, pageSize), articleId, currentUserId, admin);
+    }
+
+    @Override
     public long countApproved(Long articleId) {
         return count(new LambdaQueryWrapper<BlogComment>()
                 .eq(BlogComment::getArticleId, articleId)
@@ -82,11 +92,32 @@ public class CommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogComme
         removeById(id);
     }
 
+    @Override
+    @Transactional
+    public void deleteAuthorCommentWithChildren(Long id, Long currentUserId, boolean admin) {
+        BlogComment root = baseMapper.selectAuthorCommentForUpdate(id, currentUserId, admin);
+        if (root == null) {
+            throw new BusinessException(404, "评论不存在或无权操作");
+        }
+        deleteOwnedChildrenRecursive(root.getId(), root.getArticleId());
+        removeById(root.getId());
+    }
+
     private void deleteChildrenRecursive(Long parentId) {
         List<BlogComment> children = list(new LambdaQueryWrapper<BlogComment>()
                 .eq(BlogComment::getParentId, parentId));
         for (BlogComment child : children) {
             deleteChildrenRecursive(child.getId());
+            removeById(child.getId());
+        }
+    }
+
+    private void deleteOwnedChildrenRecursive(Long parentId, Long articleId) {
+        List<BlogComment> children = list(new LambdaQueryWrapper<BlogComment>()
+                .eq(BlogComment::getParentId, parentId)
+                .eq(BlogComment::getArticleId, articleId));
+        for (BlogComment child : children) {
+            deleteOwnedChildrenRecursive(child.getId(), articleId);
             removeById(child.getId());
         }
     }

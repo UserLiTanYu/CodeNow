@@ -38,6 +38,7 @@ import { uploadImage } from '@/api/upload'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
+  uploadRequest: { type: Function, default: uploadImage },
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -87,7 +88,7 @@ async function uploadFile(file) {
   try {
     const formData = new FormData()
     formData.append('file', file)
-    const res = await uploadImage(formData)
+    const res = await props.uploadRequest(formData)
     imageUrl.value = res.data.url
     emit('update:modelValue', res.data.url)
     ElMessage.success('上传成功')

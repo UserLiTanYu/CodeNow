@@ -8,6 +8,10 @@
           <el-icon><Document /></el-icon>
           <span>我的文章</span>
         </el-menu-item>
+        <el-menu-item index="/author-console/comments">
+          <el-icon><ChatDotRound /></el-icon>
+          <span>文章评论</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
     <el-container class="author-shell">
@@ -41,7 +45,7 @@
 
 <script setup>
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowDown, Document, House } from '@element-plus/icons-vue'
+import { ArrowDown, ChatDotRound, Document, House } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 

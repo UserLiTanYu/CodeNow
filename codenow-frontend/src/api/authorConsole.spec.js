@@ -12,10 +12,14 @@ vi.mock('@/utils/request', () => ({ default: request }))
 import {
   createAuthorArticle,
   deleteAuthorArticle,
+  deleteAuthorComment,
   getAuthorArticle,
   getAuthorArticles,
+  getAuthorComments,
+  getAuthorTags,
   toggleAuthorArticleStatus,
   updateAuthorArticle,
+  uploadAuthorImage,
 } from './authorConsole'
 
 describe('author console api', () => {
@@ -42,5 +46,22 @@ describe('author console api', () => {
       .flat()
       .filter((value) => typeof value === 'string'))
       .not.toContain('/author/articles/11/top')
+  })
+
+  it('uses author-scoped tag, comment and image upload endpoints', () => {
+    const params = { pageNum: 1, pageSize: 10, articleId: 9 }
+    const formData = new FormData()
+
+    getAuthorTags()
+    getAuthorComments(params)
+    deleteAuthorComment(5)
+    uploadAuthorImage(formData)
+
+    expect(request.get).toHaveBeenNthCalledWith(1, '/author/tags')
+    expect(request.get).toHaveBeenNthCalledWith(2, '/author/comments', { params })
+    expect(request.delete).toHaveBeenCalledWith('/author/comments/5')
+    expect(request.post).toHaveBeenCalledWith('/author/upload/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
   })
 })

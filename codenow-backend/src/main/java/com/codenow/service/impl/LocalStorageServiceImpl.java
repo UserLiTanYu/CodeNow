@@ -53,6 +53,12 @@ public class LocalStorageServiceImpl implements StorageService {
     }
 
     @Override
+    public boolean isManagedUrl(String url) {
+        return url != null && url.startsWith("/api/blog/files/")
+                && url.length() > "/api/blog/files/".length();
+    }
+
+    @Override
     public void delete(String url) {
         if (url == null || !url.startsWith("/api/blog/files/")) {
             return;
