@@ -67,6 +67,12 @@ jobs:
         run: docker compose config --quiet
       - name: Build and start the full stack
         run: docker compose up -d --build
+      - name: Wait for MySQL to be healthy
+        run: |
+          for i in $(seq 1 30); do
+            docker compose exec -T mysql mysqladmin ping -uroot -p"$DB_PASSWORD" --silent && break
+            sleep 2
+          done
       - name: Run database migration twice
         run: |
           docker compose exec -T mysql mysql -uroot -p"$DB_PASSWORD" "$DB_NAME" < codenow-backend/migration-medium-priority.sql
