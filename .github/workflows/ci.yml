@@ -20,7 +20,9 @@ jobs:
           cache: maven
       - name: Run backend tests
         working-directory: codenow-backend
-        run: ./mvnw --batch-mode clean test
+        run: |
+          chmod +x ./mvnw
+          ./mvnw --batch-mode clean test
 
   frontend-quality:
     runs-on: ubuntu-latest
