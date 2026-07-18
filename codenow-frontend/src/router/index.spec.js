@@ -43,6 +43,14 @@ describe('authGuard', () => {
     })
   })
 
+  it('registers member author application and admin review routes', async () => {
+    const router = (await import('./index')).default
+    const routeNames = router.getRoutes().map((route) => route.name)
+
+    expect(routeNames).toContain('author-application')
+    expect(routeNames).toContain('admin-author-applications')
+  })
+
   it('prevents ordinary users from entering the admin area', async () => {
     localStorage.setItem('token', 'member-token')
     globalThis.fetch = vi.fn().mockResolvedValue({

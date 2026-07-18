@@ -7,6 +7,7 @@ export const useUserStore = defineStore('user', () => {
   const userInfo = ref(null)
   const isLoggedIn = computed(() => Boolean(token.value))
   const isAdmin = computed(() => userInfo.value?.role?.toUpperCase() === 'ADMIN')
+  const isAuthor = computed(() => userInfo.value?.role?.toUpperCase() === 'AUTHOR')
 
   async function login(account, password, captchaId, captchaCode) {
     const res = await loginApi({ account, password, captchaId, captchaCode })
@@ -32,5 +33,5 @@ export const useUserStore = defineStore('user', () => {
     return res.data
   }
 
-  return { token, userInfo, isLoggedIn, isAdmin, login, logout, fetchUserInfo }
+  return { token, userInfo, isLoggedIn, isAdmin, isAuthor, login, logout, fetchUserInfo }
 })

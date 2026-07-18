@@ -170,7 +170,7 @@ docker compose exec -T mysql sh -c \
 注意：
 
 - `migration-community-v1.sql` 和 `migration-community-v2.sql` 不是完全幂等脚本，只能在对应整组结构都不存在时执行一次。
-- `migration-category-hierarchy.sql` 和 `migration-medium-priority.sql` 是幂等脚本。
+- `migration-category-hierarchy.sql`、`migration-medium-priority.sql` 和 `migration-author-role.sql` 是幂等脚本。
 - 如果同一组结构只存在一部分，应停止更新并检查数据库，不能直接重跑非幂等脚本。
 
 当前服务器已经完成普通用户第一、二版迁移时，通常只需执行：
@@ -183,6 +183,21 @@ docker compose exec -T mysql sh -c \
 docker compose exec -T mysql sh -c \
   'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' \
   < codenow-backend/migration-medium-priority.sql
+
+docker compose exec -T mysql sh -c \
+  'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' \
+  < codenow-backend/migration-author-role.sql
+```
+
+作者角色迁移完成后应确认 `author_application`、`author_profile` 两张表存在，并且 `sys_user.role` 注释包含 `AUTHOR`：
+
+```bash
+docker compose exec -T mysql sh -c \
+  'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "
+    SHOW TABLES LIKE '\''author_application'\'';
+    SHOW TABLES LIKE '\''author_profile'\'';
+    SHOW COLUMNS FROM sys_user LIKE '\''role'\'';
+  "'
 ```
 
 ## 7. 是否同步新的学习目录

@@ -33,6 +33,10 @@
           <el-icon><User /></el-icon>
           <span>用户管理</span>
         </el-menu-item>
+        <el-menu-item index="/author-applications">
+          <el-icon><UserFilled /></el-icon>
+          <span>作者申请</span>
+        </el-menu-item>
         <el-menu-item index="/login-logs">
           <el-icon><Key /></el-icon>
           <span>登录日志</span>
@@ -71,7 +75,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { Document, Folder, PriceTag, ArrowDown, Notebook, ChatDotRound, User, Key, House } from '@element-plus/icons-vue'
+import { Document, Folder, PriceTag, ArrowDown, Notebook, ChatDotRound, User, UserFilled, Key, House } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 
 const route = useRoute()
@@ -86,6 +90,7 @@ const routeTitle = computed(() => {
     '/comments': '评论管理',
     '/logs': '操作日志',
     '/users': '用户管理',
+    '/author-applications': '作者申请审批',
     '/login-logs': '登录日志',
   }
   return map[route.path] || '文章管理'

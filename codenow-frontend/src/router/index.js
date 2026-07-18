@@ -58,6 +58,12 @@ const router = createRouter({
           component: () => import('@/views/user/UserList.vue'),
         },
         {
+          path: 'author-applications',
+          name: 'admin-author-applications',
+          meta: { title: '作者申请' },
+          component: () => import('@/views/author/AdminAuthorApplications.vue'),
+        },
+        {
           path: 'login-logs',
           name: 'login-logs',
           meta: { title: '登录日志' },
@@ -110,6 +116,12 @@ const router = createRouter({
           name: 'member-comments',
           meta: { title: '我的评论', requiresAuth: true },
           component: () => import('@/views/member/MemberComments.vue'),
+        },
+        {
+          path: 'author-application',
+          name: 'author-application',
+          meta: { title: '作者身份', requiresAuth: true },
+          component: () => import('@/views/author/AuthorApplication.vue'),
         },
         {
           path: 'notifications',

@@ -52,6 +52,7 @@
                 <el-dropdown-item command="comments">我的评论</el-dropdown-item>
                 <el-dropdown-item command="favorites">我的收藏</el-dropdown-item>
                 <el-dropdown-item command="notifications">消息中心<span v-if="unreadCount" class="unread-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span></el-dropdown-item>
+                <el-dropdown-item v-if="!userStore.isAdmin" command="authorApplication">{{ userStore.isAuthor ? '作者身份' : '申请成为作者' }}</el-dropdown-item>
                 <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -234,6 +235,7 @@ async function handleUserCommand(command) {
   if (command === 'comments') return router.push('/blog/comments')
   if (command === 'favorites') return router.push('/blog/favorites')
   if (command === 'notifications') return router.push('/blog/notifications')
+  if (command === 'authorApplication') return router.push('/blog/author-application')
   if (command === 'logout') {
     await userStore.logout()
     ElMessage.success('已退出登录')

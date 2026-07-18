@@ -17,7 +17,7 @@ CREATE TABLE `sys_user` (
     `nickname`    VARCHAR(50)  DEFAULT NULL            COMMENT '昵称',
     `avatar`      VARCHAR(255) DEFAULT NULL            COMMENT '头像 URL',
     `email`       VARCHAR(100) DEFAULT NULL            COMMENT '邮箱',
-    `role`        VARCHAR(20)  NOT NULL DEFAULT 'USER' COMMENT '角色（ADMIN/USER）',
+    `role`        VARCHAR(20)  NOT NULL DEFAULT 'USER' COMMENT '角色（ADMIN/AUTHOR/USER）',
     `status`      VARCHAR(20)  NOT NULL DEFAULT 'ACTIVE' COMMENT '状态（ACTIVE/BANNED）',
     `email_verified` TINYINT   NOT NULL DEFAULT 0      COMMENT '邮箱是否已验证',
     `last_login_time` DATETIME DEFAULT NULL            COMMENT '最后登录时间',
@@ -223,3 +223,47 @@ CREATE TABLE `sys_login_log` (
     KEY `idx_login_log_account_time` (`account`, `create_time`),
     CONSTRAINT `fk_login_log_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='登录日志表';
+
+-- -------------------------------------------
+-- 12. 作者公开资料表
+-- -------------------------------------------
+CREATE TABLE `author_profile` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `user_id` BIGINT NOT NULL,
+    `bio` VARCHAR(500) NOT NULL,
+    `expertise` VARCHAR(500) NOT NULL,
+    `website_url` VARCHAR(500) DEFAULT NULL,
+    `portfolio_url` VARCHAR(500) DEFAULT NULL,
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_author_profile_user` (`user_id`),
+    CONSTRAINT `fk_author_profile_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='作者公开资料表';
+
+-- -------------------------------------------
+-- 13. 作者入驻申请表
+-- -------------------------------------------
+CREATE TABLE `author_application` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `user_id` BIGINT NOT NULL,
+    `reason` VARCHAR(1000) NOT NULL,
+    `expertise` VARCHAR(500) NOT NULL,
+    `bio` VARCHAR(500) NOT NULL,
+    `portfolio_url` VARCHAR(500) DEFAULT NULL,
+    `website_url` VARCHAR(500) DEFAULT NULL,
+    `status` VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    `reviewer_id` BIGINT DEFAULT NULL,
+    `review_remark` VARCHAR(500) DEFAULT NULL,
+    `submitted_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `reviewed_at` DATETIME DEFAULT NULL,
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `pending_user_id` BIGINT GENERATED ALWAYS AS (CASE WHEN `status` = 'PENDING' THEN `user_id` ELSE NULL END) STORED,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_author_application_pending_user` (`pending_user_id`),
+    KEY `idx_author_application_user_status` (`user_id`, `status`),
+    KEY `idx_author_application_status_time` (`status`, `submitted_at`),
+    KEY `idx_author_application_reviewer` (`reviewer_id`),
+    CONSTRAINT `fk_author_application_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`),
+    CONSTRAINT `fk_author_application_reviewer` FOREIGN KEY (`reviewer_id`) REFERENCES `sys_user` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='作者入驻申请表';

@@ -21,7 +21,7 @@
         <el-form label-position="top" class="profile-form">
           <el-form-item label="用户名"><el-input :model-value="profile.username" disabled /></el-form-item>
           <el-form-item label="昵称"><el-input v-model="profile.nickname" maxlength="50" show-word-limit /></el-form-item>
-          <el-form-item label="角色"><el-tag>{{ profile.role === 'ADMIN' ? '管理员' : '普通用户' }}</el-tag></el-form-item>
+          <el-form-item label="角色"><el-tag :type="roleMeta.type">{{ roleMeta.label }}</el-tag></el-form-item>
           <el-button type="primary" :loading="saving" @click="saveProfile">保存资料</el-button>
         </el-form>
       </el-tab-pane>
@@ -55,7 +55,7 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getProfile, updateProfile } from '@/api/auth'
@@ -74,6 +74,11 @@ const emailCodeLoading = ref(false)
 const passwordSaving = ref(false)
 const emailSeconds = ref(0)
 const profile = reactive({ username: '', email: '', nickname: '', avatar: '', role: '' })
+const roleMeta = computed(() => ({
+  ADMIN: { label: '管理员', type: 'danger' },
+  AUTHOR: { label: '作者', type: 'success' },
+  USER: { label: '普通用户', type: 'info' },
+}[profile.role?.toUpperCase()] || { label: '普通用户', type: 'info' }))
 const emailForm = reactive({ email: '', verificationCode: '' })
 const passwordForm = reactive({ currentPassword: '', newPassword: '', confirmPassword: '' })
 let timer

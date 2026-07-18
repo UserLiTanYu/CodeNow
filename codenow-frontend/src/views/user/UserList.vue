@@ -10,7 +10,7 @@
       <el-table-column prop="nickname" label="昵称" min-width="120" />
       <el-table-column prop="email" label="邮箱" min-width="200" />
       <el-table-column prop="role" label="角色" width="100">
-        <template #default="{ row }"><el-tag :type="row.role === 'ADMIN' ? 'danger' : 'info'">{{ row.role === 'ADMIN' ? '管理员' : '用户' }}</el-tag></template>
+        <template #default="{ row }"><el-tag :type="roleMeta(row.role).type">{{ roleMeta(row.role).label }}</el-tag></template>
       </el-table-column>
       <el-table-column prop="status" label="状态" width="100">
         <template #default="{ row }"><el-tag :type="row.status === 'BANNED' ? 'danger' : 'success'">{{ row.status === 'BANNED' ? '已禁用' : '正常' }}</el-tag></template>
@@ -42,6 +42,12 @@ const keyword = ref('')
 const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+const roles = {
+  ADMIN: { label: '管理员', type: 'danger' },
+  AUTHOR: { label: '作者', type: 'success' },
+  USER: { label: '用户', type: 'info' },
+}
+const roleMeta = (role) => roles[role?.toUpperCase()] || roles.USER
 
 async function loadUsers() {
   loading.value = true
