@@ -5,6 +5,7 @@
       <div class="member-links">
         <router-link to="/blog/comments">我的评论</router-link>
         <router-link to="/blog/favorites">我的收藏</router-link>
+        <router-link v-if="userStore.canEnterAuthorConsole" to="/author-console/articles">作者工作台</router-link>
       </div>
     </div>
 

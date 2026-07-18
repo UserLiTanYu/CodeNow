@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
+import { invalidateAuthSession } from '@/utils/authSession'
 
 const request = axios.create({
   baseURL: '/api',
@@ -8,7 +9,7 @@ const request = axios.create({
 })
 
 export function redirectToLogin() {
-  localStorage.removeItem('token')
+  invalidateAuthSession()
 
   const currentRoute = router.currentRoute.value
   if (currentRoute.path === '/login') return

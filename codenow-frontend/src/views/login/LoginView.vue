@@ -178,7 +178,9 @@ async function handleLogin() {
     ElMessage.success('登录成功')
     const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/') && !route.query.redirect.startsWith('//')
       ? route.query.redirect
-      : res.data.role === 'ADMIN' ? '/' : '/blog'
+      : res.data.role?.toUpperCase() === 'ADMIN'
+        ? '/'
+        : res.data.role?.toUpperCase() === 'AUTHOR' ? '/author-console/articles' : '/blog'
     router.replace(redirect)
   } catch {
     loginForm.captchaCode = ''

@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { invalidateAuthSession } from '@/utils/authSession'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -68,6 +69,26 @@ const router = createRouter({
           name: 'login-logs',
           meta: { title: '登录日志' },
           component: () => import('@/views/user/LoginLogList.vue'),
+        },
+      ],
+    },
+    {
+      path: '/author-console',
+      component: () => import('@/layout/AuthorLayout.vue'),
+      redirect: '/author-console/articles',
+      meta: { allowedRoles: ['AUTHOR', 'ADMIN'] },
+      children: [
+        {
+          path: 'articles',
+          name: 'author-articles',
+          meta: { title: '我的文章' },
+          component: () => import('@/views/author/AuthorArticleList.vue'),
+        },
+        {
+          path: 'articles/edit/:id?',
+          name: 'author-article-edit',
+          meta: { title: '编辑文章' },
+          component: () => import('@/views/author/AuthorArticleEdit.vue'),
         },
       ],
     },
@@ -155,12 +176,8 @@ router.afterEach((to) => {
   document.title = `${to.meta.title || '页面'} - 码上记`
 })
 
-let verifiedToken = ''
-let verifiedRole = ''
-
 export function resetTokenVerification() {
-  verifiedToken = ''
-  verifiedRole = ''
+  // Kept for callers/tests; restricted routes are intentionally revalidated.
 }
 
 export async function verifyToken(token) {
@@ -190,7 +207,11 @@ function loginLocation(to) {
 export async function authGuard(to) {
   const token = localStorage.getItem('token')
   const requiresAuth = Boolean(to.meta?.requiresAuth)
-  const requiresAdmin = Boolean(to.meta?.requiresAdmin) || !to.path.startsWith('/blog') && to.path !== '/login'
+  const allowedRoles = Array.isArray(to.meta?.allowedRoles)
+    ? to.meta.allowedRoles.map((role) => role.toUpperCase())
+    : Boolean(to.meta?.requiresAdmin) || (!to.path.startsWith('/blog') && to.path !== '/login')
+      ? ['ADMIN']
+      : []
   if (to.path.startsWith('/blog') && !requiresAuth) {
     return true
   }
@@ -201,26 +222,20 @@ export async function authGuard(to) {
     resetTokenVerification()
     return loginLocation(to)
   }
-  if (token === verifiedToken) {
-    if (requiresAdmin && verifiedRole !== 'ADMIN') return { path: '/blog' }
-    return true
-  }
-
   try {
     const user = await verifyToken(token)
     if (user) {
-      verifiedToken = token
-      verifiedRole = user.role?.toUpperCase() || ''
-      if (requiresAdmin && verifiedRole !== 'ADMIN') return { path: '/blog' }
+      const role = user.role?.toUpperCase() || ''
+      if (allowedRoles.length && !allowedRoles.includes(role)) return { path: '/blog' }
       return true
     }
 
-    localStorage.removeItem('token')
+    invalidateAuthSession()
     resetTokenVerification()
     return loginLocation(to)
   } catch {
-    // 网络或服务临时不可用时保留 Token；后续 API 请求仍由后端执行权限校验。
-    return true
+    // Keep the token for a temporary outage, but never open a role-restricted shell.
+    return allowedRoles.length ? { path: '/blog' } : true
   }
 }
 

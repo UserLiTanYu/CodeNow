@@ -17,6 +17,69 @@ public interface BlogArticleMapper extends BaseMapper<BlogArticle> {
     @Update("UPDATE blog_article SET is_top = 1 - is_top WHERE id = #{id} AND is_deleted = 0")
     int toggleTop(@Param("id") Long id);
 
+    @Update("""
+            <script>
+            UPDATE blog_article
+            SET title = #{article.title}, content = #{article.content}, summary = #{article.summary},
+                category_id = #{article.categoryId}, status = #{article.status}, sort = #{article.sort}
+            WHERE id = #{article.id} AND is_deleted = 0
+            <if test="!admin">AND author_id = #{userId}</if>
+            </script>
+            """)
+    int updateAuthorArticle(@Param("article") BlogArticle article,
+                            @Param("userId") Long userId,
+                            @Param("admin") boolean admin);
+
+    @Update("""
+            <script>
+            UPDATE blog_article SET is_deleted = 1
+            WHERE id = #{id} AND is_deleted = 0
+            <if test="!admin">AND author_id = #{userId}</if>
+            </script>
+            """)
+    int deleteAuthorArticle(@Param("id") Long id, @Param("userId") Long userId,
+                            @Param("admin") boolean admin);
+
+    @Update("""
+            <script>
+            UPDATE blog_article SET status = 1 - status
+            WHERE id = #{id} AND is_deleted = 0
+            <if test="!admin">AND author_id = #{userId}</if>
+            </script>
+            """)
+    int toggleAuthorStatus(@Param("id") Long id, @Param("userId") Long userId,
+                           @Param("admin") boolean admin);
+
+    @Select("""
+            <script>
+            SELECT a.*
+            FROM blog_article a
+            WHERE a.is_deleted = 0
+            <if test="!admin">AND a.author_id = #{userId}</if>
+            <if test="categoryIds != null and !categoryIds.isEmpty()">
+              AND a.category_id IN
+              <foreach collection="categoryIds" item="categoryId" open="(" separator="," close=")">
+                #{categoryId}
+              </foreach>
+            </if>
+            <if test="tagId != null">
+              AND EXISTS (
+                SELECT 1 FROM blog_article_tag rel
+                WHERE rel.article_id = a.id
+                  AND rel.tag_id = #{tagId}
+                  AND rel.is_deleted = 0
+              )
+            </if>
+            ORDER BY a.create_time DESC, a.id DESC
+            </script>
+            """)
+    Page<BlogArticle> selectAuthorArticlePage(
+            Page<BlogArticle> page,
+            @Param("categoryIds") java.util.List<Long> categoryIds,
+            @Param("tagId") Long tagId,
+            @Param("userId") Long userId,
+            @Param("admin") boolean admin);
+
     @Select("""
             <script>
             SELECT a.*

@@ -40,6 +40,9 @@ public class SaTokenConfig implements WebMvcConfigurer {
                         "/swagger-resources/**"
                 );
 
+        registry.addInterceptor(new SaInterceptor(handle -> StpUtil.checkRoleOr("AUTHOR", "ADMIN")))
+                .addPathPatterns("/api/author/**");
+
         registry.addInterceptor(new SaInterceptor(handle -> StpUtil.checkRole("ADMIN")))
                 .addPathPatterns(
                         "/api/articles/**",

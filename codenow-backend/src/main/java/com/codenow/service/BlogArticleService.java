@@ -48,6 +48,19 @@ public interface BlogArticleService extends IService<BlogArticle> {
      */
     Page<ArticleVO> pageArticleVO(Integer pageNum, Integer pageSize, Long categoryId, Long tagId);
 
+    Page<ArticleVO> pageAuthorArticleVO(Integer pageNum, Integer pageSize, Long categoryId, Long tagId,
+                                        Long currentUserId, boolean admin);
+
+    ArticleVO getAuthorArticleVOById(Long id, Long currentUserId, boolean admin);
+
+    void saveAuthorArticleWithTags(BlogArticle article, List<Long> tagIds, Long currentUserId);
+
+    void updateAuthorArticleWithTags(BlogArticle article, List<Long> tagIds, Long currentUserId, boolean admin);
+
+    void deleteAuthorArticleWithTags(Long id, Long currentUserId, boolean admin);
+
+    void toggleAuthorStatus(Long id, Long currentUserId, boolean admin);
+
     /**
      * 分页查询已发布文章（用户端，仅 status=1）
      */

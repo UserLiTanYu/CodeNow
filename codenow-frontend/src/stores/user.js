@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, onScopeDispose, ref } from 'vue'
 import { login as loginApi, logout as logoutApi, getUserInfo } from '@/api/auth'
+import { AUTH_INVALIDATED_EVENT } from '@/utils/authSession'
 
 export const useUserStore = defineStore('user', () => {
   const token = ref(localStorage.getItem('token') || '')
@@ -8,6 +9,17 @@ export const useUserStore = defineStore('user', () => {
   const isLoggedIn = computed(() => Boolean(token.value))
   const isAdmin = computed(() => userInfo.value?.role?.toUpperCase() === 'ADMIN')
   const isAuthor = computed(() => userInfo.value?.role?.toUpperCase() === 'AUTHOR')
+  const canEnterAuthorConsole = computed(() => ['AUTHOR', 'ADMIN'].includes(userInfo.value?.role?.toUpperCase()))
+
+  function clearSession() {
+    token.value = ''
+    userInfo.value = null
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener(AUTH_INVALIDATED_EVENT, clearSession)
+    onScopeDispose(() => window.removeEventListener(AUTH_INVALIDATED_EVENT, clearSession))
+  }
 
   async function login(account, password, captchaId, captchaCode) {
     const res = await loginApi({ account, password, captchaId, captchaCode })
@@ -21,8 +33,7 @@ export const useUserStore = defineStore('user', () => {
     try {
       await logoutApi()
     } finally {
-      token.value = ''
-      userInfo.value = null
+      clearSession()
       localStorage.removeItem('token')
     }
   }
@@ -33,5 +44,5 @@ export const useUserStore = defineStore('user', () => {
     return res.data
   }
 
-  return { token, userInfo, isLoggedIn, isAdmin, isAuthor, login, logout, fetchUserInfo }
+  return { token, userInfo, isLoggedIn, isAdmin, isAuthor, canEnterAuthorConsole, login, logout, fetchUserInfo, clearSession }
 })

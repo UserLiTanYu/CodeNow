@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
 import router from '@/router'
+import { useUserStore } from '@/stores/user'
 import request, { redirectToLogin } from './request'
 
 vi.mock('element-plus', () => ({
@@ -9,17 +11,23 @@ vi.mock('element-plus', () => ({
 describe('authentication response handling', () => {
   beforeEach(() => {
     localStorage.clear()
+    setActivePinia(createPinia())
     vi.restoreAllMocks()
   })
 
-  it('clears the token and preserves the current route when redirecting', () => {
+  it('clears local and reactive authentication state when redirecting', () => {
     localStorage.setItem('token', 'expired-token')
+    const userStore = useUserStore()
+    userStore.token = 'expired-token'
+    userStore.userInfo = { role: 'AUTHOR' }
     router.currentRoute.value = { path: '/tags', fullPath: '/tags?page=2' }
     const replace = vi.spyOn(router, 'replace').mockResolvedValue()
 
     redirectToLogin()
 
     expect(localStorage.getItem('token')).toBeNull()
+    expect(userStore.token).toBe('')
+    expect(userStore.userInfo).toBeNull()
     expect(replace).toHaveBeenCalledWith({
       name: 'login',
       query: { redirect: '/tags?page=2' },

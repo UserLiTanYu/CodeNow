@@ -113,6 +113,100 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
     }
 
     @Override
+    public Page<ArticleVO> pageAuthorArticleVO(Integer pageNum, Integer pageSize, Long categoryId, Long tagId,
+                                               Long currentUserId, boolean admin) {
+        validatePage(pageNum, pageSize);
+        List<Long> categoryIds = categoryId == null ? Collections.emptyList() : selfAndDescendantCategoryIds(categoryId);
+        Page<BlogArticle> articlePage = baseMapper.selectAuthorArticlePage(
+                new Page<>(pageNum, pageSize), categoryIds, tagId, currentUserId, admin);
+        Page<ArticleVO> result = new Page<>(articlePage.getCurrent(), articlePage.getSize(), articlePage.getTotal());
+        result.setRecords(buildArticleVOBatch(articlePage.getRecords()));
+        return result;
+    }
+
+    @Override
+    public ArticleVO getAuthorArticleVOById(Long id, Long currentUserId, boolean admin) {
+        BlogArticle article = requireAccessibleArticle(id, currentUserId, admin);
+        return buildArticleVOBatch(List.of(article)).get(0);
+    }
+
+    @Override
+    @Transactional
+    public void saveAuthorArticleWithTags(BlogArticle article, List<Long> tagIds, Long currentUserId) {
+        normalizeAuthorArticle(article);
+        article.setAuthorId(currentUserId);
+        article.setIsTop(0);
+        saveArticleWithTags(article, tagIds);
+    }
+
+    @Override
+    @Transactional
+    public void updateAuthorArticleWithTags(BlogArticle article, List<Long> tagIds,
+                                            Long currentUserId, boolean admin) {
+        normalizeAuthorArticle(article);
+        article.setAuthorId(null);
+        article.setIsTop(null);
+        if (baseMapper.updateAuthorArticle(article, currentUserId, admin) != 1) {
+            throwMutationFailure(article.getId(), currentUserId, admin);
+        }
+        articleTagMapper.delete(new LambdaQueryWrapper<BlogArticleTag>()
+                .eq(BlogArticleTag::getArticleId, article.getId()));
+        saveArticleTagRelations(article.getId(), tagIds);
+    }
+
+    @Override
+    @Transactional
+    public void deleteAuthorArticleWithTags(Long id, Long currentUserId, boolean admin) {
+        if (baseMapper.deleteAuthorArticle(id, currentUserId, admin) != 1) {
+            throwMutationFailure(id, currentUserId, admin);
+        }
+    }
+
+    @Override
+    public void toggleAuthorStatus(Long id, Long currentUserId, boolean admin) {
+        if (baseMapper.toggleAuthorStatus(id, currentUserId, admin) != 1) {
+            throwMutationFailure(id, currentUserId, admin);
+        }
+    }
+
+    private BlogArticle requireAccessibleArticle(Long id, Long currentUserId, boolean admin) {
+        BlogArticle article = getById(id);
+        if (article == null) throw new BusinessException(404, "文章不存在");
+        if (!admin && !Objects.equals(article.getAuthorId(), currentUserId)) {
+            throw new BusinessException(403, "无权操作该文章");
+        }
+        return article;
+    }
+
+    private void throwMutationFailure(Long id, Long currentUserId, boolean admin) {
+        BlogArticle article = getById(id);
+        if (article == null) throw new BusinessException(404, "文章不存在");
+        if (!admin && !Objects.equals(article.getAuthorId(), currentUserId)) {
+            throw new BusinessException(403, "无权操作该文章");
+        }
+        throw new BusinessException(409, "文章状态已发生变化，请刷新后重试");
+    }
+
+    private void validatePage(Integer pageNum, Integer pageSize) {
+        if (pageNum == null || pageNum < 1 || pageSize == null || pageSize < 1 || pageSize > 100) {
+            throw new BusinessException(400, "分页参数不合法");
+        }
+    }
+
+    private void normalizeAuthorArticle(BlogArticle article) {
+        article.setCoverImage(null);
+        if (article.getStatus() == null) article.setStatus(ArticleStatus.DRAFT);
+        if (!Objects.equals(article.getStatus(), ArticleStatus.DRAFT)
+                && !Objects.equals(article.getStatus(), ArticleStatus.PUBLISHED)) {
+            throw new BusinessException(400, "文章状态不合法");
+        }
+        if (article.getSort() == null) article.setSort(0);
+        if (article.getSort() < 0 || article.getSort() > 9999) {
+            throw new BusinessException(400, "学习顺序必须在 0 到 9999 之间");
+        }
+    }
+
+    @Override
     public Page<ArticleVO> pagePublishedArticles(Integer pageNum, Integer pageSize, Long categoryId, Long tagId,
                                                  String keyword, String sort) {
         String normalizedKeyword = keyword == null ? null : keyword.trim();

@@ -51,6 +51,18 @@ describe('authGuard', () => {
     expect(routeNames).toContain('admin-author-applications')
   })
 
+  it('registers the author console article list and edit routes with role metadata', async () => {
+    const router = (await import('./index')).default
+    const routes = router.getRoutes()
+    const consoleRoute = routes.find((route) => route.path === '/author-console')
+    const listRoute = routes.find((route) => route.name === 'author-articles')
+    const editRoute = routes.find((route) => route.name === 'author-article-edit')
+
+    expect(consoleRoute?.meta.allowedRoles).toEqual(['AUTHOR', 'ADMIN'])
+    expect(listRoute?.path).toBe('/author-console/articles')
+    expect(editRoute?.path).toBe('/author-console/articles/edit/:id?')
+  })
+
   it('prevents ordinary users from entering the admin area', async () => {
     localStorage.setItem('token', 'member-token')
     globalThis.fetch = vi.fn().mockResolvedValue({
@@ -60,6 +72,43 @@ describe('authGuard', () => {
     })
 
     await expect(authGuard({ path: '/users', fullPath: '/users', meta: { requiresAdmin: true } })).resolves.toEqual({ path: '/blog' })
+  })
+
+  it.each([
+    ['USER', { path: '/blog' }],
+    ['AUTHOR', true],
+    ['ADMIN', true],
+  ])('applies author console allowed roles to %s', async (role, expected) => {
+    localStorage.setItem('token', `${role.toLowerCase()}-token`)
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      json: vi.fn().mockResolvedValue({ code: 200, data: { id: 3, role } }),
+    })
+
+    await expect(authGuard({
+      path: '/author-console/articles',
+      fullPath: '/author-console/articles',
+      meta: { allowedRoles: ['AUTHOR', 'ADMIN'] },
+    })).resolves.toEqual(expected)
+  })
+
+  it('revalidates the current role on repeated restricted-route checks', async () => {
+    localStorage.setItem('token', 'author-token')
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      json: vi.fn().mockResolvedValue({ code: 200, data: { id: 4, role: 'author' } }),
+    })
+    const target = {
+      path: '/author-console/articles',
+      fullPath: '/author-console/articles',
+      meta: { allowedRoles: ['AUTHOR', 'ADMIN'] },
+    }
+
+    await expect(authGuard(target)).resolves.toBe(true)
+    await expect(authGuard(target)).resolves.toBe(true)
+    expect(fetch).toHaveBeenCalledTimes(2)
   })
 
   it('clears an invalid token and redirects to login', async () => {
@@ -73,11 +122,11 @@ describe('authGuard', () => {
     expect(localStorage.getItem('token')).toBeNull()
   })
 
-  it('keeps the token when verification fails because the service is unavailable', async () => {
+  it('fails closed for a restricted route when verification is unavailable', async () => {
     localStorage.setItem('token', 'valid-token')
     globalThis.fetch = vi.fn().mockRejectedValue(new TypeError('network error'))
 
-    await expect(authGuard({ path: '/articles', fullPath: '/articles' })).resolves.toBe(true)
+    await expect(authGuard({ path: '/articles', fullPath: '/articles' })).resolves.toEqual({ path: '/blog' })
     expect(localStorage.getItem('token')).toBe('valid-token')
   })
 })
