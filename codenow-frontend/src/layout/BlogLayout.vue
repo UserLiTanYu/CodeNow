@@ -137,8 +137,21 @@
         <router-view />
       </main>
       <aside class="blog-sidebar">
+        <div v-if="isAuthorPage && categories.length" class="sidebar-section">
+          <h3 class="sidebar-title">作者分类</h3>
+          <div class="category-list">
+            <button
+              v-for="cat in flatCategories"
+              :key="cat.id"
+              type="button"
+              class="category-item"
+              :class="{ active: selectedAuthorCategoryId === cat.id }"
+              @click="selectAuthorCategory(cat.id)"
+            >{{ cat.name }}</button>
+          </div>
+        </div>
         <div class="sidebar-section">
-          <h3 class="sidebar-title">热门文章</h3>
+          <h3 class="sidebar-title">{{ isAuthorPage ? '作者热门文章' : '热门文章' }}</h3>
           <div v-if="hotArticles.length > 0" class="hot-list">
             <router-link
               v-for="(item, index) in hotArticles"
@@ -156,7 +169,7 @@
           <p v-else class="empty-text">暂无热门文章</p>
         </div>
         <div class="sidebar-section">
-          <h3 class="sidebar-title">标签</h3>
+          <h3 class="sidebar-title">{{ isAuthorPage ? '作者标签' : '标签' }}</h3>
           <div class="tag-cloud">
             <router-link
               v-for="tag in tags"
@@ -185,7 +198,7 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Close, EditPen, Menu, Search, Setting, User, View } from '@element-plus/icons-vue'
-import { getBlogCategories, getBlogTags, getHotArticles } from '@/api/blog'
+import { getBlogCategories, getBlogTags, getHotArticles, getPublicAuthorCategories, getPublicAuthorTags, getPublicAuthorArticles } from '@/api/blog'
 import { avatarUrl, useDefaultAvatar } from '@/utils/avatar'
 import { getUnreadNotificationCount } from '@/api/member'
 import { useUserStore } from '@/stores/user'
@@ -203,6 +216,21 @@ const mobileSearchOpen = ref(false)
 const mobileSearchInput = ref()
 const loginTarget = computed(() => ({ path: '/login', query: { redirect: route.fullPath } }))
 const unreadCount = ref(0)
+const isAuthorPage = computed(() => /^\/blog\/author\/\d+/.test(route.path))
+const authorId = computed(() => route.params.id)
+const selectedAuthorCategoryId = ref(null)
+const flatCategories = computed(() => {
+  const result = []
+  for (const cat of categories.value) {
+    result.push({ id: cat.id, name: cat.name })
+    if (cat.children) {
+      for (const child of cat.children) {
+        result.push({ id: child.id, name: `  ${child.name}` })
+      }
+    }
+  }
+  return result
+})
 
 function normalizedKeyword() {
   return searchKeyword.value.trim().slice(0, 100)
@@ -221,6 +249,10 @@ function clearSearch() {
   if (route.query.keyword) {
     router.push({ path: '/blog' })
   }
+}
+
+function selectAuthorCategory(catId) {
+  selectedAuthorCategoryId.value = selectedAuthorCategoryId.value === catId ? null : catId
 }
 
 async function toggleMobileSearch() {
@@ -272,11 +304,32 @@ watch(
   () => route.fullPath,
   async () => {
     mobileMenuOpen.value = false
-    try {
-      const hotRes = await getHotArticles()
-      hotArticles.value = (hotRes.data || []).slice(0, 3)
-    } catch {
-      // 热门榜刷新失败时保留上一次成功结果。
+    if (isAuthorPage.value && authorId.value) {
+      try {
+        const [catRes, tagRes, artRes] = await Promise.all([
+          getPublicAuthorCategories(authorId.value),
+          getPublicAuthorTags(authorId.value),
+          getPublicAuthorArticles(authorId.value, { pageNum: 1, pageSize: 3, sort: 'mostViewed' }),
+        ])
+        categories.value = catRes.data || []
+        tags.value = tagRes.data || []
+        hotArticles.value = (artRes.data?.records || []).slice(0, 3)
+      } catch {
+        // 保留上一次结果
+      }
+    } else {
+      try {
+        const [catRes, tagRes, hotRes] = await Promise.all([
+          getBlogCategories(),
+          getBlogTags(),
+          getHotArticles(),
+        ])
+        categories.value = catRes.data || []
+        tags.value = tagRes.data || []
+        hotArticles.value = (hotRes.data || []).slice(0, 3)
+      } catch {
+        // 保留上一次结果
+      }
     }
     if (userStore.token) {
       getUnreadNotificationCount().then(res => { unreadCount.value = res.data.count || 0 }).catch(() => {})
@@ -291,17 +344,30 @@ onMounted(async () => {
   if (userStore.token) {
     getUnreadNotificationCount().then(res => { unreadCount.value = res.data.count || 0 }).catch(() => {})
   }
-  try {
-    const [catRes, tagRes, hotRes] = await Promise.all([
-      getBlogCategories(),
-      getBlogTags(),
-      getHotArticles(),
-    ])
-    categories.value = catRes.data
-    tags.value = tagRes.data
-    hotArticles.value = (hotRes.data || []).slice(0, 3)
-  } catch {
-    // 辅助内容加载失败不影响文章主列表。
+  if (isAuthorPage.value && authorId.value) {
+    try {
+      const [catRes, tagRes, artRes] = await Promise.all([
+        getPublicAuthorCategories(authorId.value),
+        getPublicAuthorTags(authorId.value),
+        getPublicAuthorArticles(authorId.value, { pageNum: 1, pageSize: 3, sort: 'mostViewed' }),
+      ])
+      categories.value = catRes.data || []
+      tags.value = tagRes.data || []
+      hotArticles.value = (artRes.data?.records || []).slice(0, 3)
+    } catch { /* ignore */ }
+  } else {
+    try {
+      const [catRes, tagRes, hotRes] = await Promise.all([
+        getBlogCategories(),
+        getBlogTags(),
+        getHotArticles(),
+      ])
+      categories.value = catRes.data
+      tags.value = tagRes.data
+      hotArticles.value = (hotRes.data || []).slice(0, 3)
+    } catch {
+      // 辅助内容加载失败不影响文章主列表。
+    }
   }
 })
 </script>
@@ -583,11 +649,19 @@ onMounted(async () => {
   margin: 0 0 var(--blog-space-4);
   padding-bottom: var(--blog-space-3);
   border-bottom: 1px solid var(--blog-color-border);
-  font-size: 16px;
+  color: var(--blog-color-text);
+  font-size: 15px;
   font-weight: 650;
 }
+.category-list { display: flex; flex-direction: column; gap: 4px; }
+.category-item {
+  display: block; width: 100%; padding: 6px 10px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--blog-color-text-secondary); font-size: 13px;
+  text-align: left; cursor: pointer; transition: background 0.15s, color 0.15s;
+}
+.category-item:hover { background: var(--blog-color-primary-soft); color: var(--blog-color-primary); }
+.category-item.active { background: var(--blog-color-primary-soft); color: var(--blog-color-primary); font-weight: 600; }
 .tag-cloud {
-  display: flex;
   flex-wrap: wrap;
   gap: var(--blog-space-2);
 }
