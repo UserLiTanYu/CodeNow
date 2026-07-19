@@ -8,6 +8,8 @@ import org.apache.ibatis.builder.MapperBuilderAssistant;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.codenow.dto.ArticleVO;
 import com.codenow.entity.BlogArticle;
+import com.codenow.entity.BlogCategory;
+import com.codenow.entity.BlogTag;
 import com.codenow.exception.BusinessException;
 import com.codenow.mapper.BlogArticleMapper;
 import com.codenow.mapper.BlogArticleTagMapper;
@@ -232,6 +234,80 @@ class AuthorArticleServiceTest {
         service.deleteAuthorArticleWithTags(1L, 7L, true);
 
         verify(articleMapper).deleteAuthorArticle(1L, 7L, true);
+    }
+
+    @Test
+    void createRejectsCategoryBelongingToOtherUser() {
+        BlogArticle art = article(null, 7L);
+        art.setCategoryId(100L);
+        BlogCategory otherCategory = new BlogCategory();
+        otherCategory.setId(100L);
+        otherCategory.setAuthorId(8L); // 属于其他用户
+        when(categoryMapper.selectById(100L)).thenReturn(otherCategory);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> service.saveAuthorArticleWithTags(art, List.of(), 7L));
+        assertEquals(400, ex.getCode());
+        assertTrue(ex.getMessage().contains("只能选择自己创建的分类"));
+        verify(articleMapper, never()).insert(any(BlogArticle.class));
+    }
+
+    @Test
+    void createRejectsTagsBelongingToOtherUser() {
+        BlogArticle art = article(null, 7L);
+        BlogTag ownTag = tag(1L, 7L);
+        BlogTag otherTag = tag(2L, 8L);
+        when(tagMapper.selectBatchIds(any())).thenReturn(List.of(ownTag, otherTag));
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> service.saveAuthorArticleWithTags(art, List.of(1L, 2L), 7L));
+        assertEquals(400, ex.getCode());
+        assertTrue(ex.getMessage().contains("只能选择自己创建的标签"));
+        verify(articleMapper, never()).insert(any(BlogArticle.class));
+    }
+
+    @Test
+    void updateRejectsCategoryBelongingToOtherUser() {
+        BlogArticle art = article(1L, 7L);
+        art.setCategoryId(100L);
+        art.setCoverImage("/api/blog/files/2026/07/19/cover.png");
+        BlogCategory otherCategory = new BlogCategory();
+        otherCategory.setId(100L);
+        otherCategory.setAuthorId(8L);
+        when(categoryMapper.selectById(100L)).thenReturn(otherCategory);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> service.updateAuthorArticleWithTags(art, List.of(), 7L, false));
+        assertEquals(400, ex.getCode());
+        verify(articleMapper, never()).updateAuthorArticle(any(), anyLong(), anyBoolean());
+    }
+
+    @Test
+    void createAllowsOwnCategoryAndTags() {
+        BlogArticle art = article(null, 7L);
+        art.setCategoryId(100L);
+        BlogCategory ownCategory = new BlogCategory();
+        ownCategory.setId(100L);
+        ownCategory.setAuthorId(7L);
+        when(categoryMapper.selectById(100L)).thenReturn(ownCategory);
+        BlogTag ownTag = tag(1L, 7L);
+        when(tagMapper.selectBatchIds(any())).thenReturn(List.of(ownTag));
+        when(articleMapper.insert((BlogArticle) any())).thenAnswer(invocation -> {
+            invocation.<BlogArticle>getArgument(0).setId(3L);
+            return 1;
+        });
+
+        service.saveAuthorArticleWithTags(art, List.of(1L), 7L);
+
+        verify(articleMapper).insert((BlogArticle) any());
+    }
+
+    private BlogTag tag(Long id, Long createdBy) {
+        BlogTag tag = new BlogTag();
+        tag.setId(id);
+        tag.setName("tag-" + id);
+        tag.setCreatedBy(createdBy);
+        return tag;
     }
 
     private BlogArticle article(Long id, Long authorId) {

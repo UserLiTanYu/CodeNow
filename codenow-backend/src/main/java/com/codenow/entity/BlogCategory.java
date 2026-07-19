@@ -21,6 +21,8 @@ public class BlogCategory {
 
     private String description;
 
+    private Long authorId;
+
     private Long parentId;
 
     private Integer sort;

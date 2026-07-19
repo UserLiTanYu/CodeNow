@@ -96,6 +96,18 @@ const router = createRouter({
           meta: { title: '文章评论' },
           component: () => import('@/views/author/AuthorCommentList.vue'),
         },
+        {
+          path: 'categories',
+          name: 'author-categories',
+          meta: { title: '分类管理' },
+          component: () => import('@/views/author/AuthorCategoryList.vue'),
+        },
+        {
+          path: 'tags',
+          name: 'author-tags',
+          meta: { title: '标签管理' },
+          component: () => import('@/views/author/AuthorTagList.vue'),
+        },
       ],
     },
     {

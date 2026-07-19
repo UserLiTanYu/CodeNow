@@ -31,14 +31,22 @@
         </div>
       </section>
 
-      <section class="article-toolbar" aria-label="作者文章排序">
-        <div>
+      <section class="article-toolbar" aria-label="作者文章筛选与排序">
+        <div class="toolbar-left">
           <h2>公开文章</h2>
           <span>共 {{ articleTotal }} 篇</span>
         </div>
-        <div class="sort-switch" role="group" aria-label="作者文章排序">
-          <button type="button" :class="{ active: articleSort === 'latest' }" @click="selectSort('latest')">最新发布</button>
-          <button type="button" :class="{ active: articleSort === 'mostViewed' }" @click="selectSort('mostViewed')">阅读最多</button>
+        <div class="toolbar-filters">
+          <el-select v-model="selectedCategoryId" placeholder="全部分类" clearable @change="onFilterChange">
+            <el-option v-for="cat in authorCategories" :key="cat.id" :label="cat.name" :value="cat.id" />
+          </el-select>
+          <el-select v-model="selectedTagId" placeholder="全部标签" clearable @change="onFilterChange">
+            <el-option v-for="tag in authorTags" :key="tag.id" :label="tag.name" :value="tag.id" />
+          </el-select>
+          <div class="sort-switch" role="group" aria-label="作者文章排序">
+            <button type="button" :class="{ active: articleSort === 'latest' }" @click="selectSort('latest')">最新发布</button>
+            <button type="button" :class="{ active: articleSort === 'mostViewed' }" @click="selectSort('mostViewed')">阅读最多</button>
+          </div>
         </div>
       </section>
 
@@ -47,7 +55,7 @@
         <strong>文章列表加载失败</strong>
         <button type="button" @click="fetchArticles">重新加载</button>
       </div>
-      <div v-else-if="articles.length === 0" class="state-panel small">这位作者还没有公开文章</div>
+      <div v-else-if="articles.length === 0" class="state-panel small">暂无符合条件的文章</div>
       <template v-else>
         <BlogArticleCard v-for="item in articles" :key="item.article.id" :item="item" />
         <nav v-if="articleTotal > pageSize" class="pagination-box" aria-label="作者文章分页">
@@ -68,7 +76,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import BlogArticleCard from '@/components/blog/BlogArticleCard.vue'
-import { getPublicAuthor, getPublicAuthorArticles } from '@/api/blog'
+import { getPublicAuthor, getPublicAuthorArticles, getPublicAuthorCategories, getPublicAuthorTags } from '@/api/blog'
 import { avatarUrl, useDefaultAvatar } from '@/utils/avatar'
 
 const route = useRoute()
@@ -78,6 +86,10 @@ const articleTotal = ref(0)
 const pageNum = ref(1)
 const pageSize = 10
 const articleSort = ref('latest')
+const selectedCategoryId = ref(null)
+const selectedTagId = ref(null)
+const authorCategories = ref([])
+const authorTags = ref([])
 const loadingProfile = ref(true)
 const loadingArticles = ref(false)
 const profileError = ref(false)
@@ -103,11 +115,14 @@ async function fetchArticles() {
   loadingArticles.value = true
   articleError.value = false
   try {
-    const response = await getPublicAuthorArticles(route.params.id, {
+    const params = {
       pageNum: pageNum.value,
       pageSize,
       sort: articleSort.value,
-    })
+    }
+    if (selectedCategoryId.value) params.categoryId = selectedCategoryId.value
+    if (selectedTagId.value) params.tagId = selectedTagId.value
+    const response = await getPublicAuthorArticles(route.params.id, params)
     if (currentRequest !== articleRequestId) return
     articles.value = response.data.records || []
     articleTotal.value = Number(response.data.total || 0)
@@ -121,6 +136,20 @@ async function fetchArticles() {
   }
 }
 
+async function fetchAuthorFilters() {
+  try {
+    const [catRes, tagRes] = await Promise.all([
+      getPublicAuthorCategories(route.params.id),
+      getPublicAuthorTags(route.params.id),
+    ])
+    authorCategories.value = catRes.data || []
+    authorTags.value = tagRes.data || []
+  } catch {
+    authorCategories.value = []
+    authorTags.value = []
+  }
+}
+
 async function fetchProfile() {
   const currentRequest = ++profileRequestId
   ++articleRequestId
@@ -129,12 +158,14 @@ async function fetchProfile() {
   author.value = null
   articles.value = []
   articleTotal.value = 0
+  selectedCategoryId.value = null
+  selectedTagId.value = null
   try {
     const response = await getPublicAuthor(route.params.id)
     if (currentRequest !== profileRequestId) return
     author.value = response.data
     document.title = `${author.value.displayName} - 码上记`
-    await fetchArticles()
+    await Promise.all([fetchArticles(), fetchAuthorFilters()])
   } catch {
     if (currentRequest !== profileRequestId) return
     profileError.value = true
@@ -146,6 +177,11 @@ async function fetchProfile() {
 function selectSort(sort) {
   if (articleSort.value === sort) return
   articleSort.value = sort
+  pageNum.value = 1
+  fetchArticles()
+}
+
+function onFilterChange() {
   pageNum.value = 1
   fetchArticles()
 }
@@ -185,9 +221,10 @@ watch(
 .profile-links { display: flex; justify-content: center; gap: 12px; }
 .profile-links a { color: var(--blog-color-primary); font-size: 13px; text-decoration: none; }
 .article-toolbar { padding: 13px 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid var(--blog-color-border); border-radius: var(--blog-radius-card); background: var(--blog-color-surface); }
-.article-toolbar > div:first-child { display: flex; align-items: baseline; gap: 9px; }
-.article-toolbar h2 { margin: 0; color: var(--blog-color-text); font-size: 18px; }
-.article-toolbar span { color: var(--blog-color-text-muted); font-size: 13px; }
+.toolbar-left { display: flex; align-items: baseline; gap: 9px; }
+.toolbar-left h2 { margin: 0; color: var(--blog-color-text); font-size: 18px; }
+.toolbar-left span { color: var(--blog-color-text-muted); font-size: 13px; }
+.toolbar-filters { display: flex; align-items: center; gap: 10px; }
 .sort-switch { padding: 3px; display: flex; border: 1px solid var(--blog-color-border); border-radius: 8px; background: var(--blog-color-background); }
 .sort-switch button { min-height: 30px; padding: 0 12px; border: 0; border-radius: 5px; color: var(--blog-color-text-muted); background: transparent; cursor: pointer; }
 .sort-switch button.active { color: var(--blog-color-primary); background: var(--blog-color-surface); box-shadow: 0 1px 4px rgba(31,45,61,.1); font-weight: 600; }
@@ -201,11 +238,12 @@ a:focus-visible, button:focus-visible { outline: 3px solid rgba(51,126,204,.24);
   .profile-panel { padding: 22px; flex-direction: column; }
   .profile-side { width: 100%; }
   .stats-grid { max-width: 330px; }
+  .article-toolbar { flex-direction: column; align-items: stretch; }
+  .toolbar-filters { flex-wrap: wrap; }
 }
 @media (max-width: 520px) {
   .profile-main { align-items: flex-start; flex-direction: column; }
   .profile-main > img { width: 76px; height: 76px; }
   .profile-copy h1 { font-size: 24px; }
-  .article-toolbar { align-items: flex-start; flex-direction: column; }
 }
 </style>

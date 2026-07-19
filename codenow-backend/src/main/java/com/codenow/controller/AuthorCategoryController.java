@@ -16,22 +16,22 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "管理员分类管理")
+@Tag(name = "作者分类管理")
 @RestController
-@RequestMapping("/api/categories")
+@RequestMapping("/api/author/categories")
 @RequiredArgsConstructor
-public class CategoryController {
+public class AuthorCategoryController {
 
     private final BlogCategoryService categoryService;
 
-    @Operation(summary = "查询分类列表")
+    @Operation(summary = "查询我的分类列表")
     @GetMapping
     public R<List<BlogCategory>> list() {
         long userId = StpUtil.getLoginIdAsLong();
         return R.ok(categoryService.listTreeByAuthor(userId));
     }
 
-    @OperationLog("管理员新增分类")
+    @OperationLog("作者新增分类")
     @Operation(summary = "新增分类")
     @PostMapping
     public R<Void> save(@Valid @RequestBody CategoryDTO dto) {
@@ -43,11 +43,11 @@ public class CategoryController {
         return R.ok();
     }
 
-    @OperationLog("管理员修改分类")
+    @OperationLog("作者修改分类")
     @Operation(summary = "修改分类")
     @PutMapping("/{id}")
     public R<Void> update(
-            @Parameter(description = "分类 ID", example = "1") @PathVariable Long id,
+            @Parameter(description = "分类 ID") @PathVariable Long id,
             @Valid @RequestBody CategoryDTO dto) {
         long userId = StpUtil.getLoginIdAsLong();
         BlogCategory category = new BlogCategory();
@@ -56,10 +56,10 @@ public class CategoryController {
         return R.ok();
     }
 
-    @OperationLog("管理员删除分类")
+    @OperationLog("作者删除分类")
     @Operation(summary = "删除分类")
     @DeleteMapping("/{id}")
-    public R<Void> delete(@Parameter(description = "分类 ID", example = "1") @PathVariable Long id) {
+    public R<Void> delete(@Parameter(description = "分类 ID") @PathVariable Long id) {
         long userId = StpUtil.getLoginIdAsLong();
         categoryService.deleteAuthorCategory(id, userId);
         return R.ok();

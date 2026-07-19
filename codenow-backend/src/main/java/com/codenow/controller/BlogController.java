@@ -82,15 +82,15 @@ public class BlogController {
         return R.ok(vo);
     }
 
-    @Operation(summary = "查询所有分类")
+    @Operation(summary = "查询所有分类", description = "仅返回至少有一篇已发布文章的分类")
     @GetMapping("/categories")
     public R<List<BlogCategory>> listCategories() {
-        return R.ok(categoryService.listTree());
+        return R.ok(categoryService.listTreeByPublishedArticles());
     }
 
-    @Operation(summary = "查询所有标签")
+    @Operation(summary = "查询所有标签", description = "仅返回至少关联了一篇已发布文章的标签")
     @GetMapping("/tags")
     public R<List<BlogTag>> listTags() {
-        return R.ok(tagService.list());
+        return R.ok(tagService.listByPublishedArticles());
     }
 }

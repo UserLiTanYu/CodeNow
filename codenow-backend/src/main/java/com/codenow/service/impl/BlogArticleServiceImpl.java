@@ -140,6 +140,7 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
     @Transactional
     public void saveAuthorArticleWithTags(BlogArticle article, List<Long> tagIds, Long currentUserId) {
         normalizeAuthorArticle(article);
+        validateCategoryAndTagOwnership(article.getCategoryId(), tagIds, currentUserId);
         article.setAuthorId(currentUserId);
         article.setIsTop(0);
         saveArticleWithTags(article, tagIds);
@@ -150,6 +151,7 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
     public void updateAuthorArticleWithTags(BlogArticle article, List<Long> tagIds,
                                             Long currentUserId, boolean admin) {
         normalizeAuthorArticle(article);
+        validateCategoryAndTagOwnership(article.getCategoryId(), tagIds, currentUserId);
         article.setAuthorId(null);
         article.setIsTop(null);
         if (baseMapper.updateAuthorArticle(article, currentUserId, admin) != 1) {
@@ -218,6 +220,35 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         if (article.getSort() == null) article.setSort(0);
         if (article.getSort() < 0 || article.getSort() > 9999) {
             throw new BusinessException(400, "学习顺序必须在 0 到 9999 之间");
+        }
+    }
+
+    /**
+     * 验证分类和标签是否属于当前作者
+     */
+    private void validateCategoryAndTagOwnership(Long categoryId, List<Long> tagIds, Long currentUserId) {
+        if (categoryId != null) {
+            BlogCategory category = categoryMapper.selectById(categoryId);
+            if (category == null) {
+                throw new BusinessException(400, "分类不存在");
+            }
+            if (!Objects.equals(category.getAuthorId(), currentUserId)) {
+                throw new BusinessException(400, "只能选择自己创建的分类");
+            }
+        }
+        if (tagIds != null && !tagIds.isEmpty()) {
+            List<Long> distinctTagIds = tagIds.stream().filter(Objects::nonNull).distinct().toList();
+            if (!distinctTagIds.isEmpty()) {
+                List<BlogTag> tags = tagMapper.selectBatchIds(distinctTagIds);
+                if (tags.size() != distinctTagIds.size()) {
+                    throw new BusinessException(400, "包含不存在的标签 ID");
+                }
+                for (BlogTag tag : tags) {
+                    if (!Objects.equals(tag.getCreatedBy(), currentUserId)) {
+                        throw new BusinessException(400, "只能选择自己创建的标签");
+                    }
+                }
+            }
         }
     }
 

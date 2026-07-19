@@ -81,6 +81,12 @@ public interface BlogArticleMapper extends BaseMapper<BlogArticle> {
             @Param("userId") Long userId,
             @Param("admin") boolean admin);
 
+    @Select("SELECT DISTINCT a.category_id FROM blog_article a WHERE a.status = 1 AND a.is_deleted = 0 AND a.category_id IS NOT NULL")
+    java.util.List<Long> selectPublishedCategoryIds();
+
+    @Select("SELECT DISTINCT rel.tag_id FROM blog_article_tag rel INNER JOIN blog_article a ON a.id = rel.article_id AND a.status = 1 AND a.is_deleted = 0 WHERE rel.is_deleted = 0")
+    java.util.List<Long> selectPublishedTagIds();
+
     @Select("""
             <script>
             SELECT a.*

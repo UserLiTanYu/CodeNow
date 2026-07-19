@@ -2,7 +2,6 @@ package com.codenow.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.codenow.common.R;
-import com.codenow.common.UserRole;
 import com.codenow.entity.BlogTag;
 import com.codenow.service.BlogTagService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Tag(name = "作者标签")
+@Tag(name = "作者标签管理")
 @RestController
 @RequestMapping("/api/author/tags")
 @RequiredArgsConstructor
@@ -25,17 +24,18 @@ public class AuthorTagController {
 
     private final BlogTagService tagService;
 
-    @Operation(summary = "查询作者可用标签", description = "返回作者编辑文章时可选的全部标签")
+    @Operation(summary = "查询我的标签列表")
     @GetMapping
     public R<List<BlogTag>> list() {
-        return R.ok(tagService.list());
+        long userId = StpUtil.getLoginIdAsLong();
+        return R.ok(tagService.listByCreator(userId));
     }
 
     @Operation(summary = "创建标签")
     @PostMapping
     public R<BlogTag> create(@Valid @RequestBody TagDTO dto) {
         long userId = StpUtil.getLoginIdAsLong();
-        BlogTag existing = tagService.lambdaQuery().eq(BlogTag::getName, dto.getName().trim()).one();
+        BlogTag existing = tagService.lambdaQuery().eq(BlogTag::getName, dto.getName().trim()).eq(BlogTag::getCreatedBy, userId).one();
         if (existing != null) {
             return R.error(409, "标签名称已存在");
         }
@@ -53,11 +53,10 @@ public class AuthorTagController {
         long userId = StpUtil.getLoginIdAsLong();
         BlogTag tag = tagService.getById(id);
         if (tag == null) return R.error(404, "标签不存在");
-        if (!StpUtil.getRoleList().contains(UserRole.ADMIN)
-                && (tag.getCreatedBy() == null || !tag.getCreatedBy().equals(userId))) {
+        if (tag.getCreatedBy() == null || !tag.getCreatedBy().equals(userId)) {
             return R.error(403, "只能修改自己创建的标签");
         }
-        BlogTag duplicate = tagService.lambdaQuery().eq(BlogTag::getName, dto.getName().trim()).ne(BlogTag::getId, id).one();
+        BlogTag duplicate = tagService.lambdaQuery().eq(BlogTag::getName, dto.getName().trim()).eq(BlogTag::getCreatedBy, userId).ne(BlogTag::getId, id).one();
         if (duplicate != null) return R.error(409, "标签名称已存在");
         tag.setName(dto.getName().trim());
         tagService.updateById(tag);
@@ -68,10 +67,9 @@ public class AuthorTagController {
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) {
         long userId = StpUtil.getLoginIdAsLong();
-        boolean isAdmin = StpUtil.getRoleList().contains(UserRole.ADMIN);
         BlogTag tag = tagService.getById(id);
         if (tag == null) return R.error(404, "标签不存在");
-        if (!isAdmin && (tag.getCreatedBy() == null || !tag.getCreatedBy().equals(userId))) {
+        if (tag.getCreatedBy() == null || !tag.getCreatedBy().equals(userId)) {
             return R.error(403, "只能删除自己创建的标签");
         }
         tagService.removeById(id);

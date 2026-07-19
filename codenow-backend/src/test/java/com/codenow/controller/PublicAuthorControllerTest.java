@@ -4,8 +4,12 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.codenow.common.R;
 import com.codenow.dto.ArticleVO;
 import com.codenow.dto.PublicAuthorVO;
+import com.codenow.service.BlogCategoryService;
+import com.codenow.service.BlogTagService;
 import com.codenow.service.PublicAuthorService;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
@@ -17,7 +21,7 @@ class PublicAuthorControllerTest {
         PublicAuthorService service = mock(PublicAuthorService.class);
         Page<PublicAuthorVO> page = new Page<>(1, 12, 0);
         when(service.pagePublicAuthors(1, 12, "Java", "popular")).thenReturn(page);
-        PublicAuthorController controller = new PublicAuthorController(service);
+        PublicAuthorController controller = new PublicAuthorController(service, mock(BlogCategoryService.class), mock(BlogTagService.class));
 
         R<Page<PublicAuthorVO>> result = controller.list(1, 12, "Java", "popular");
 
@@ -31,7 +35,7 @@ class PublicAuthorControllerTest {
         PublicAuthorVO author = new PublicAuthorVO();
         author.setUserId(7L);
         when(service.getPublicAuthor(7L)).thenReturn(author);
-        PublicAuthorController controller = new PublicAuthorController(service);
+        PublicAuthorController controller = new PublicAuthorController(service, mock(BlogCategoryService.class), mock(BlogTagService.class));
 
         R<PublicAuthorVO> result = controller.detail(7L);
 
@@ -44,7 +48,7 @@ class PublicAuthorControllerTest {
         PublicAuthorService service = mock(PublicAuthorService.class);
         Page<ArticleVO> page = new Page<>(1, 10, 0);
         when(service.pagePublicAuthorArticles(7L, 1, 10, "latest")).thenReturn(page);
-        PublicAuthorController controller = new PublicAuthorController(service);
+        PublicAuthorController controller = new PublicAuthorController(service, mock(BlogCategoryService.class), mock(BlogTagService.class));
 
         R<Page<ArticleVO>> result = controller.articles(7L, 1, 10, "latest");
 

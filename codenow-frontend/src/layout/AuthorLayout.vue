@@ -2,26 +2,32 @@
   <el-container class="author-layout">
     <el-aside width="224px" class="author-sidebar">
       <router-link to="/blog" class="brand">码上记</router-link>
+      <div class="author-identity">
+        <img :src="avatarUrl(userStore.userInfo?.avatar)" alt="作者头像" class="identity-avatar" @error="useDefaultAvatar" />
+        <div class="identity-info">
+          <strong>{{ userStore.userInfo?.nickname || userStore.userInfo?.username || '作者' }}</strong>
+          <router-link v-if="userStore.userInfo?.id" :to="`/blog/author/${userStore.userInfo.id}`" class="view-public-link">查看公开主页 →</router-link>
+        </div>
+      </div>
       <div class="console-label">作者工作台</div>
       <el-menu :default-active="route.path" router class="author-menu">
         <el-menu-item index="/author-console/articles">
           <el-icon><Document /></el-icon>
           <span>我的文章</span>
         </el-menu-item>
+        <el-menu-item index="/author-console/categories">
+          <el-icon><FolderOpened /></el-icon>
+          <span>分类管理</span>
+        </el-menu-item>
+        <el-menu-item index="/author-console/tags">
+          <el-icon><PriceTag /></el-icon>
+          <span>标签管理</span>
+        </el-menu-item>
         <el-menu-item index="/author-console/comments">
           <el-icon><ChatDotRound /></el-icon>
           <span>文章评论</span>
         </el-menu-item>
-        <el-menu-item index="/author-console/profile">
-          <el-icon><User /></el-icon>
-          <span>作者资料</span>
-        </el-menu-item>
       </el-menu>
-      <div class="sidebar-footer">
-        <router-link :to="`/blog/author/${userStore.userInfo?.id || ''}`" class="view-public-link">
-          查看我的公开主页 →
-        </router-link>
-      </div>
     </el-aside>
     <el-container class="author-shell">
       <el-header class="author-header">
@@ -54,9 +60,10 @@
 
 <script setup>
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowDown, ChatDotRound, Document, House, User } from '@element-plus/icons-vue'
+import { ArrowDown, ChatDotRound, Document, FolderOpened, House, PriceTag } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import { avatarUrl, useDefaultAvatar } from '@/utils/avatar'
 
 const route = useRoute()
 const router = useRouter()
@@ -81,14 +88,17 @@ async function handleCommand(command) {
 <style scoped>
 .author-layout { height: 100vh; overflow: hidden; background: #f3f6fa; }
 .author-sidebar { height: 100vh; overflow: hidden; color: #dce6f2; background: #172235; border-right: 1px solid #24344d; }
-.brand { height: 66px; padding: 0 24px; display: flex; align-items: center; color: #fff; background: #111a2a; font-size: 22px; font-weight: 750; text-decoration: none; }
-.console-label { padding: 24px 24px 10px; color: #8494aa; font-size: 11px; font-weight: 700; letter-spacing: 1.6px; }
+.brand { height: 56px; padding: 0 24px; display: flex; align-items: center; color: #fff; background: #111a2a; font-size: 22px; font-weight: 750; text-decoration: none; }
+.author-identity { padding: 16px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #24344d; }
+.identity-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #24344d; }
+.identity-info { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.identity-info strong { color: #fff; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.view-public-link { color: #8494aa; font-size: 11px; text-decoration: none; transition: color 0.16s; }
+.view-public-link:hover { color: #dce6f2; }
+.console-label { padding: 16px 24px 8px; color: #8494aa; font-size: 11px; font-weight: 700; letter-spacing: 1.6px; }
 .author-menu { border-right: 0; background: transparent; }
 .author-menu :deep(.el-menu-item) { margin: 4px 12px; border-radius: 8px; color: #bfccdc; }
 .author-menu :deep(.el-menu-item:hover), .author-menu :deep(.el-menu-item.is-active) { color: #fff; background: #2b66b1; }
-.sidebar-footer { padding: 16px 24px; margin-top: auto; }
-.view-public-link { color: #8494aa; font-size: 12px; text-decoration: none; transition: color 0.16s; }
-.view-public-link:hover { color: #dce6f2; }
 .author-shell { min-width: 0; height: 100vh; overflow: hidden; }
 .author-header { height: 78px; padding: 0 28px; flex: 0 0 78px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e5eaf0; background: #fff; }
 .author-header h1 { margin: 2px 0 0; color: #1f2a3a; font-size: 20px; }
@@ -99,6 +109,8 @@ async function handleCommand(command) {
 @media (max-width: 720px) {
   .author-sidebar { width: 72px !important; }
   .brand { padding: 0 12px; font-size: 16px; }
+  .author-identity { padding: 12px; justify-content: center; }
+  .identity-info { display: none; }
   .console-label, .author-menu span, .eyebrow, .header-actions > .el-button { display: none; }
   .author-header { padding: 0 12px; }
   .author-header h1 { font-size: 18px; }
