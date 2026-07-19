@@ -56,9 +56,10 @@ codenow/
 ├── codenow-backend/                    # Spring Boot 后端
 │   ├── .dockerignore                   # 后端镜像构建忽略规则
 │   ├── Dockerfile                      # JDK 21 多阶段构建、非 root 运行
-│   ├── init.sql                        # 全新数据库初始化脚本
-│   ├── migration-medium-priority.sql   # 已有数据库幂等升级脚本
-│   ├── rollback-medium-priority.sql    # 数据库幂等回滚脚本
+│   ├── sql/                            # 数据库脚本
+│   │   ├── init.sql                    # 全新数据库初始化
+│   │   ├── migration-*.sql             # 增量迁移脚本
+│   │   └── rollback-*.sql              # 回滚脚本
 │   ├── pom.xml                         # Maven 依赖、构建与测试配置
 │   └── src/
 │       ├── main/
@@ -149,7 +150,7 @@ cd codenow
 ### 2. 初始化数据库
 
 ```bash
-mysql -u root -p --default-character-set=utf8mb4 < codenow-backend/init.sql
+mysql -u root -p --default-character-set=utf8mb4 < codenow-backend/sql/init.sql
 ```
 
 创建 `codenow` 数据库、7 张表和默认管理员账号（admin / 123456）。

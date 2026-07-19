@@ -196,7 +196,7 @@ docker compose ps -a
 | `frontend` | `healthy` |
 | `storage-init` | `Exited (0)`，属于正常状态 |
 
-首次创建 `mysql_data` 数据卷时，MySQL 会自动执行 `codenow-backend/init.sql`。修改 `init.sql` 不会自动更新已有数据卷。
+首次创建 `mysql_data` 数据卷时，MySQL 会自动执行 `codenow-backend/sql/init.sql`。修改 `init.sql` 不会自动更新已有数据卷。
 
 查看启动日志：
 
@@ -470,7 +470,7 @@ docker compose up -d --build
 ```bash
 docker compose exec -T mysql sh -c \
   'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' \
-  < codenow-backend/rollback-medium-priority.sql
+  < codenow-backend/sql/rollback-medium-priority.sql
 ```
 
 推荐顺序：
