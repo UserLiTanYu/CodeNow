@@ -1,0 +1,4 @@
+# Test configuration: disable Flyway (no MySQL during unit tests)
+spring:
+  flyway:
+    enabled: false
