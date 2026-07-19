@@ -12,7 +12,6 @@ import com.codenow.entity.LoginLog;
 import com.codenow.service.SysUserService;
 import com.codenow.service.LoginLogService;
 import jakarta.validation.Valid;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -77,25 +76,5 @@ public class AdminUserController {
                         .like(account != null && !account.isBlank(), LoginLog::getAccount, account == null ? null : account.trim())
                         .eq(success != null, LoginLog::getSuccess, success)
                         .orderByDesc(LoginLog::getCreateTime)));
-    }
-
-    @PutMapping("/{id}/author-role/revoke")
-    public R<Void> revokeAuthorRole(@PathVariable Long id, @RequestBody(required = false) RevokeDTO dto) {
-        if (id.equals(StpUtil.getLoginIdAsLong())) {
-            return R.error(400, "不能撤销当前登录账号的作者资格");
-        }
-        SysUser user = userService.getById(id);
-        if (user == null) return R.error(404, "用户不存在");
-        if (!UserRole.AUTHOR.equals(user.getRole())) {
-            return R.error(400, "该用户不是作者角色");
-        }
-        user.setRole(UserRole.USER);
-        userService.updateById(user);
-        return R.ok();
-    }
-
-    @Data
-    public static class RevokeDTO {
-        private String reason;
     }
 }
