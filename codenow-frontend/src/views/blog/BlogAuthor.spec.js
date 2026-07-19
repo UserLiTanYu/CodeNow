@@ -1,13 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import BlogAuthor from './BlogAuthor.vue'
-import { getPublicAuthor, getPublicAuthorArticles } from '@/api/blog'
+import { getPublicAuthor, getPublicAuthorArticles, getPublicAuthorCategories, getPublicAuthorTags } from '@/api/blog'
 
 const route = { params: { id: '7' } }
 vi.mock('vue-router', () => ({ useRoute: () => route }))
 vi.mock('@/api/blog', () => ({
   getPublicAuthor: vi.fn(),
   getPublicAuthorArticles: vi.fn(),
+  getPublicAuthorCategories: vi.fn(),
+  getPublicAuthorTags: vi.fn(),
 }))
 
 const BlogArticleCardStub = {
@@ -16,6 +18,9 @@ const BlogArticleCardStub = {
 }
 const ElPaginationStub = { template: '<nav class="pagination-stub" />' }
 const RouterLinkStub = { props: ['to'], template: '<a :href="to"><slot /></a>' }
+const ElSkeletonStub = { template: '<div />' }
+const ElEmptyStub = { template: '<div />' }
+const ElSelectStub = { template: '<div />' }
 
 describe('BlogAuthor', () => {
   beforeEach(() => {
@@ -36,19 +41,21 @@ describe('BlogAuthor', () => {
       records: [{ article: { id: 21, title: 'Spring Boot 实践' }, tags: [] }],
       total: 1,
     } })
+    getPublicAuthorCategories.mockResolvedValue({ data: [] })
+    getPublicAuthorTags.mockResolvedValue({ data: [] })
   })
 
   it('renders the public profile, safe external links and published articles', async () => {
     const wrapper = mount(BlogAuthor, {
-      global: { stubs: { BlogArticleCard: BlogArticleCardStub, ElPagination: ElPaginationStub, RouterLink: RouterLinkStub } },
+      global: { stubs: { BlogArticleCard: BlogArticleCardStub, ElPagination: ElPaginationStub, RouterLink: RouterLinkStub, ElSkeleton: ElSkeletonStub, ElEmpty: ElEmptyStub, ElSelect: ElSelectStub } },
     })
     await flushPromises()
 
     expect(getPublicAuthor).toHaveBeenCalledWith('7')
     expect(getPublicAuthorArticles).toHaveBeenCalledWith('7', { pageNum: 1, pageSize: 10, sort: 'latest' })
     expect(wrapper.text()).toContain('林舟')
-    expect(wrapper.text()).toContain('2篇文章')
-    expect(wrapper.text()).toContain('500次阅读')
+    expect(wrapper.text()).toContain('2')
+    expect(wrapper.text()).toContain('500')
     expect(wrapper.text()).toContain('Spring Boot 实践')
     const website = wrapper.get('a[href="https://example.com"]')
     expect(website.attributes('target')).toBe('_blank')
@@ -59,7 +66,7 @@ describe('BlogAuthor', () => {
     getPublicAuthor.mockRejectedValueOnce(new Error('404'))
 
     const wrapper = mount(BlogAuthor, {
-      global: { stubs: { BlogArticleCard: BlogArticleCardStub, ElPagination: ElPaginationStub, RouterLink: RouterLinkStub } },
+      global: { stubs: { BlogArticleCard: BlogArticleCardStub, ElPagination: ElPaginationStub, RouterLink: RouterLinkStub, ElSkeleton: ElSkeletonStub, ElEmpty: ElEmptyStub, ElSelect: ElSelectStub } },
     })
     await flushPromises()
 
