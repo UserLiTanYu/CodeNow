@@ -5,8 +5,12 @@ import com.codenow.dto.ArticleVO;
 import com.codenow.dto.PublicAuthorRow;
 import com.codenow.dto.PublicAuthorVO;
 import com.codenow.entity.BlogArticle;
+import com.codenow.entity.BlogCategory;
+import com.codenow.entity.BlogTag;
 import com.codenow.exception.BusinessException;
 import com.codenow.mapper.BlogArticleMapper;
+import com.codenow.mapper.BlogCategoryMapper;
+import com.codenow.mapper.BlogTagMapper;
 import com.codenow.mapper.PublicAuthorMapper;
 import com.codenow.service.BlogArticleService;
 import com.codenow.service.PublicAuthorService;
@@ -17,6 +21,7 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +31,8 @@ public class PublicAuthorServiceImpl implements PublicAuthorService {
 
     private final PublicAuthorMapper mapper;
     private final BlogArticleMapper articleMapper;
+    private final BlogCategoryMapper categoryMapper;
+    private final BlogTagMapper tagMapper;
     private final BlogArticleService articleService;
 
     @Override
@@ -53,14 +60,31 @@ public class PublicAuthorServiceImpl implements PublicAuthorService {
     }
 
     @Override
-    public Page<ArticleVO> pagePublicAuthorArticles(Long userId, Integer pageNum, Integer pageSize, String sort) {
+    public Page<ArticleVO> pagePublicAuthorArticles(Long userId, Integer pageNum, Integer pageSize, String sort, Long categoryId, Long tagId) {
         validatePage(pageNum, pageSize);
         String normalizedSort = normalizeArticleSort(sort);
         // This check deliberately happens before the article query so revoked, banned,
         // deleted or incomplete authors cannot be enumerated through this endpoint.
         getPublicAuthor(userId);
+
+        // Validate categoryId belongs to this author
+        if (categoryId != null) {
+            BlogCategory category = categoryMapper.selectById(categoryId);
+            if (category == null || !Objects.equals(category.getAuthorId(), userId)) {
+                throw new BusinessException(400, "分类不存在或不属于该作者");
+            }
+        }
+
+        // Validate tagId belongs to this author
+        if (tagId != null) {
+            BlogTag tag = tagMapper.selectById(tagId);
+            if (tag == null || !Objects.equals(tag.getCreatedBy(), userId)) {
+                throw new BusinessException(400, "标签不存在或不属于该作者");
+            }
+        }
+
         Page<BlogArticle> source = articleMapper.selectPublishedAuthorArticlePage(
-                new Page<>(pageNum, pageSize), userId, normalizedSort);
+                new Page<>(pageNum, pageSize), userId, normalizedSort, categoryId, tagId);
         Page<ArticleVO> result = new Page<>(source.getCurrent(), source.getSize(), source.getTotal());
         result.setRecords(articleService.buildArticleVOBatch(source.getRecords()));
         return result;

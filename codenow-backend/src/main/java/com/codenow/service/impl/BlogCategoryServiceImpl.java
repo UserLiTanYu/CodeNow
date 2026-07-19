@@ -120,9 +120,14 @@ public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, Blo
         });
         List<BlogCategory> roots = new ArrayList<>();
         for (BlogCategory category : categories) {
-            BlogCategory parent = byId.get(normalizeParentId(category.getParentId()));
-            if (parent == null) roots.add(category);
-            else parent.getChildren().add(category);
+            Long parentId = normalizeParentId(category.getParentId());
+            BlogCategory parent = byId.get(parentId);
+            // Only attach to parent if same author (prevents cross-author mixing)
+            if (parent != null && Objects.equals(parent.getAuthorId(), category.getAuthorId())) {
+                parent.getChildren().add(category);
+            } else {
+                roots.add(category);
+            }
         }
         return roots;
     }
@@ -187,28 +192,36 @@ public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, Blo
 
     @Override
     public List<BlogCategory> listTreeByPublishedArticles() {
-        // 获取所有已发布文章关联的分类 ID（仅叶子节点级别的直接关联）
-        List<Long> publishedCategoryIds = articleMapper.selectPublishedCategoryIds();
-        if (publishedCategoryIds.isEmpty()) {
-            return Collections.emptyList();
-        }
-        // 获取全部分类（用于构建完整树结构和查找祖先）
+        // Blog home sidebar: show primary author's categories that have published articles
+        // Each author's own categories are shown on their individual profile page
         List<BlogCategory> allCategories = list(new LambdaQueryWrapper<BlogCategory>()
                 .orderByAsc(BlogCategory::getSort).orderByAsc(BlogCategory::getId));
-        // 收集所有需要展示的分类 ID：已发布文章的分类 + 所有祖先
-        Set<Long> requiredIds = new HashSet<>();
+        Long primaryAuthorId = allCategories.stream()
+                .map(BlogCategory::getAuthorId)
+                .filter(Objects::nonNull)
+                .min(Long::compareTo)
+                .orElse(null);
+        if (primaryAuthorId == null) return Collections.emptyList();
+
+        List<Long> publishedCategoryIds = articleMapper.selectPublishedCategoryIds();
+        if (publishedCategoryIds.isEmpty()) return Collections.emptyList();
+
         Map<Long, BlogCategory> byId = new HashMap<>();
         allCategories.forEach(c -> byId.put(c.getId(), c));
+
+        // Collect primary author's categories that have published articles + ancestors
+        Set<Long> requiredIds = new HashSet<>();
         for (Long cid : publishedCategoryIds) {
+            BlogCategory cat = byId.get(cid);
+            if (cat == null || !Objects.equals(cat.getAuthorId(), primaryAuthorId)) continue;
             Long current = cid;
             while (current != null && requiredIds.add(current)) {
-                BlogCategory cat = byId.get(current);
-                current = (cat == null || cat.getParentId() == null || cat.getParentId() == 0L) ? null : cat.getParentId();
+                BlogCategory c = byId.get(current);
+                current = (c == null || c.getParentId() == null || c.getParentId() == 0L) ? null : c.getParentId();
             }
         }
-        // 仅保留需要展示的分类
         List<BlogCategory> filtered = allCategories.stream()
-                .filter(c -> requiredIds.contains(c.getId()))
+                .filter(c -> Objects.equals(c.getAuthorId(), primaryAuthorId) && requiredIds.contains(c.getId()))
                 .collect(Collectors.toList());
         return buildTree(filtered);
     }

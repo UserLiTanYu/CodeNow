@@ -9,5 +9,5 @@ public interface PublicAuthorService {
 
     PublicAuthorVO getPublicAuthor(Long userId);
 
-    Page<ArticleVO> pagePublicAuthorArticles(Long userId, Integer pageNum, Integer pageSize, String sort);
+    Page<ArticleVO> pagePublicAuthorArticles(Long userId, Integer pageNum, Integer pageSize, String sort, Long categoryId, Long tagId);
 }

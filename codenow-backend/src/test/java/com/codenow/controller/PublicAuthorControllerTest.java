@@ -47,13 +47,13 @@ class PublicAuthorControllerTest {
     void articlesDelegatesAuthorScopeToService() {
         PublicAuthorService service = mock(PublicAuthorService.class);
         Page<ArticleVO> page = new Page<>(1, 10, 0);
-        when(service.pagePublicAuthorArticles(7L, 1, 10, "latest")).thenReturn(page);
+        when(service.pagePublicAuthorArticles(7L, 1, 10, "latest", null, null)).thenReturn(page);
         PublicAuthorController controller = new PublicAuthorController(service, mock(BlogCategoryService.class), mock(BlogTagService.class));
 
-        R<Page<ArticleVO>> result = controller.articles(7L, 1, 10, "latest");
+        R<Page<ArticleVO>> result = controller.articles(7L, 1, 10, "latest", null, null);
 
         assertEquals(200, result.getCode());
         assertEquals(page, result.getData());
-        verify(service).pagePublicAuthorArticles(7L, 1, 10, "latest");
+        verify(service).pagePublicAuthorArticles(7L, 1, 10, "latest", null, null);
     }
 }

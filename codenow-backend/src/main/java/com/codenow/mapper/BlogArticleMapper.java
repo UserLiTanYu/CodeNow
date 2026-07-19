@@ -99,6 +99,15 @@ public interface BlogArticleMapper extends BaseMapper<BlogArticle> {
             WHERE a.author_id = #{authorId}
               AND a.status = 1
               AND a.is_deleted = 0
+            <if test="categoryId != null">
+              AND a.category_id = #{categoryId}
+            </if>
+            <if test="tagId != null">
+              AND EXISTS (
+                SELECT 1 FROM blog_article_tag rel
+                WHERE rel.article_id = a.id AND rel.tag_id = #{tagId} AND rel.is_deleted = 0
+              )
+            </if>
             ORDER BY
             <choose>
               <when test="sort == 'mostViewed'">
@@ -113,7 +122,9 @@ public interface BlogArticleMapper extends BaseMapper<BlogArticle> {
     Page<BlogArticle> selectPublishedAuthorArticlePage(
             Page<BlogArticle> page,
             @Param("authorId") Long authorId,
-            @Param("sort") String sort);
+            @Param("sort") String sort,
+            @Param("categoryId") Long categoryId,
+            @Param("tagId") Long tagId);
 
     @Select("""
             <script>

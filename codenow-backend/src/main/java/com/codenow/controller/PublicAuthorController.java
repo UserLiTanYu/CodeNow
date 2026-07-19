@@ -58,8 +58,10 @@ public class PublicAuthorController {
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @Parameter(description = "排序方式：latest（最新）或 mostViewed（最多阅读）")
-            @RequestParam(defaultValue = "latest") String sort) {
-        return R.ok(service.pagePublicAuthorArticles(userId, pageNum, pageSize, sort));
+            @RequestParam(defaultValue = "latest") String sort,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long tagId) {
+        return R.ok(service.pagePublicAuthorArticles(userId, pageNum, pageSize, sort, categoryId, tagId));
     }
 
     @RateLimit(maxCount = 30, timeWindow = 10, message = "请求过于频繁，请稍后再试")

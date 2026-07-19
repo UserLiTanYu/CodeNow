@@ -305,17 +305,24 @@ watch(
   async () => {
     mobileMenuOpen.value = false
     if (isAuthorPage.value && authorId.value) {
+      // Clear stale global data immediately while loading author data
+      categories.value = []
+      tags.value = []
+      hotArticles.value = []
       try {
         const [catRes, tagRes, artRes] = await Promise.all([
           getPublicAuthorCategories(authorId.value),
           getPublicAuthorTags(authorId.value),
           getPublicAuthorArticles(authorId.value, { pageNum: 1, pageSize: 3, sort: 'mostViewed' }),
         ])
-        categories.value = catRes.data || []
-        tags.value = tagRes.data || []
-        hotArticles.value = (artRes.data?.records || []).slice(0, 3)
+        // Only apply if still on same author page
+        if (isAuthorPage.value && String(authorId.value) === route.params.id) {
+          categories.value = catRes.data || []
+          tags.value = tagRes.data || []
+          hotArticles.value = (artRes.data?.records || []).slice(0, 3)
+        }
       } catch {
-        // 保留上一次结果
+        // keep empty on failure
       }
     } else {
       try {
