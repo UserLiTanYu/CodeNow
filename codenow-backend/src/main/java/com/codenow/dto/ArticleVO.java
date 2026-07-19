@@ -19,4 +19,7 @@ public class ArticleVO {
 
     @Schema(description = "标签列表")
     private List<BlogTag> tags;
+
+    @Schema(description = "可公开发现的作者摘要；作者不可发现时为空")
+    private ArticleAuthorVO author;
 }

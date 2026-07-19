@@ -3,6 +3,8 @@ package com.codenow.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.codenow.dto.ArticleVO;
+import com.codenow.dto.ArticleAuthorVO;
+import com.codenow.dto.PublicAuthorRow;
 import com.codenow.entity.BlogArticle;
 import com.codenow.entity.BlogArticleTag;
 import com.codenow.entity.BlogTag;
@@ -11,6 +13,7 @@ import com.codenow.mapper.BlogArticleMapper;
 import com.codenow.mapper.BlogArticleTagMapper;
 import com.codenow.mapper.BlogCategoryMapper;
 import com.codenow.mapper.BlogTagMapper;
+import com.codenow.mapper.PublicAuthorMapper;
 import com.codenow.service.HotArticleService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,6 +51,9 @@ class BlogArticleServiceImplTest {
 
     @Mock
     private HotArticleService hotArticleService;
+
+    @Mock
+    private PublicAuthorMapper publicAuthorMapper;
 
     @BeforeEach
     void setUp() {
@@ -248,6 +254,27 @@ class BlogArticleServiceImplTest {
 
         assertNotNull(result);
         verify(hotArticleService).incrementViewCount(1L, 11);
+    }
+
+    @Test
+    void buildArticleVOBatchAddsOnlyDiscoverableAuthorSummary() {
+        BlogArticle article = new BlogArticle();
+        article.setId(1L);
+        article.setAuthorId(7L);
+        PublicAuthorRow author = new PublicAuthorRow();
+        author.setUserId(7L);
+        author.setDisplayName("测试作者");
+        author.setAvatar("/avatar.png");
+        when(articleTagMapper.selectList(any())).thenReturn(Collections.emptyList());
+        when(publicAuthorMapper.selectPublicAuthorSummariesByUserIds(any())).thenReturn(List.of(author));
+
+        ArticleVO result = articleService.buildArticleVOBatch(List.of(article)).getFirst();
+
+        ArticleAuthorVO summary = result.getAuthor();
+        assertNotNull(summary);
+        assertEquals(7L, summary.getUserId());
+        assertEquals("测试作者", summary.getDisplayName());
+        assertEquals("/avatar.png", summary.getAvatar());
     }
 
     private BlogTag tag(Long id) {

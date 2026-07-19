@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.codenow.dto.ArticleVO;
+import com.codenow.dto.ArticleAuthorVO;
+import com.codenow.dto.PublicAuthorRow;
 import com.codenow.common.ArticleStatus;
 import com.codenow.exception.BusinessException;
 import com.codenow.entity.BlogArticle;
@@ -14,6 +16,7 @@ import com.codenow.mapper.BlogArticleMapper;
 import com.codenow.mapper.BlogArticleTagMapper;
 import com.codenow.mapper.BlogCategoryMapper;
 import com.codenow.mapper.BlogTagMapper;
+import com.codenow.mapper.PublicAuthorMapper;
 import com.codenow.service.BlogArticleService;
 import com.codenow.service.HotArticleService;
 import com.codenow.service.StorageService;
@@ -33,6 +36,7 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
     private final BlogTagMapper tagMapper;
     private final HotArticleService hotArticleService;
     private final StorageService storageService;
+    private final PublicAuthorMapper publicAuthorMapper;
 
     @Override
     @Transactional
@@ -326,14 +330,26 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
             tagMap = tags.stream().collect(Collectors.toMap(BlogTag::getId, t -> t, (a, b) -> a));
         }
 
-        // 4. 按 articleId 分组标签
+        // 4. 批量查询仍可公开发现的作者，避免返回 SysUser 私有字段或产生 N+1。
+        Set<Long> authorIds = articles.stream()
+                .map(BlogArticle::getAuthorId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, PublicAuthorRow> authorMap = Collections.emptyMap();
+        if (!authorIds.isEmpty()) {
+            authorMap = publicAuthorMapper.selectPublicAuthorSummariesByUserIds(authorIds).stream()
+                    .collect(Collectors.toMap(PublicAuthorRow::getUserId, item -> item, (a, b) -> a));
+        }
+
+        // 5. 按 articleId 分组标签
         Map<Long, List<Long>> articleTagMap = allRelations.stream()
                 .collect(Collectors.groupingBy(BlogArticleTag::getArticleId,
                         Collectors.mapping(BlogArticleTag::getTagId, Collectors.toList())));
 
-        // 5. 组装 VO
+        // 6. 组装 VO
         Map<Long, String> finalCategoryNameMap = categoryNameMap;
         Map<Long, BlogTag> finalTagMap = tagMap;
+        Map<Long, PublicAuthorRow> finalAuthorMap = authorMap;
         return articles.stream().map(article -> {
             ArticleVO vo = new ArticleVO();
             vo.setArticle(article);
@@ -343,6 +359,14 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
                     .map(finalTagMap::get)
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList()));
+            PublicAuthorRow author = finalAuthorMap.get(article.getAuthorId());
+            if (author != null) {
+                ArticleAuthorVO summary = new ArticleAuthorVO();
+                summary.setUserId(author.getUserId());
+                summary.setDisplayName(author.getDisplayName());
+                summary.setAvatar(author.getAvatar());
+                vo.setAuthor(summary);
+            }
             return vo;
         }).collect(Collectors.toList());
     }

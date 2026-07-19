@@ -127,6 +127,18 @@ const router = createRouter({
           component: () => import('@/views/blog/BlogTag.vue'),
         },
         {
+          path: 'authors',
+          name: 'blog-authors',
+          meta: { title: '作者发现' },
+          component: () => import('@/views/blog/BlogAuthors.vue'),
+        },
+        {
+          path: 'author/:id',
+          name: 'blog-author',
+          meta: { title: '作者主页' },
+          component: () => import('@/views/blog/BlogAuthor.vue'),
+        },
+        {
           path: 'profile',
           name: 'member-profile',
           meta: { title: '个人中心', requiresAuth: true },

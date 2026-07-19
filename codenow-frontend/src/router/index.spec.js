@@ -65,6 +65,19 @@ describe('authGuard', () => {
     expect(commentsRoute?.path).toBe('/author-console/comments')
   })
 
+  it('registers public author discovery and profile routes without auth metadata', async () => {
+    const router = (await import('./index')).default
+    const routes = router.getRoutes()
+    const discovery = routes.find((route) => route.name === 'blog-authors')
+    const profile = routes.find((route) => route.name === 'blog-author')
+
+    expect(discovery?.path).toBe('/blog/authors')
+    expect(profile?.path).toBe('/blog/author/:id')
+    expect(discovery?.meta.requiresAuth).not.toBe(true)
+    expect(profile?.meta.requiresAuth).not.toBe(true)
+    await expect(authGuard({ path: '/blog/authors', fullPath: '/blog/authors' })).resolves.toBe(true)
+  })
+
   it('prevents ordinary users from entering the admin area', async () => {
     localStorage.setItem('token', 'member-token')
     globalThis.fetch = vi.fn().mockResolvedValue({

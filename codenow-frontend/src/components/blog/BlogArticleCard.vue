@@ -15,6 +15,15 @@
 
       <div class="card-meta">
         <router-link
+          v-if="author"
+          :to="`/blog/author/${author.userId}`"
+          class="meta-link author-link"
+          @click.stop
+        >
+          <img :src="avatarUrl(author.avatar)" alt="" @error="useDefaultAvatar" />
+          {{ author.displayName }}
+        </router-link>
+        <router-link
           v-if="showCategory && item.categoryName"
           :to="`/blog/category/${article.categoryId}`"
           class="meta-link category-link"
@@ -54,6 +63,7 @@
 import { computed } from 'vue'
 import { Clock, Folder, View } from '@element-plus/icons-vue'
 import { formatDate } from '@/utils/format'
+import { avatarUrl, useDefaultAvatar } from '@/utils/avatar'
 
 const props = defineProps({
   item: {
@@ -67,6 +77,7 @@ const props = defineProps({
 })
 
 const article = computed(() => props.item.article)
+const author = computed(() => props.item.author || null)
 const tags = computed(() => props.item.tags || [])
 const visibleTags = computed(() => tags.value.slice(0, 2))
 const hiddenTagCount = computed(() => Math.max(tags.value.length - visibleTags.value.length, 0))
@@ -175,6 +186,16 @@ function tagTone(name = '') {
 }
 .meta-link:hover {
   color: var(--blog-color-primary);
+}
+.author-link {
+  font-weight: 600;
+}
+.author-link img {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--blog-color-background);
 }
 .meta-link:focus-visible {
   outline: 3px solid rgba(64, 158, 255, 0.3);

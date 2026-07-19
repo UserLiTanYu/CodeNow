@@ -6,6 +6,7 @@
 
         <nav class="nav-categories desktop-nav" aria-label="博客分类导航">
           <router-link to="/blog" class="nav-item">首页</router-link>
+          <router-link to="/blog/authors" class="nav-item">作者</router-link>
           <div
             v-for="cat in categories"
             :key="cat.id"
@@ -113,6 +114,7 @@
           aria-label="移动端博客分类导航"
         >
           <router-link to="/blog" class="mobile-nav-item">首页</router-link>
+          <router-link to="/blog/authors" class="mobile-nav-item">作者</router-link>
           <div
             v-for="cat in categories"
             :key="cat.id"

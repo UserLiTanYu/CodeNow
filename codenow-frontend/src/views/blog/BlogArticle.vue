@@ -7,6 +7,10 @@
       <div class="article-header">
         <h1 class="article-title">{{ article.title }}</h1>
         <div class="article-meta">
+          <router-link v-if="author" :to="`/blog/author/${author.userId}`" class="meta-item author-meta">
+            <img :src="avatarUrl(author.avatar)" alt="" @error="useDefaultAvatar" />
+            {{ author.displayName }}
+          </router-link>
           <span v-if="categoryName" class="meta-item">
             <el-icon><Folder /></el-icon> {{ categoryName }}
           </span>
@@ -116,6 +120,7 @@ hljs.registerLanguage('cpp', cpp)
 import { getBlogArticle } from '@/api/blog'
 import { getCommentTree } from '@/api/comment'
 import { formatDate } from '@/utils/format'
+import { avatarUrl, useDefaultAvatar } from '@/utils/avatar'
 import { addFavorite, getFavoriteStatus, removeFavorite } from '@/api/member'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
@@ -135,6 +140,7 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const article = ref(null)
+const author = ref(null)
 const categoryName = ref('')
 const tags = ref([])
 const comments = ref([])
@@ -147,6 +153,8 @@ const commentRootTotal = ref(0)
 const commentTotalCount = ref(0)
 const favorited = ref(false)
 const favoriteLoading = ref(false)
+let requestId = 0
+
 
 const renderedContent = computed(() => {
   if (!article.value?.content) return ''
@@ -155,12 +163,15 @@ const renderedContent = computed(() => {
   return DOMPurify.sanitize(html, { ADD_ATTR: ['class'] })
 })
 
-async function fetchArticle(id) {
+async function fetchArticle(articleId) {
+  const currentRequest = ++requestId
   loading.value = true
   articleError.value = ''
   try {
-    const res = await getBlogArticle(id)
+    const res = await getBlogArticle(articleId)
+    if (currentRequest !== requestId) return
     article.value = res.data.article
+    author.value = res.data.author || null
     categoryName.value = res.data.categoryName || ''
     tags.value = res.data.tags || []
     document.title = `${article.value.title} - 码上记`
@@ -168,20 +179,25 @@ async function fetchArticle(id) {
     fetchComments()
     fetchFavoriteStatus()
   } catch {
+    if (currentRequest !== requestId) return
     article.value = null
+    author.value = null
     articleError.value = '文章加载失败，请稍后重试'
   } finally {
-    loading.value = false
+    if (currentRequest === requestId) loading.value = false
   }
 }
 
 async function fetchFavoriteStatus() {
+  const currentArticleId = route.params.id
   favorited.value = false
   if (!userStore.isLoggedIn) return
   try {
     const res = await getFavoriteStatus(route.params.id)
+    if (route.params.id !== currentArticleId) return
     favorited.value = Boolean(res.data.favorited)
   } catch {
+    if (route.params.id !== currentArticleId) return
     favorited.value = false
   }
 }
@@ -208,16 +224,19 @@ async function toggleFavorite() {
 }
 
 async function fetchComments() {
+  const currentArticleId = route.params.id
   commentError.value = ''
   try {
     const res = await getCommentTree(route.params.id, {
       pageNum: commentPageNum.value,
       pageSize: commentPageSize,
     })
+    if (route.params.id !== currentArticleId) return
     comments.value = res.data.page.records
     commentRootTotal.value = res.data.page.total
     commentTotalCount.value = res.data.totalCount
   } catch {
+    if (route.params.id !== currentArticleId) return
     comments.value = []
     commentRootTotal.value = 0
     commentTotalCount.value = 0
@@ -254,6 +273,7 @@ watch(
 }
 .article-meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--blog-space-5);
   font-size: 14px;
@@ -265,6 +285,9 @@ watch(
   align-items: center;
   gap: var(--blog-space-1);
 }
+.author-meta { color: var(--blog-color-text-secondary); font-weight: 600; text-decoration: none; }
+.author-meta:hover { color: var(--blog-color-primary); }
+.author-meta img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; background: var(--blog-color-background); }
 .article-tags {
   display: flex;
   gap: var(--blog-space-2);

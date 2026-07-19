@@ -85,6 +85,34 @@ public interface BlogArticleMapper extends BaseMapper<BlogArticle> {
             <script>
             SELECT a.*
             FROM blog_article a
+            INNER JOIN author_profile p ON p.user_id = a.author_id
+            INNER JOIN sys_user u ON u.id = p.user_id
+              AND u.role = 'AUTHOR'
+              AND u.status = 'ACTIVE'
+              AND u.is_deleted = 0
+            WHERE a.author_id = #{authorId}
+              AND a.status = 1
+              AND a.is_deleted = 0
+            ORDER BY
+            <choose>
+              <when test="sort == 'mostViewed'">
+                a.view_count DESC, a.create_time DESC, a.id DESC
+              </when>
+              <otherwise>
+                a.create_time DESC, a.id DESC
+              </otherwise>
+            </choose>
+            </script>
+            """)
+    Page<BlogArticle> selectPublishedAuthorArticlePage(
+            Page<BlogArticle> page,
+            @Param("authorId") Long authorId,
+            @Param("sort") String sort);
+
+    @Select("""
+            <script>
+            SELECT a.*
+            FROM blog_article a
             LEFT JOIN blog_category c
               ON c.id = a.category_id AND c.is_deleted = 0
             LEFT JOIN blog_category pc

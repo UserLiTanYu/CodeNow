@@ -13,6 +13,7 @@ import com.codenow.mapper.BlogArticleMapper;
 import com.codenow.mapper.BlogArticleTagMapper;
 import com.codenow.mapper.BlogCategoryMapper;
 import com.codenow.mapper.BlogTagMapper;
+import com.codenow.mapper.PublicAuthorMapper;
 import com.codenow.service.HotArticleService;
 import com.codenow.service.StorageService;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,6 +42,7 @@ class AuthorArticleServiceTest {
     @Mock private BlogTagMapper tagMapper;
     @Mock private HotArticleService hotArticleService;
     @Mock private StorageService storageService;
+    @Mock private PublicAuthorMapper publicAuthorMapper;
 
     @BeforeEach
     void setUp() {
