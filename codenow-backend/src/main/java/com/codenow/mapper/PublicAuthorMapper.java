@@ -47,6 +47,9 @@ public interface PublicAuthorMapper {
               <when test="sort == 'latest'">
                 COALESCE(stats.last_published_at, p.create_time) DESC, u.id DESC
               </when>
+              <when test="sort == 'articles'">
+                COALESCE(stats.article_count, 0) DESC, u.id DESC
+              </when>
               <otherwise>
                 COALESCE(stats.article_count, 0) DESC,
                 COALESCE(stats.total_views, 0) DESC,

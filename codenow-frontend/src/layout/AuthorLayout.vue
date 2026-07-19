@@ -12,7 +12,16 @@
           <el-icon><ChatDotRound /></el-icon>
           <span>文章评论</span>
         </el-menu-item>
+        <el-menu-item index="/author-console/profile">
+          <el-icon><User /></el-icon>
+          <span>作者资料</span>
+        </el-menu-item>
       </el-menu>
+      <div class="sidebar-footer">
+        <router-link :to="`/blog/author/${userStore.userInfo?.id || ''}`" class="view-public-link">
+          查看我的公开主页 →
+        </router-link>
+      </div>
     </el-aside>
     <el-container class="author-shell">
       <el-header class="author-header">
@@ -45,7 +54,7 @@
 
 <script setup>
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowDown, ChatDotRound, Document, House } from '@element-plus/icons-vue'
+import { ArrowDown, ChatDotRound, Document, House, User } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 
@@ -77,6 +86,9 @@ async function handleCommand(command) {
 .author-menu { border-right: 0; background: transparent; }
 .author-menu :deep(.el-menu-item) { margin: 4px 12px; border-radius: 8px; color: #bfccdc; }
 .author-menu :deep(.el-menu-item:hover), .author-menu :deep(.el-menu-item.is-active) { color: #fff; background: #2b66b1; }
+.sidebar-footer { padding: 16px 24px; margin-top: auto; }
+.view-public-link { color: #8494aa; font-size: 12px; text-decoration: none; transition: color 0.16s; }
+.view-public-link:hover { color: #dce6f2; }
 .author-shell { min-width: 0; height: 100vh; overflow: hidden; }
 .author-header { height: 78px; padding: 0 28px; flex: 0 0 78px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e5eaf0; background: #fff; }
 .author-header h1 { margin: 2px 0 0; color: #1f2a3a; font-size: 20px; }

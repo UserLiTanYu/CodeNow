@@ -251,6 +251,8 @@ http://localhost:8080/doc.html
 
 ### 扩展功能
 
+- [x] Flyway 版本化数据库迁移（启动时自动执行，V1-V4，schema 版本追踪）
+- [x] 健康检查端点 `/api/health`（数据库连接状态 + Flyway schema 版本）
 - [x] Redis 缓存热门文章（ZSet + TTL 5 分钟自动刷新）
 - [x] AOP 操作日志（自动记录管理员操作，异步写入数据库）
 - [x] API 接口限流（Redis + Lua 滑动窗口，Redis 不可用时降级放行）

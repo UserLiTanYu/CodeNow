@@ -83,7 +83,7 @@ public class PublicAuthorServiceImpl implements PublicAuthorService {
 
     private String normalizeSort(String sort) {
         String normalized = sort == null || sort.isBlank() ? "popular" : sort.trim();
-        if (!List.of("popular", "latest").contains(normalized)) {
+        if (!List.of("popular", "latest", "articles").contains(normalized)) {
             throw new BusinessException(400, "不支持的作者排序方式");
         }
         return normalized;

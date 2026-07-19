@@ -19,6 +19,8 @@ public class BlogTag {
 
     private LocalDateTime createTime;
 
+    private Long createdBy;
+
     @TableLogic
     private Integer isDeleted;
 }

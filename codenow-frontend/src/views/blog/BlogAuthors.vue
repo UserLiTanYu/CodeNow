@@ -24,6 +24,7 @@
       <div class="sort-switch" role="group" aria-label="作者排序">
         <button type="button" :class="{ active: selectedSort === 'popular' }" @click="selectSort('popular')">热门作者</button>
         <button type="button" :class="{ active: selectedSort === 'latest' }" @click="selectSort('latest')">最近活跃</button>
+        <button type="button" :class="{ active: selectedSort === 'articles' }" @click="selectSort('articles')">文章最多</button>
       </div>
     </section>
 
@@ -135,7 +136,7 @@ watch(
   ([keyword, sort]) => {
     activeKeyword.value = typeof keyword === 'string' ? keyword.trim().slice(0, 100) : ''
     searchInput.value = activeKeyword.value
-    selectedSort.value = sort === 'latest' ? 'latest' : 'popular'
+    selectedSort.value = ['popular', 'latest', 'articles'].includes(sort) ? sort : 'popular'
     pageNum.value = 1
     fetchAuthors()
   },

@@ -8,6 +8,7 @@
           <div class="comment-header">
             <strong class="comment-nickname">{{ comment.nickname }}</strong>
             <span v-if="comment.userRole === 'ADMIN'" class="admin-badge">管理员</span>
+            <span v-if="comment.userRole === 'AUTHOR'" class="author-badge">作者</span>
             <time class="comment-time" :datetime="comment.createTime">{{ formatDate(comment.createTime) }}</time>
           </div>
           <div class="comment-content">{{ comment.content }}</div>
@@ -55,6 +56,7 @@
                   <div class="comment-header">
                     <strong class="comment-nickname">{{ item.comment.nickname }}</strong>
                     <span v-if="item.comment.userRole === 'ADMIN'" class="admin-badge">管理员</span>
+                    <span v-if="item.comment.userRole === 'AUTHOR'" class="author-badge">作者</span>
                     <span v-if="item.replyToNickname" class="reply-target">回复 @{{ item.replyToNickname }}</span>
                     <time class="comment-time" :datetime="item.comment.createTime">{{ formatDate(item.comment.createTime) }}</time>
                   </div>
@@ -203,6 +205,14 @@ function handleReplySuccess() {
   border-radius: 4px;
   color: #fff;
   background: var(--blog-color-primary);
+  font-size: 10px;
+  line-height: 16px;
+}
+.comment-tree .author-badge {
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: #fff;
+  background: #52c41a;
   font-size: 10px;
   line-height: 16px;
 }
