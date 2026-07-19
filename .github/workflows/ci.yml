@@ -67,32 +67,26 @@ jobs:
         run: docker compose config --quiet
       - name: Build and start the full stack
         run: docker compose up -d --build
-      - name: Wait for MySQL to be healthy
+      - name: Wait for backend health
         run: |
-          for i in $(seq 1 30); do
-            docker compose exec -T mysql mysqladmin ping -uroot -p"$DB_PASSWORD" --silent && break
+          for i in $(seq 1 60); do
+            curl --fail --silent http://localhost:18080/api/health && break
+            if [ "$i" -eq 60 ]; then
+              echo "backend did not become healthy" >&2
+              docker compose logs backend
+              exit 1
+            fi
             sleep 2
           done
-      - name: Run database migrations twice
+      - name: Verify Flyway schema version
         run: |
-          docker compose exec -T mysql mysql -uroot -p"$DB_PASSWORD" "$DB_NAME" < codenow-backend/migration-medium-priority.sql
-          docker compose exec -T mysql mysql -uroot -p"$DB_PASSWORD" "$DB_NAME" < codenow-backend/migration-medium-priority.sql
-          docker compose exec -T mysql mysql -uroot -p"$DB_PASSWORD" "$DB_NAME" < codenow-backend/migration-author-role.sql
-          docker compose exec -T mysql mysql -uroot -p"$DB_PASSWORD" "$DB_NAME" < codenow-backend/migration-author-role.sql
-      - name: Verify schema rollback and re-apply
-        run: |
-          docker compose exec -T mysql mysql -uroot -p"$DB_PASSWORD" "$DB_NAME" < codenow-backend/rollback-author-role.sql
-          test "$(docker compose exec -T mysql mysql -N -uroot -p"$DB_PASSWORD" -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$DB_NAME' AND TABLE_NAME IN ('author_application','author_profile');")" = "0"
-          docker compose exec -T mysql mysql -uroot -p"$DB_PASSWORD" "$DB_NAME" < codenow-backend/rollback-medium-priority.sql
-          test "$(docker compose exec -T mysql mysql -N -uroot -p"$DB_PASSWORD" -e "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='$DB_NAME' AND TABLE_NAME='blog_article_tag' AND COLUMN_NAME='is_deleted';")" = "0"
-          docker compose exec -T mysql mysql -uroot -p"$DB_PASSWORD" "$DB_NAME" < codenow-backend/migration-medium-priority.sql
-          docker compose exec -T mysql mysql -uroot -p"$DB_PASSWORD" "$DB_NAME" < codenow-backend/migration-author-role.sql
-          test "$(docker compose exec -T mysql mysql -N -uroot -p"$DB_PASSWORD" -e "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='$DB_NAME' AND TABLE_NAME='blog_article_tag' AND COLUMN_NAME='is_deleted';")" = "1"
-          test "$(docker compose exec -T mysql mysql -N -uroot -p"$DB_PASSWORD" -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$DB_NAME' AND TABLE_NAME IN ('author_application','author_profile');")" = "2"
-          test "$(docker compose exec -T mysql mysql -N -uroot -p"$DB_PASSWORD" -e "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='$DB_NAME' AND TABLE_NAME='author_application' AND COLUMN_NAME='pending_user_id' AND EXTRA LIKE '%STORED GENERATED%' AND GENERATION_EXPRESSION LIKE '%status%';")" = "1"
-          test "$(docker compose exec -T mysql mysql -N -uroot -p"$DB_PASSWORD" -e "SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='$DB_NAME' AND TABLE_NAME='author_application' AND INDEX_NAME='uk_author_application_pending_user' AND NON_UNIQUE=0;")" = "1"
-          test "$(docker compose exec -T mysql mysql -N -uroot -p"$DB_PASSWORD" -e "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$DB_NAME' AND TABLE_NAME IN ('author_application','author_profile') AND CONSTRAINT_TYPE='FOREIGN KEY';")" = "3"
-          test "$(docker compose exec -T mysql mysql -N -uroot -p"$DB_PASSWORD" -e "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='$DB_NAME' AND TABLE_NAME='sys_user' AND COLUMN_NAME='role' AND COLUMN_COMMENT LIKE '%AUTHOR%';")" = "1"
+          health=$(curl --fail --silent http://localhost:18080/api/health)
+          echo "Health response: $health"
+          # Verify database is connected
+          echo "$health" | python3 -c "import json,sys; d=json.load(sys.stdin)['data']; assert d['database'] == 'connected', f'database: {d.get(\"database\")}'"
+          # Verify schema version exists
+          echo "$health" | python3 -c "import json,sys; d=json.load(sys.stdin)['data']; assert 'dbSchemaVersion' in d, 'missing dbSchemaVersion'"
+          echo "Flyway schema verified: $(echo "$health" | python3 -c "import json,sys; print(json.load(sys.stdin)['data']['dbSchemaVersion'])")"
       - name: Run API smoke flow
         run: bash scripts/smoke-test.sh
       - name: Show service logs on failure

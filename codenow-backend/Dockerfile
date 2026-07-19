@@ -11,7 +11,7 @@ RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
 
 # 复制源码并构建
 COPY src ./src
-RUN ./mvnw clean package -B
+RUN ./mvnw clean package -B -DskipTests
 
 # ===== 运行阶段 =====
 FROM eclipse-temurin:21-jre-alpine

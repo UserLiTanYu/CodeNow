@@ -8,6 +8,14 @@ spring:
     url: jdbc:mysql://${DB_HOST:mysql}:3306/${DB_NAME:codenow}?useUnicode=true&characterEncoding=utf-8&sslMode=${DB_SSL_MODE:REQUIRED}&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=false
     username: ${DB_USER:root}
     password: ${DB_PASSWORD}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
+    validate-on-migrate: true
+    out-of-order: false
+    table: flyway_schema_history
   data:
     redis:
       host: ${REDIS_HOST:redis}
