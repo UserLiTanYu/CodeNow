@@ -33,6 +33,9 @@ import org.springframework.dao.DuplicateKeyException;
 
 import java.time.LocalDateTime;
 
+/**
+ * 评论接口。公开读取与受限写入分离；删除权限同时考虑评论本人和管理员角色。
+ */
 @Tag(name = "评论管理")
 @RestController
 @RequestMapping("/api/comments")
@@ -45,6 +48,10 @@ public class CommentController {
     private final CommentLikeService commentLikeService;
     private final UserNotificationService notificationService;
 
+    /**
+     * 获取文章评论树。
+     * 返回指定文章的树形评论列表（仅已通过审核）。
+     */
     @Operation(summary = "获取文章评论树", description = "返回指定文章的树形评论列表（仅已通过审核）")
     @GetMapping("/article/{articleId}")
     public R<CommentPageVO> getCommentTree(
@@ -56,6 +63,10 @@ public class CommentController {
         return R.ok(new CommentPageVO(page, commentService.countApproved(articleId)));
     }
 
+    /**
+     * 发表评论。
+     * 发表文章评论，支持回复某条评论（楼中楼），需登录。
+     */
     @RateLimit(maxCount = 5, timeWindow = 60, message = "评论过于频繁，请 1 分钟后再试")
     @Operation(summary = "发表评论", description = "发表文章评论，支持回复某条评论（楼中楼），需登录")
     @PostMapping
@@ -105,6 +116,9 @@ public class CommentController {
         return R.ok();
     }
 
+    /**
+     * 点赞评论。
+     */
     @PostMapping("/{id}/likes")
     public R<Void> like(@PathVariable Long id) {
         if (commentService.getById(id) == null) return R.error(404, "评论不存在");
@@ -120,6 +134,9 @@ public class CommentController {
         return R.ok();
     }
 
+    /**
+     * 取消点赞评论。
+     */
     @DeleteMapping("/{id}/likes")
     public R<Void> unlike(@PathVariable Long id) {
         commentLikeService.remove(new LambdaQueryWrapper<CommentLike>()
@@ -128,6 +145,10 @@ public class CommentController {
         return R.ok();
     }
 
+    /**
+     * 分页查询评论（管理后台）。
+     * 分页查询所有评论，支持按文章筛选，需登录。
+     */
     @Operation(summary = "分页查询评论（管理后台）", description = "分页查询所有评论，支持按文章筛选，需登录")
     @GetMapping
     public R<Page<BlogComment>> list(
@@ -138,6 +159,10 @@ public class CommentController {
         return R.ok(commentService.pageComments(pageNum, pageSize, articleId));
     }
 
+    /**
+     * 删除评论。
+     * 删除评论及其所有子评论，需登录。
+     */
     @OperationLog("删除评论")
     @Operation(summary = "删除评论", description = "删除评论及其所有子评论，需登录")
     @DeleteMapping("/{id}")

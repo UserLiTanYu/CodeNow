@@ -1,24 +1,31 @@
 <template>
-  <section class="member-card">
-    <div class="heading"><div><h1>我的评论</h1><p>查看和管理你发表过的评论</p></div><router-link to="/blog/profile">返回个人中心</router-link></div>
-    <el-table v-loading="loading" :data="comments" empty-text="还没有发表过评论">
-      <el-table-column label="文章" min-width="180"><template #default="{ row }"><router-link :to="`/blog/article/${row.articleId}`">{{ row.articleTitle }}</router-link></template></el-table-column>
-      <el-table-column prop="content" label="评论内容" min-width="280" show-overflow-tooltip />
-      <el-table-column prop="createTime" label="发表时间" width="180" :formatter="formatDateCell" />
-      <el-table-column label="操作" width="90"><template #default="{ row }"><el-button type="danger" link @click="remove(row)">删除</el-button></template></el-table-column>
+  <section class=”member-card”>
+    <!-- 页面标题和返回链接 -->
+    <div class=”heading”><div><h1>我的评论</h1><p>查看和管理你发表过的评论</p></div><router-link to=”/blog/profile”>返回个人中心</router-link></div>
+    <!-- 评论列表表格 -->
+    <el-table v-loading=”loading” :data=”comments” empty-text=”还没有发表过评论”>
+      <el-table-column label=”文章” min-width=”180”><template #default=”{ row }”><router-link :to=”`/blog/article/${row.articleId}`”>{{ row.articleTitle }}</router-link></template></el-table-column>
+      <el-table-column prop=”content” label=”评论内容” min-width=”280” show-overflow-tooltip />
+      <el-table-column prop=”createTime” label=”发表时间” width=”180” :formatter=”formatDateCell” />
+      <el-table-column label=”操作” width=”90”><template #default=”{ row }”><el-button type=”danger” link @click=”remove(row)”>删除</el-button></template></el-table-column>
     </el-table>
-    <el-pagination v-if="total > pageSize" v-model:current-page="pageNum" :page-size="pageSize" :total="total" layout="prev, pager, next" class="pagination" @current-change="load" />
+    <!-- 分页器 -->
+    <el-pagination v-if=”total > pageSize” v-model:current-page=”pageNum” :page-size=”pageSize” :total=”total” layout=”prev, pager, next” class=”pagination” @current-change=”load” />
   </section>
 </template>
 
 <script setup>
+/** 会员我的评论页面 - 查看和管理自己发表过的评论 */
 import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { deleteMyComment, getMyComments } from '@/api/member'
 import { formatDateCell } from '@/utils/format'
 const comments = ref([]); const loading = ref(false); const pageNum = ref(1); const pageSize = 10; const total = ref(0)
+/** 加载我的评论列表 */
 async function load() { loading.value = true; try { const res = await getMyComments({ pageNum: pageNum.value, pageSize }); comments.value = res.data.records; total.value = res.data.total } finally { loading.value = false } }
-async function remove(row) { await ElMessageBox.confirm('删除后将显示为“该评论已由用户删除”，回复关系会保留。', '删除评论', { type: 'warning' }); await deleteMyComment(row.id); ElMessage.success('评论已删除'); load() }
+/** 删除评论（需二次确认） */
+async function remove(row) { await ElMessageBox.confirm('删除后将显示为”该评论已由用户删除”，回复关系会保留。', '删除评论', { type: 'warning' }); await deleteMyComment(row.id); ElMessage.success('评论已删除'); load() }
+/** 页面挂载时加载评论列表 */
 onMounted(load)
 </script>
 

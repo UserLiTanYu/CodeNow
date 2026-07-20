@@ -12,12 +12,22 @@ import org.springframework.stereotype.Service;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * 博客标签服务实现类。
+ * 管理文章标签的查询操作，支持按创建者筛选和按已发布文章关联筛选。
+ */
 @Service
 @RequiredArgsConstructor
 public class BlogTagServiceImpl extends ServiceImpl<BlogTagMapper, BlogTag> implements BlogTagService {
 
     private final BlogArticleMapper articleMapper;
 
+    /**
+     * 根据创建者 ID 查询标签列表
+     *
+     * @param creatorId 创建者用户 ID
+     * @return 该创建者创建的标签列表，按创建时间倒序排列
+     */
     @Override
     public List<BlogTag> listByCreator(Long creatorId) {
         return list(new LambdaQueryWrapper<BlogTag>()
@@ -25,6 +35,11 @@ public class BlogTagServiceImpl extends ServiceImpl<BlogTagMapper, BlogTag> impl
                 .orderByDesc(BlogTag::getCreateTime));
     }
 
+    /**
+     * 查询已发布文章关联的标签列表
+     *
+     * @return 已发布文章使用的标签列表，按创建时间倒序排列
+     */
     @Override
     public List<BlogTag> listByPublishedArticles() {
         List<Long> publishedTagIds = articleMapper.selectPublishedTagIds();

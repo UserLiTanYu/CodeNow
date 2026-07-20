@@ -1,9 +1,12 @@
 <template>
+  <!-- 文章编辑器组件：支持新建和编辑文章，包含表单校验、Markdown编辑器、文档导入等功能 -->
   <div class="article-editor">
+    <!-- 加载错误提示 -->
     <div v-if="loadError" class="load-error">
       <el-alert :title="loadError" type="error" show-icon :closable="false" />
       <el-button type="primary" @click="loadArticle">重新加载</el-button>
     </div>
+    <!-- 文章编辑表单 -->
     <el-form
       v-else
       ref="formRef"
@@ -14,9 +17,11 @@
       :rules="rules"
       label-width="80px"
     >
+      <!-- 文章标题输入 -->
       <el-form-item label="标题" prop="title">
         <el-input v-model="form.title" placeholder="请输入文章标题" />
       </el-form-item>
+      <!-- 文章分类选择（级联选择器，支持父子分类） -->
       <el-form-item label="分类" prop="categoryId">
         <el-cascader
           v-model="form.categoryId"
@@ -27,26 +32,33 @@
           style="width: 100%"
         />
       </el-form-item>
+      <!-- 文章标签多选 -->
       <el-form-item label="标签">
         <el-select v-model="form.tagIds" multiple placeholder="请选择标签" style="width: 100%">
           <el-option v-for="tag in tags" :key="tag.id" :label="tag.name" :value="tag.id" />
         </el-select>
       </el-form-item>
+      <!-- 文章摘要 -->
       <el-form-item label="摘要">
         <el-input v-model="form.summary" type="textarea" :rows="2" placeholder="文章摘要（可选）" />
       </el-form-item>
+      <!-- 学习顺序：数字越小越靠前 -->
       <el-form-item label="学习顺序">
         <el-input-number v-model="form.sort" :min="0" :max="9999" />
         <span class="sort-tip">数字越小越靠前</span>
       </el-form-item>
+      <!-- 封面图上传（权限控制：管理员和有图片权限的作者可上传） -->
       <el-form-item v-if="adminTools || imageTools" label="封面图">
         <ImageUpload v-model="form.coverImage" :upload-request="uploadImageRequest" />
       </el-form-item>
       <el-form-item v-else label="封面图">
         <span class="stage-tip">作者图片上传将在下一阶段开放</span>
       </el-form-item>
+      <!-- 文章内容编辑区：工具栏 + Markdown 编辑器 -->
       <el-form-item class="content-form-item" label="内容" prop="content">
+        <!-- 编辑器工具栏：文档导入、ZIP包导入、插入图片 -->
         <div class="editor-toolbar">
+          <!-- 隐藏的文档文件输入框 -->
           <input
             ref="documentInputRef"
             class="document-input"
@@ -54,6 +66,7 @@
             accept=".md,.txt,text/markdown,text/plain"
             @change="handleDocumentSelected"
           />
+          <!-- 隐藏的ZIP包输入框（仅管理员可见） -->
           <input
             v-if="adminTools"
             ref="packageInputRef"
@@ -73,9 +86,11 @@
           </el-button>
           <span class="import-tip">.md/.txt 最大 2MB{{ adminTools ? '；含本地图片请使用 ZIP 包，最大 25MB' : '' }}</span>
         </div>
+        <!-- Markdown 编辑器 -->
         <MdEditor v-model="form.content" style="height: 500px" />
       </el-form-item>
 
+      <!-- 图片插入对话框：上传图片后插入到 Markdown 内容中 -->
       <el-dialog v-if="adminTools || imageTools" v-model="showImageUpload" title="插入图片" width="450px">
         <ImageUpload v-model="insertImageUrl" :upload-request="uploadImageRequest" />
         <template #footer>
@@ -83,6 +98,7 @@
           <el-button type="primary" :disabled="!insertImageUrl" @click="handleInsertImage">插入</el-button>
         </template>
       </el-dialog>
+      <!-- 底部操作按钮：取消、保存草稿、发布 -->
       <el-form-item>
         <el-button @click="router.back()">取消</el-button>
         <el-button type="primary" :loading="saving" @click="handleSave(0)">保存草稿</el-button>
@@ -93,6 +109,12 @@
 </template>
 
 <script setup>
+/**
+ * 文章编辑器组件
+ * 支持新建和编辑文章，包含标题、分类、标签、摘要、封面图、Markdown 内容编辑等功能。
+ * 编辑器通过 props 注入管理端/作者端 API，共享表单和离开保护，同时保持各自的权限与上传能力。
+ * 支持导入 .md/.txt 文档和 ZIP 文章包（含图片），并提供未保存修改的离开保护。
+ */
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -104,6 +126,15 @@ import { importArticlePackage } from '@/api/upload'
 import { DOCUMENT_IMPORT_EXTENSIONS, DOCUMENT_IMPORT_MAX_SIZE, documentExtension, parseTextDocument } from '@/utils/documentImport'
 import { categoryCascaderOptions } from '@/utils/categoryTree'
 
+/**
+ * 组件属性
+ * articleApi: 文章 CRUD 接口对象（管理端和作者端使用不同实现）
+ * loadCategories/loadTags: 加载分类和标签的函数
+ * redirectPath: 保存成功后的跳转路径
+ * adminTools: 是否启用管理员专属工具（ZIP导入等）
+ * imageTools: 是否启用图片上传功能
+ * uploadImageRequest: 自定义图片上传接口
+ */
 const props = defineProps({
   articleApi: { type: Object, required: true },
   loadCategories: { type: Function, required: true },
@@ -116,25 +147,46 @@ const props = defineProps({
 
 const route = useRoute()
 const router = useRouter()
+
+/** 表单引用，用于触发表单校验 */
 const formRef = ref()
+/** 是否正在保存中 */
 const saving = ref(false)
+/** 分类列表 */
 const categories = ref([])
+/** 标签列表 */
 const tags = ref([])
+/** 是否为编辑模式（URL 中有文章ID） */
 const isEdit = ref(false)
+/** 文章数据是否正在加载 */
 const articleLoading = ref(false)
+/** 分类和标签选项是否正在加载 */
 const optionsLoading = ref(true)
+/** 加载错误信息 */
 const loadError = ref('')
+/** 是否显示图片插入对话框 */
 const showImageUpload = ref(false)
+/** 待插入的图片URL */
 const insertImageUrl = ref('')
+/** 表单初始快照，用于检测未保存修改 */
 const initialSnapshot = ref('')
+/** 是否允许离开当前页面（保存成功后置为 true） */
 const allowLeave = ref(false)
+/** 文档文件输入框引用 */
 const documentInputRef = ref()
+/** 是否正在导入文档 */
 const importing = ref(false)
+/** ZIP 包输入框引用 */
 const packageInputRef = ref()
+/** 是否正在导入 ZIP 文章包 */
 const packageImporting = ref(false)
+
+/** 将分类列表转换为级联选择器所需的树形结构 */
 const categoryOptions = computed(() => categoryCascaderOptions(categories.value))
+/** 是否处于初始化加载状态（文章或选项加载中） */
 const initializing = computed(() => articleLoading.value || optionsLoading.value)
 
+/** 文章表单数据 */
 const form = reactive({
   title: '',
   content: '',
@@ -146,12 +198,14 @@ const form = reactive({
   sort: 0,
 })
 
+/** 表单校验规则 */
 const rules = {
   title: [{ required: true, message: '请输入标题', trigger: 'blur' }],
   content: [{ required: true, message: '请输入内容', trigger: 'blur' }],
   categoryId: [{ required: true, message: '请选择分类', trigger: 'change' }],
 }
 
+/** 加载分类和标签选项数据，并行请求互不影响 */
 async function loadOptions() {
   optionsLoading.value = true
   try {
@@ -163,6 +217,7 @@ async function loadOptions() {
   }
 }
 
+/** 加载文章详情（编辑模式）：从接口获取文章数据并填充到表单中 */
 async function loadArticle() {
   if (!route.params.id) return
   isEdit.value = true
@@ -189,6 +244,7 @@ async function loadArticle() {
   }
 }
 
+/** 保存文章：校验表单后根据模式调用创建或更新接口，成功后跳转到指定页面 */
 async function handleSave(status) {
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
@@ -209,20 +265,24 @@ async function handleSave(status) {
   }
 }
 
+/** 生成表单当前状态的 JSON 快照（标签ID排序后序列化） */
 function snapshotForm() {
   return JSON.stringify({ ...form, tagIds: [...form.tagIds].sort((a, b) => a - b) })
 }
 
+/** 检测表单是否有未保存的修改：比较当前快照与初始快照 */
 function hasUnsavedChanges() {
   return !allowLeave.value && initialSnapshot.value !== '' && snapshotForm() !== initialSnapshot.value
 }
 
+/** 浏览器关闭/刷新前的保护：有未保存修改时提示用户 */
 function handleBeforeUnload(event) {
   if (!hasUnsavedChanges()) return
   event.preventDefault()
   event.returnValue = ''
 }
 
+/** 路由离开前的保护：有未保存修改时弹出确认对话框 */
 onBeforeRouteLeave(async () => {
   if (!hasUnsavedChanges()) return true
   try {
@@ -237,6 +297,7 @@ onBeforeRouteLeave(async () => {
   }
 })
 
+/** 将上传的图片以 Markdown 图片语法插入到文章内容末尾 */
 function handleInsertImage() {
   if (!insertImageUrl.value) return
   form.content = `${form.content}\n![图片](${insertImageUrl.value})\n`
@@ -244,6 +305,7 @@ function handleInsertImage() {
   insertImageUrl.value = ''
 }
 
+/** 处理文档导入：读取 .md/.txt 文件内容，覆盖当前正文，可选提取标题 */
 async function handleDocumentSelected(event) {
   const file = event.target.files?.[0]
   event.target.value = ''
@@ -276,6 +338,7 @@ async function handleDocumentSelected(event) {
   }
 }
 
+/** 处理 ZIP 文章包导入：上传 ZIP 文件到服务端，服务端解析后返回文章内容和图片数量 */
 async function handlePackageSelected(event) {
   const file = event.target.files?.[0]
   event.target.value = ''
@@ -306,12 +369,14 @@ async function handlePackageSelected(event) {
   }
 }
 
+/** 组件挂载：注册浏览器关闭保护，初始化快照，并行加载选项和文章数据 */
 onMounted(async () => {
   window.addEventListener('beforeunload', handleBeforeUnload)
   if (!route.params.id) initialSnapshot.value = snapshotForm()
   await Promise.allSettled([loadOptions(), loadArticle()])
 })
 
+/** 组件卸载前：移除浏览器关闭保护事件监听 */
 onBeforeUnmount(() => window.removeEventListener('beforeunload', handleBeforeUnload))
 </script>
 

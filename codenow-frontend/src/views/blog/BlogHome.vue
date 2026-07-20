@@ -1,5 +1,6 @@
 <template>
   <div class="blog-home">
+    <!-- 筛选排序工具栏 -->
     <section class="list-toolbar" aria-label="文章列表筛选与排序">
       <div class="toolbar-heading">
         <span class="toolbar-title">{{ toolbarTitle }}</span>
@@ -24,11 +25,13 @@
       </div>
     </section>
 
+    <!-- 加载中骨架屏 -->
     <div v-if="loading" class="loading-box">
       <el-skeleton :rows="5" animated />
     </div>
     <template v-else>
       <el-alert v-if="errorMessage" :title="errorMessage" type="error" show-icon :closable="false" class="error-alert" />
+      <!-- 搜索结果提示区域 -->
       <div v-if="activeKeyword" class="search-result-heading" aria-live="polite">
         <div>
           <span class="search-eyebrow">搜索结果</span>
@@ -58,6 +61,7 @@
 </template>
 
 <script setup>
+/** 博客首页 - 展示全部文章列表，支持搜索和多种排序方式 */
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BlogArticleCard from '@/components/blog/BlogArticleCard.vue'
@@ -73,6 +77,7 @@ const total = ref(0)
 const errorMessage = ref('')
 const activeKeyword = ref('')
 const selectedSort = ref('learning')
+/** 排序选项配置 */
 const sortOptions = [
   { label: '学习顺序', value: 'learning' },
   { label: '最新发布', value: 'latest' },
@@ -80,6 +85,7 @@ const sortOptions = [
 ]
 const toolbarTitle = '全部文章'
 
+/** 加载文章列表数据 */
 async function fetchArticles() {
   loading.value = true
   errorMessage.value = ''
@@ -103,6 +109,7 @@ async function fetchArticles() {
   }
 }
 
+/** 构建路由查询参数 */
 function buildQuery({ includeKeyword = true } = {}) {
   const query = {}
   if (includeKeyword && activeKeyword.value) query.keyword = activeKeyword.value
@@ -110,20 +117,27 @@ function buildQuery({ includeKeyword = true } = {}) {
   return query
 }
 
+/** 应用筛选条件到 URL */
 function applyFilters() {
   router.push({ path: '/blog', query: buildQuery() })
 }
 
+/** 切换排序方式 */
 function selectSort(sort) {
   if (selectedSort.value === sort) return
   selectedSort.value = sort
   applyFilters()
 }
 
+/** 清除搜索关键词 */
 function clearSearch() {
   router.push({ path: '/blog', query: buildQuery({ includeKeyword: false }) })
 }
 
+/**
+ * 监听 URL 查询参数变化，同步筛选状态
+ * URL 查询参数是筛选条件的事实来源，确保刷新、前进后退和分享链接都能恢复同一列表状态
+ */
 watch(
   () => [route.query.keyword, route.query.sort],
   ([keyword, sort]) => {

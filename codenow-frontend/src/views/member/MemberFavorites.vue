@@ -1,19 +1,25 @@
 <template>
   <section class="favorites-card">
+    <!-- 页面标题和返回链接 -->
     <div class="page-heading"><div><h1>我的收藏</h1><p>保存下来，稍后继续阅读</p></div><router-link to="/blog/profile">个人中心</router-link></div>
+    <!-- 加载中骨架屏 -->
     <el-skeleton v-if="loading" :rows="6" animated />
+    <!-- 收藏列表为空时的提示 -->
     <el-empty v-else-if="favorites.length === 0" description="还没有收藏文章" />
+    <!-- 收藏文章列表 -->
     <div v-else class="favorite-list">
       <article v-for="item in favorites" :key="item.articleId" class="favorite-item">
         <div><router-link :to="`/blog/article/${item.articleId}`">{{ item.title }}</router-link><p>{{ item.summary || '暂无摘要' }}</p><small>收藏于 {{ formatDate(item.favoriteTime) }}</small></div>
         <el-button text type="danger" @click="cancelFavorite(item.articleId)">取消收藏</el-button>
       </article>
+      <!-- 分页器 -->
       <el-pagination v-if="total > pageSize" v-model:current-page="pageNum" :page-size="pageSize" :total="total" layout="prev, pager, next" @current-change="loadFavorites" />
     </div>
   </section>
 </template>
 
 <script setup>
+/** 会员我的收藏页面 - 查看和管理收藏的文章 */
 import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getFavorites, removeFavorite } from '@/api/member'
@@ -25,6 +31,7 @@ const pageNum = ref(1)
 const pageSize = 10
 const total = ref(0)
 
+/** 加载收藏文章列表 */
 async function loadFavorites() {
   loading.value = true
   try {
@@ -33,11 +40,13 @@ async function loadFavorites() {
     total.value = res.data.total
   } finally { loading.value = false }
 }
+/** 取消收藏文章 */
 async function cancelFavorite(id) {
   await removeFavorite(id)
   ElMessage.success('已取消收藏')
   loadFavorites()
 }
+/** 页面挂载时加载收藏列表 */
 onMounted(loadFavorites)
 </script>
 

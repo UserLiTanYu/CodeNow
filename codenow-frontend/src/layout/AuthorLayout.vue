@@ -1,7 +1,11 @@
 <template>
+  <!-- 作者工作台布局组件：左侧边栏导航 + 右侧内容区域 -->
   <el-container class="author-layout">
+    <!-- 左侧边栏：品牌标识、作者信息、导航菜单 -->
     <el-aside width="224px" class="author-sidebar">
+      <!-- 品牌标识，点击返回博客首页 -->
       <router-link to="/blog" class="brand">码上记</router-link>
+      <!-- 作者身份信息区域 -->
       <div class="author-identity">
         <img :src="avatarUrl(userStore.userInfo?.avatar)" alt="作者头像" class="identity-avatar" @error="useDefaultAvatar" />
         <div class="identity-info">
@@ -9,7 +13,9 @@
           <router-link v-if="userStore.userInfo?.id" :to="`/blog/author/${userStore.userInfo.id}`" class="view-public-link">查看公开主页 →</router-link>
         </div>
       </div>
+      <!-- 工作台标签 -->
       <div class="console-label">作者工作台</div>
+      <!-- 导航菜单：文章管理、分类管理、标签管理、评论管理 -->
       <el-menu :default-active="route.path" router class="author-menu">
         <el-menu-item index="/author-console/articles">
           <el-icon><Document /></el-icon>
@@ -29,12 +35,15 @@
         </el-menu-item>
       </el-menu>
     </el-aside>
+    <!-- 右侧内容区域 -->
     <el-container class="author-shell">
+      <!-- 顶部头部栏：页面标题和用户操作 -->
       <el-header class="author-header">
         <div>
           <div class="eyebrow">AUTHOR CONSOLE</div>
           <h1>{{ route.meta.title || '我的文章' }}</h1>
         </div>
+        <!-- 头部操作按钮：访问博客、用户下拉菜单 -->
         <div class="header-actions">
           <el-button plain @click="router.push('/blog')">
             <el-icon><House /></el-icon>访问博客
@@ -53,12 +62,18 @@
           </el-dropdown>
         </div>
       </el-header>
+      <!-- 主内容区域：渲染子路由 -->
       <el-main class="author-main"><router-view /></el-main>
     </el-container>
   </el-container>
 </template>
 
 <script setup>
+/**
+ * 作者工作台布局组件
+ * 提供作者后台管理界面的整体布局框架，包含左侧导航侧边栏和右侧内容区域。
+ * 侧边栏展示作者身份信息和功能菜单，顶部头部栏显示页面标题和用户操作。
+ */
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowDown, ChatDotRound, Document, FolderOpened, House, PriceTag } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
@@ -69,8 +84,10 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
+/** 页面加载时获取用户信息（如果尚未加载） */
 if (!userStore.userInfo) userStore.fetchUserInfo().catch(() => {})
 
+/** 处理用户下拉菜单命令：个人中心跳转或退出登录 */
 async function handleCommand(command) {
   if (command === 'profile') return router.push('/blog/profile')
   if (command === 'logout') {

@@ -1,13 +1,15 @@
 <template>
   <div class="author-page">
+    <!-- 加载中状态 -->
     <div v-if="loadingProfile" class="state-panel">正在加载作者主页…</div>
+    <!-- 加载失败或作者不存在时的错误状态 -->
     <div v-else-if="profileError || !author" class="state-panel error-state" role="alert">
       <strong>作者主页不可用</strong>
       <span>该作者可能已暂停公开展示，或页面暂时无法访问。</span>
       <router-link to="/blog/authors">返回作者发现</router-link>
     </div>
     <template v-else>
-      <!-- 作者资料头 -->
+      <!-- 作者资料头部：头像、昵称、简介、统计信息、擅长领域、外部链接 -->
       <section class="author-hero">
         <img :src="avatarUrl(author.avatar)" :alt="`${author.displayName}头像`" class="hero-avatar" @error="useDefaultAvatar" />
         <div class="hero-info">
@@ -48,7 +50,7 @@
         </div>
       </section>
 
-      <!-- 文章列表 -->
+      <!-- 文章列表区域 -->
       <div v-if="loadingArticles" class="loading-box"><el-skeleton :rows="3" animated /></div>
       <div v-else-if="articleError" class="state-panel small error-state" role="alert">
         <strong>文章列表加载失败</strong>
@@ -74,6 +76,7 @@
 </template>
 
 <script setup>
+/** 作者公共主页 - 展示作者资料、文章列表，支持分类/标签筛选和排序 */
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import BlogArticleCard from '@/components/blog/BlogArticleCard.vue'
@@ -95,17 +98,22 @@ const loadingProfile = ref(true)
 const loadingArticles = ref(false)
 const profileError = ref(false)
 const articleError = ref(false)
+/** 作者资料与文章列表分别隔离竞态；切换作者时还会主动使旧文章请求失效 */
 let profileRequestId = 0
 let articleRequestId = 0
 
+/** 校验外部 URL 是否为合法的 HTTP/HTTPS 地址 */
 function safeExternalUrl(value) {
   if (typeof value !== 'string' || !/^https?:\/\//i.test(value)) return ''
   return value
 }
 
+/** 安全的个人网站 URL */
 const safeWebsite = computed(() => safeExternalUrl(author.value?.websiteUrl))
+/** 安全的作品集 URL */
 const safePortfolio = computed(() => safeExternalUrl(author.value?.portfolioUrl))
 
+/** 当前筛选条件的显示标签 */
 const filterLabel = computed(() => {
   const cat = authorCategories.value.find(c => c.id === selectedCategoryId.value)
   const tag = authorTags.value.find(t => t.id === selectedTagId.value)
@@ -114,10 +122,12 @@ const filterLabel = computed(() => {
   return '全部文章'
 })
 
+/** 数字格式化为千分位分隔 */
 function formatNumber(value) {
   return Number(value || 0).toLocaleString('zh-CN')
 }
 
+/** 加载作者文章列表，支持分类、标签筛选和排序 */
 async function fetchArticles() {
   if (!author.value) return
   const currentRequest = ++articleRequestId
@@ -141,6 +151,7 @@ async function fetchArticles() {
   }
 }
 
+/** 加载作者的分类和标签筛选选项 */
 async function fetchAuthorFilters() {
   try {
     const [catRes, tagRes] = await Promise.all([
@@ -155,6 +166,7 @@ async function fetchAuthorFilters() {
   }
 }
 
+/** 加载作者个人资料 */
 async function fetchProfile() {
   const currentRequest = ++profileRequestId
   ++articleRequestId
@@ -179,6 +191,7 @@ async function fetchProfile() {
   }
 }
 
+/** 切换文章排序方式 */
 function selectSort(sort) {
   if (articleSort.value === sort) return
   articleSort.value = sort
@@ -186,11 +199,13 @@ function selectSort(sort) {
   fetchArticles()
 }
 
+/** 筛选条件变更时重置分页并重新加载 */
 function onFilterChange() {
   pageNum.value = 1
   fetchArticles()
 }
 
+/** 监听路由参数变化，切换作者时重新加载数据 */
 watch(
   () => route.params.id,
   () => {

@@ -18,10 +18,18 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/admin/users")
 @RequiredArgsConstructor
+/**
+ * 管理员用户管理控制器。
+ * 提供用户列表查询、用户状态管理及登录日志查看等管理功能。
+ */
 public class AdminUserController {
     private final SysUserService userService;
     private final LoginLogService loginLogService;
 
+    /**
+     * 分页查询用户列表。
+     * 支持按用户名、昵称或邮箱关键词搜索，按创建时间倒序排列。返回数据已脱敏。
+     */
     @GetMapping
     public R<Page<SysUser>> list(
             @RequestParam(defaultValue = "1") Integer pageNum,
@@ -38,6 +46,10 @@ public class AdminUserController {
         return R.ok(page);
     }
 
+    /**
+     * 修改用户状态。
+     * 支持启用或禁用用户，禁用时需填写原因，禁用后自动踢出会话。
+     */
     @PutMapping("/{id}/status")
     public R<Void> updateStatus(@PathVariable Long id, @Valid @RequestBody UserStatusDTO dto) {
         if (id.equals(StpUtil.getLoginIdAsLong())) {
@@ -63,6 +75,10 @@ public class AdminUserController {
         return R.ok();
     }
 
+    /**
+     * 分页查询登录日志。
+     * 支持按用户 ID、账号名称和登录结果筛选。
+     */
     @GetMapping("/login-logs")
     public R<Page<LoginLog>> loginLogs(
             @RequestParam(defaultValue = "1") Integer pageNum,

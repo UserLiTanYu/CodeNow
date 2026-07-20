@@ -9,6 +9,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+/**
+ * Sa-Token 路径授权配置。登录、作者角色和管理员角色三组拦截器会叠加匹配；
+ * 公开路径仅跳过第一组登录检查，不代表绕过其他可能命中的角色检查。
+ */
 @Configuration
 public class SaTokenConfig implements WebMvcConfigurer {
 
@@ -20,6 +24,16 @@ public class SaTokenConfig implements WebMvcConfigurer {
         return new StpLogicJwtForSimple();
     }
 
+    /**
+     * 注册 Sa-Token 拦截器，配置三组路径授权规则：
+     * <ul>
+     *   <li>登录拦截器：对 /api/** 生效，排除公开路径</li>
+     *   <li>作者角色拦截器：对 /api/author/** 生效，要求 AUTHOR 或 ADMIN 角色</li>
+     *   <li>管理员角色拦截器：对后台管理路径生效，要求 ADMIN 角色</li>
+     * </ul>
+     *
+     * @param registry 拦截器注册器
+     */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new SaInterceptor(handle -> StpUtil.checkLogin()))

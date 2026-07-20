@@ -19,16 +19,26 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/tags")
 @RequiredArgsConstructor
+/**
+ * 标签管理控制器。
+ * 提供标签的增删改查功能。
+ */
 public class TagController {
 
     private final BlogTagService tagService;
 
+    /**
+     * 查询全部标签列表。
+     */
     @Operation(summary = "查询标签列表", description = "查询全部标签")
     @GetMapping
     public R<List<BlogTag>> list() {
         return R.ok(tagService.list());
     }
 
+    /**
+     * 新增标签。
+     */
     @OperationLog("新增标签")
     @Operation(summary = "新增标签", description = "创建一个新标签")
     @PostMapping
@@ -39,6 +49,9 @@ public class TagController {
         return R.ok();
     }
 
+    /**
+     * 修改标签。
+     */
     @OperationLog("修改标签")
     @Operation(summary = "修改标签", description = "根据 ID 修改标签名称")
     @PutMapping("/{id}")
@@ -55,6 +68,9 @@ public class TagController {
         return R.ok();
     }
 
+    /**
+     * 删除标签。
+     */
     @OperationLog("删除标签")
     @Operation(summary = "删除标签", description = "根据 ID 逻辑删除标签")
     @DeleteMapping("/{id}")

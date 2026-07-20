@@ -27,6 +27,10 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/blog")
 @RequiredArgsConstructor
+/**
+ * 博客前台控制器（公开接口）。
+ * 提供已发布文章的查询、热门文章、分类和标签列表等公开访问功能。
+ */
 public class BlogController {
 
     private final BlogArticleService articleService;
@@ -34,6 +38,10 @@ public class BlogController {
     private final BlogTagService tagService;
     private final HotArticleService hotArticleService;
 
+    /**
+     * 分页查询已发布文章。
+     * 仅返回已发布文章，置顶优先，支持按分类、标签和关键词筛选，并可按发布时间或阅读量排序。
+     */
     @RateLimit(maxCount = 30, timeWindow = 10, message = "请求过于频繁，请稍后再试")
     @Operation(summary = "分页查询已发布文章", description = "仅返回已发布文章，置顶优先，支持按分类、标签和关键词筛选，并可按发布时间或阅读量排序")
     @GetMapping("/articles")
@@ -49,6 +57,10 @@ public class BlogController {
         return R.ok(articleService.pagePublishedArticles(pageNum, pageSize, categoryId, tagId, keyword, sort));
     }
 
+    /**
+     * 查询热门文章。
+     * 固定返回浏览量 Top 3 的已发布文章；Redis 为空时从数据库重建缓存。
+     */
     @RateLimit(maxCount = 20, timeWindow = 10, message = "请求过于频繁，请稍后再试")
     @Operation(summary = "查询热门文章", description = "固定返回浏览量 Top 3 的已发布文章；Redis 为空时从数据库重建缓存")
     @GetMapping("/articles/hot")
@@ -71,6 +83,10 @@ public class BlogController {
         return R.ok(articleService.buildArticleVOBatch(orderedArticles));
     }
 
+    /**
+     * 查询文章详情。
+     * 查询已发布文章详情，浏览量自动加一。
+     */
     @Operation(summary = "查询文章详情", description = "查询已发布文章详情，浏览量自动 +1")
     @GetMapping("/articles/{id}")
     public R<ArticleVO> getArticle(
@@ -82,12 +98,20 @@ public class BlogController {
         return R.ok(vo);
     }
 
+    /**
+     * 查询所有分类。
+     * 仅返回至少有一篇已发布文章的分类。
+     */
     @Operation(summary = "查询所有分类", description = "仅返回至少有一篇已发布文章的分类")
     @GetMapping("/categories")
     public R<List<BlogCategory>> listCategories() {
         return R.ok(categoryService.listTreeByPublishedArticles());
     }
 
+    /**
+     * 查询所有标签。
+     * 仅返回至少关联了一篇已发布文章的标签。
+     */
     @Operation(summary = "查询所有标签", description = "仅返回至少关联了一篇已发布文章的标签")
     @GetMapping("/tags")
     public R<List<BlogTag>> listTags() {

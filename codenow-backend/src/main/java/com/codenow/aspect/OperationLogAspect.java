@@ -20,15 +20,29 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 
+/**
+ * 操作审计切面。业务成功或失败都会记录耗时和状态；日志写入失败不得覆盖原业务结果。
+ */
 @Slf4j
 @Aspect
 @Component
 @RequiredArgsConstructor
 public class OperationLogAspect {
 
+    /** 操作日志服务，负责异步持久化日志记录 */
     private final OperationLogService operationLogService;
+
+    /** JSON 序列化工具，用于将请求参数序列化为字符串 */
     private final ObjectMapper objectMapper;
 
+    /**
+     * 环绕通知：拦截标注了 {@link OperationLog} 注解的方法，
+     * 记录方法执行耗时与成功/失败状态，最终异步写入操作日志。
+     *
+     * @param joinPoint 连接点，包含被拦截方法的信息
+     * @return 被拦截方法的执行结果
+     * @throws Throwable 业务方法抛出的异常（原样透传，不影响异常语义）
+     */
     @Around("@annotation(com.codenow.annotation.OperationLog)")
     public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
         long startTime = System.currentTimeMillis();
@@ -42,6 +56,7 @@ public class OperationLogAspect {
             status = 0;
             throw e;
         } finally {
+            // finally 确保异常请求同样留下审计记录；记录失败不能改变原业务异常语义。
             long duration = System.currentTimeMillis() - startTime;
             // 异步记录日志
             try {
@@ -53,6 +68,14 @@ public class OperationLogAspect {
         return result;
     }
 
+    /**
+     * 组装操作日志实体并异步保存。收集的信息包括：操作描述、方法全限定名、
+     * 请求参数（自动截断超长内容）、客户端 IP、操作人身份（Sa-Token）。
+     *
+     * @param joinPoint 连接点，用于获取方法签名和参数
+     * @param status    执行状态，1-成功，0-失败
+     * @param duration  方法执行耗时（毫秒）
+     */
     private void saveLog(ProceedingJoinPoint joinPoint, int status, long duration) {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();

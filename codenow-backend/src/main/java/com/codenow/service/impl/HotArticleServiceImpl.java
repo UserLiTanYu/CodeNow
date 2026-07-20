@@ -15,6 +15,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 热门文章缓存。Redis ZSet 只保存 Top N 排名，MySQL 始终是事实来源；Redis 故障时降级查询数据库。
+ * ZSet 写入、裁剪和续期并非同一原子操作，允许排行榜在并发刷新时短暂不一致。
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -27,9 +31,18 @@ public class HotArticleServiceImpl implements HotArticleService {
     private final StringRedisTemplate stringRedisTemplate;
     private final BlogArticleMapper articleMapper;
 
+    /**
+     * 更新热门文章缓存中的浏览量。
+     * 使用数据库回读后的浏览量作为 score，避免缓存自行累加造成双写偏差。
+     * 更新后裁剪超出限制的记录并续期。
+     *
+     * @param articleId    文章 ID
+     * @param newViewCount 数据库中的最新浏览量
+     */
     @Override
     public void incrementViewCount(Long articleId, int newViewCount) {
         try {
+            // 使用数据库回读后的浏览量作为 score，避免缓存自行累加造成双写偏差。
             stringRedisTemplate.opsForZSet().add(
                     HOT_ARTICLES_KEY,
                     String.valueOf(articleId),
@@ -47,6 +60,12 @@ public class HotArticleServiceImpl implements HotArticleService {
         }
     }
 
+    /**
+     * 获取热门文章 ID 列表。
+     * 优先从 Redis 缓存读取，缓存不足或异常时降级查询数据库并回填缓存。
+     *
+     * @return 热门文章 ID 列表（最多 N 条）
+     */
     @Override
     public List<Long> getHotArticleIds() {
         try {
@@ -86,6 +105,11 @@ public class HotArticleServiceImpl implements HotArticleService {
         return articles.stream().map(BlogArticle::getId).toList();
     }
 
+    /**
+     * 检查 Redis 中是否存在热门文章缓存
+     *
+     * @return 缓存是否存在
+     */
     @Override
     public boolean hasCache() {
         try {

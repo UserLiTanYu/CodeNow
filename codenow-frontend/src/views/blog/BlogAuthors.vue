@@ -1,5 +1,6 @@
 <template>
   <div class="authors-page">
+    <!-- 页面顶部横幅：标题和作者总数 -->
     <section class="authors-hero">
       <div>
         <span class="eyebrow">AUTHOR DIRECTORY</span>
@@ -9,6 +10,7 @@
       <strong class="author-total">{{ total }}<small> 位作者</small></strong>
     </section>
 
+    <!-- 搜索和排序工具栏 -->
     <section class="authors-toolbar" aria-label="作者筛选与排序">
       <form role="search" class="author-search" @submit.prevent="submitSearch">
         <input
@@ -28,6 +30,7 @@
       </div>
     </section>
 
+    <!-- 加载状态和错误提示 -->
     <div v-if="loading" class="state-panel" aria-live="polite">正在加载作者…</div>
     <div v-else-if="errorMessage" class="state-panel error-state" role="alert">
       <strong>作者列表加载失败</strong>
@@ -35,6 +38,7 @@
       <button type="button" @click="fetchAuthors">重新加载</button>
     </div>
     <div v-else-if="authors.length === 0" class="state-panel">暂无符合条件的作者</div>
+    <!-- 作者卡片网格列表 -->
     <section v-else class="author-grid" aria-label="作者列表">
       <router-link
         v-for="author in authors"
@@ -70,6 +74,7 @@
 </template>
 
 <script setup>
+/** 作者发现页面 - 展示所有作者列表，支持搜索和多种排序方式 */
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getPublicAuthors } from '@/api/blog'
@@ -86,12 +91,15 @@ const errorMessage = ref('')
 const searchInput = ref('')
 const activeKeyword = ref('')
 const selectedSort = ref('popular')
+/** 搜索、排序和分页可能连续触发请求，用序号丢弃晚到的旧响应 */
 let requestId = 0
 
+/** 数字格式化为千分位分隔 */
 function formatNumber(value) {
   return Number(value || 0).toLocaleString('zh-CN')
 }
 
+/** 加载作者列表数据 */
 async function fetchAuthors() {
   const currentRequest = ++requestId
   loading.value = true
@@ -113,6 +121,7 @@ async function fetchAuthors() {
   }
 }
 
+/** 构建路由查询参数 */
 function routeQuery(keyword = activeKeyword.value, sort = selectedSort.value) {
   const query = {}
   if (keyword) query.keyword = keyword
@@ -120,17 +129,20 @@ function routeQuery(keyword = activeKeyword.value, sort = selectedSort.value) {
   return query
 }
 
+/** 提交搜索，更新 URL 查询参数 */
 function submitSearch() {
   const keyword = searchInput.value.trim().slice(0, 100)
   searchInput.value = keyword
   router.push({ path: '/blog/authors', query: routeQuery(keyword) })
 }
 
+/** 切换排序方式 */
 function selectSort(sort) {
   if (selectedSort.value === sort) return
   router.push({ path: '/blog/authors', query: routeQuery(activeKeyword.value, sort) })
 }
 
+/** 监听 URL 查询参数变化，同步搜索和排序状态 */
 watch(
   () => [route.query.keyword, route.query.sort],
   ([keyword, sort]) => {

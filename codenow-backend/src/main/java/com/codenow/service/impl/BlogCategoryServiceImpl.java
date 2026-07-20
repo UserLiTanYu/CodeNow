@@ -17,11 +17,19 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * 分类树服务。负责平铺记录与树结构互转、后代遍历，以及新增、移动、删除时的环路和引用校验。
+ */
 @Service
 @RequiredArgsConstructor
 public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, BlogCategory> implements BlogCategoryService {
     private final BlogArticleMapper articleMapper;
 
+    /**
+     * 查询全部分类树结构
+     *
+     * @return 分类树列表（顶级分类及其子分类）
+     */
     @Override
     public List<BlogCategory> listTree() {
         List<BlogCategory> categories = list(new LambdaQueryWrapper<BlogCategory>()
@@ -29,6 +37,12 @@ public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, Blo
         return buildTree(categories);
     }
 
+    /**
+     * 根据作者 ID 查询分类树结构
+     *
+     * @param authorId 作者用户 ID
+     * @return 该作者的分类树列表
+     */
     @Override
     public List<BlogCategory> listTreeByAuthor(Long authorId) {
         List<BlogCategory> categories = list(new LambdaQueryWrapper<BlogCategory>()
@@ -37,6 +51,12 @@ public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, Blo
         return buildTree(categories);
     }
 
+    /**
+     * 获取指定分类及其所有后代分类的 ID 列表
+     *
+     * @param categoryId 分类 ID
+     * @return 包含自身和所有后代的分类 ID 列表
+     */
     @Override
     public List<Long> selfAndDescendantIds(Long categoryId) {
         if (categoryId == null) return Collections.emptyList();
@@ -44,6 +64,13 @@ public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, Blo
         return collectDescendantIds(categoryId, categories);
     }
 
+    /**
+     * 获取指定作者的分类及其所有后代分类的 ID 列表
+     *
+     * @param categoryId 分类 ID
+     * @param authorId   作者用户 ID
+     * @return 包含自身和所有后代的分类 ID 列表
+     */
     @Override
     public List<Long> selfAndDescendantIdsByAuthor(Long categoryId, Long authorId) {
         if (categoryId == null) return Collections.emptyList();
@@ -52,6 +79,12 @@ public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, Blo
         return collectDescendantIds(categoryId, categories);
     }
 
+    /**
+     * 创建分类。
+     * 校验父分类合法性（防止环路）和同名唯一性后保存。
+     *
+     * @param category 分类实体
+     */
     @Override
     @Transactional
     public void createCategory(BlogCategory category) {
@@ -61,6 +94,13 @@ public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, Blo
         save(category);
     }
 
+    /**
+     * 更新分类（管理员操作）。
+     * 校验父分类合法性和同名唯一性后更新。
+     *
+     * @param id       分类 ID
+     * @param category 更新后的分类实体
+     */
     @Override
     @Transactional
     public void updateCategory(Long id, BlogCategory category) {
@@ -74,6 +114,14 @@ public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, Blo
         updateById(category);
     }
 
+    /**
+     * 作者更新自己的分类。
+     * 校验分类归属权、父分类合法性和同名唯一性后更新。
+     *
+     * @param id       分类 ID
+     * @param authorId 作者用户 ID
+     * @param category 更新后的分类实体
+     */
     @Override
     @Transactional
     public void updateAuthorCategory(Long id, Long authorId, BlogCategory category) {
@@ -90,6 +138,12 @@ public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, Blo
         updateById(category);
     }
 
+    /**
+     * 删除分类（管理员操作）。
+     * 有子分类或关联文章时不允许删除。
+     *
+     * @param id 分类 ID
+     */
     @Override
     @Transactional
     public void deleteCategory(Long id) {
@@ -99,6 +153,13 @@ public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, Blo
         removeById(id);
     }
 
+    /**
+     * 作者删除自己的分类。
+     * 校验分类归属权，有子分类或关联文章时不允许删除。
+     *
+     * @param id       分类 ID
+     * @param authorId 作者用户 ID
+     */
     @Override
     @Transactional
     public void deleteAuthorCategory(Long id, Long authorId) {
@@ -161,6 +222,7 @@ public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, Blo
         if (authorId != null && !Objects.equals(parent.getAuthorId(), authorId)) {
             throw new BusinessException(400, "父分类必须属于同一作者");
         }
+        // 父节点不能来自当前节点的后代，否则移动后会形成分类环。
         if (id != null && selfAndDescendantIdsByAuthor(id, authorId).contains(parentId)) {
             throw new BusinessException(400, "不能将分类移动到自己的子分类下");
         }
@@ -190,6 +252,12 @@ public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, Blo
         }
     }
 
+    /**
+     * 查询博客首页侧边栏分类树。
+     * 只显示主要作者的、包含已发布文章的分类及其祖先分类。
+     *
+     * @return 分类树列表
+     */
     @Override
     public List<BlogCategory> listTreeByPublishedArticles() {
         // Blog home sidebar: show primary author's categories that have published articles

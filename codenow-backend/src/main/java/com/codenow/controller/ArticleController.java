@@ -19,10 +19,18 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/articles")
 @RequiredArgsConstructor
+/**
+ * 文章管理控制器。
+ * 提供文章的增删改查、状态切换和置顶管理等功能。
+ */
 public class ArticleController {
 
     private final BlogArticleService articleService;
 
+    /**
+     * 分页查询文章列表。
+     * 按创建时间倒序分页查询，支持按分类和标签筛选。
+     */
     @Operation(summary = "分页查询文章列表", description = "按创建时间倒序分页查询，支持按分类和标签筛选")
     @GetMapping
     public R<Page<ArticleVO>> list(
@@ -33,6 +41,10 @@ public class ArticleController {
         return R.ok(articleService.pageArticleVO(pageNum, pageSize, categoryId, tagId));
     }
 
+    /**
+     * 查询文章详情。
+     * 根据 ID 查询文章完整信息，包含分类名称和标签列表。
+     */
     @Operation(summary = "查询文章详情", description = "根据 ID 查询文章完整信息（含分类名称和标签列表）")
     @GetMapping("/{id}")
     public R<ArticleVO> getById(
@@ -44,6 +56,10 @@ public class ArticleController {
         return R.ok(vo);
     }
 
+    /**
+     * 新增文章。
+     * 创建一篇新文章，可同时关联标签。
+     */
     @OperationLog("新增文章")
     @Operation(summary = "新增文章", description = "创建一篇新文章，可同时关联标签")
     @PostMapping
@@ -54,6 +70,10 @@ public class ArticleController {
         return R.ok();
     }
 
+    /**
+     * 修改文章。
+     * 根据 ID 修改文章内容和标签关联。
+     */
     @OperationLog("修改文章")
     @Operation(summary = "修改文章", description = "根据 ID 修改文章内容和标签关联")
     @PutMapping("/{id}")
@@ -70,6 +90,10 @@ public class ArticleController {
         return R.ok();
     }
 
+    /**
+     * 删除文章。
+     * 根据 ID 逻辑删除文章并保留标签关联，以支持后续恢复。
+     */
     @OperationLog("删除文章")
     @Operation(summary = "删除文章", description = "根据 ID 逻辑删除文章并保留标签关联，以支持后续恢复")
     @DeleteMapping("/{id}")
@@ -79,6 +103,10 @@ public class ArticleController {
         return R.ok();
     }
 
+    /**
+     * 切换文章状态。
+     * 切换文章的草稿/发布状态（0=草稿, 1=已发布）。
+     */
     @OperationLog("切换文章状态")
     @Operation(summary = "切换文章状态", description = "切换文章的草稿/发布状态（0=草稿, 1=已发布）")
     @PutMapping("/{id}/status")
@@ -90,6 +118,10 @@ public class ArticleController {
         return R.ok();
     }
 
+    /**
+     * 切换文章置顶状态。
+     * 切换文章的置顶状态（0=不置顶, 1=置顶）。
+     */
     @OperationLog("切换文章置顶")
     @Operation(summary = "切换文章置顶", description = "切换文章的置顶状态（0=不置顶, 1=置顶）")
     @PutMapping("/{id}/top")

@@ -37,6 +37,11 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * 作者申请状态机。提交前计数只提供友好提示，并发重复提交最终由数据库唯一约束兜底；
+ * 审批、角色、作者资料和通知处于同一事务，状态迁移使用“当前状态=PENDING”的 CAS 条件更新。
+ * 撤销作者只改变角色，不删除作者资料和历史文章；公开查询会依据当前角色即时隐藏作者。
+ */
 @Service
 @RequiredArgsConstructor
 public class AuthorApplicationServiceImpl implements AuthorApplicationService {
@@ -49,6 +54,16 @@ public class AuthorApplicationServiceImpl implements AuthorApplicationService {
     private final AuthorProfileService profileService;
     private final UserNotificationService notificationService;
 
+    /**
+     * 提交作者申请。
+     * 校验用户状态和角色、申请理由和简介长度，检查是否存在待审核申请（并发重复由数据库唯一约束兜底），
+     * 然后创建申请记录。
+     *
+     * @param userId 申请人用户 ID
+     * @param dto    申请信息 DTO，包含申请理由、擅长领域、个人简介等
+     * @return 创建的作者申请实体
+     * @throws BusinessException 当账号不可用、已有待审核申请或数据不合法时抛出
+     */
     @Override
     @Transactional
     public AuthorApplication submit(Long userId, AuthorApplicationDTO dto) {
@@ -89,6 +104,12 @@ public class AuthorApplicationServiceImpl implements AuthorApplicationService {
         return application;
     }
 
+    /**
+     * 查询用户的最新一条作者申请
+     *
+     * @param userId 用户 ID
+     * @return 最新申请的视图对象，无申请记录时返回 null
+     */
     @Override
     public AuthorApplicationVO latest(Long userId) {
         AuthorApplication application = applicationMapper.selectOne(new LambdaQueryWrapper<AuthorApplication>()
@@ -99,6 +120,14 @@ public class AuthorApplicationServiceImpl implements AuthorApplicationService {
         return application == null ? null : toVO(application, userMap(List.of(application)));
     }
 
+    /**
+     * 分页查询当前用户的作者申请记录
+     *
+     * @param userId   用户 ID
+     * @param pageNum  页码
+     * @param pageSize 每页大小
+     * @return 分页结果
+     */
     @Override
     public Page<AuthorApplicationVO> pageMine(Long userId, Integer pageNum, Integer pageSize) {
         Page<AuthorApplication> page = applicationMapper.selectPage(page(pageNum, pageSize),
@@ -109,6 +138,13 @@ public class AuthorApplicationServiceImpl implements AuthorApplicationService {
         return toVOPage(page);
     }
 
+    /**
+     * 撤销待审核的作者申请
+     *
+     * @param userId        用户 ID（只能撤销自己的申请）
+     * @param applicationId 申请记录 ID
+     * @throws BusinessException 当申请不存在或不属于当前用户时抛出
+     */
     @Override
     @Transactional
     public void cancel(Long userId, Long applicationId) {
@@ -119,6 +155,16 @@ public class AuthorApplicationServiceImpl implements AuthorApplicationService {
         transition(application, AuthorApplicationStatus.CANCELED, null, null);
     }
 
+    /**
+     * 管理员分页查询作者申请列表。
+     * 支持按状态和关键词（用户名、昵称、邮箱、擅长领域）筛选。
+     *
+     * @param pageNum  页码
+     * @param pageSize 每页大小
+     * @param status   申请状态筛选（可选）
+     * @param keyword  搜索关键词（可选）
+     * @return 分页结果
+     */
     @Override
     public Page<AuthorApplicationVO> pageAdmin(Integer pageNum, Integer pageSize, String status, String keyword) {
         LambdaQueryWrapper<AuthorApplication> wrapper = new LambdaQueryWrapper<>();
@@ -144,6 +190,13 @@ public class AuthorApplicationServiceImpl implements AuthorApplicationService {
         return toVOPage(applicationMapper.selectPage(page(pageNum, pageSize), wrapper));
     }
 
+    /**
+     * 查询作者申请详情
+     *
+     * @param applicationId 申请记录 ID
+     * @return 申请详情视图对象
+     * @throws BusinessException 当申请不存在时抛出
+     */
     @Override
     public AuthorApplicationVO detail(Long applicationId) {
         AuthorApplication application = applicationMapper.selectById(applicationId);
@@ -153,6 +206,16 @@ public class AuthorApplicationServiceImpl implements AuthorApplicationService {
         return toVO(application, userMap(List.of(application)));
     }
 
+    /**
+     * 审批通过作者申请。
+     * 同一事务内完成：申请状态迁移、用户角色提升为 AUTHOR、创建/更新作者资料、发送站内通知。
+     * 使用 CAS 条件更新保证并发安全。
+     *
+     * @param applicationId 申请记录 ID
+     * @param reviewerId    审批人用户 ID
+     * @param remark        审批备注（可选）
+     * @throws BusinessException 当申请已处理、申请人角色或状态已变化时抛出
+     */
     @Override
     @Transactional
     public void approve(Long applicationId, Long reviewerId, String remark) {
@@ -166,6 +229,7 @@ public class AuthorApplicationServiceImpl implements AuthorApplicationService {
         }
         transition(application, AuthorApplicationStatus.APPROVED, reviewerId, trimToNull(remark));
 
+        // 条件更新把“角色仍为 USER 且账号仍有效”作为审批提交时的乐观并发检查。
         int promoted = userMapper.update(null, new UpdateWrapper<SysUser>()
                 .eq("id", applicant.getId())
                 .eq("role", UserRole.USER)
@@ -196,6 +260,15 @@ public class AuthorApplicationServiceImpl implements AuthorApplicationService {
                 "你的作者申请已通过，作者身份已生效。");
     }
 
+    /**
+     * 驳回作者申请。
+     * 同一事务内完成申请状态迁移和站内通知发送。
+     *
+     * @param applicationId 申请记录 ID
+     * @param reviewerId    审批人用户 ID
+     * @param reason        驳回原因（必填）
+     * @throws BusinessException 当驳回原因为空或申请已处理时抛出
+     */
     @Override
     @Transactional
     public void reject(Long applicationId, Long reviewerId, String reason) {
@@ -209,6 +282,15 @@ public class AuthorApplicationServiceImpl implements AuthorApplicationService {
                 "你的作者申请未通过：" + normalizedReason);
     }
 
+    /**
+     * 撤销用户的作者资格。
+     * 将用户角色从 AUTHOR 降级为 USER，保留作者资料和历史文章，发送站内通知。
+     *
+     * @param userId     目标用户 ID
+     * @param reviewerId 操作人用户 ID
+     * @param reason     撤销原因（必填）
+     * @throws BusinessException 当用户不是作者、尝试撤销自己或原因为空时抛出
+     */
     @Override
     @Transactional
     public void revokeAuthor(Long userId, Long reviewerId, String reason) {

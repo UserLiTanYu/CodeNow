@@ -40,6 +40,9 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * 会员中心接口。所有数据操作都以当前 Sa-Token 登录用户为边界，并在响应前移除敏感字段。
+ */
 @RestController
 @RequestMapping("/api/member")
 @RequiredArgsConstructor
@@ -53,6 +56,9 @@ public class MemberController {
     private final StorageService storageService;
     private final UploadProperties uploadProperties;
 
+    /**
+     * 获取当前用户个人信息。
+     */
     @GetMapping("/profile")
     public R<SysUser> profile() {
         SysUser user = userService.getById(StpUtil.getLoginIdAsLong());
@@ -60,9 +66,13 @@ public class MemberController {
         return R.ok(user);
     }
 
+    /**
+     * 修改用户昵称。
+     */
     @PutMapping("/profile")
     public R<SysUser> updateProfile(@Valid @RequestBody ProfileUpdateDTO dto) {
         SysUser user = userService.getById(StpUtil.getLoginIdAsLong());
+        // 昵称按纯文本保存，避免个人资料字段成为持久化 XSS 入口。
         String nickname = Jsoup.clean(dto.getNickname().trim(), Safelist.none());
         if (nickname.isBlank()) {
             return R.error(400, "昵称不能为空");
@@ -73,6 +83,10 @@ public class MemberController {
         return R.ok(user);
     }
 
+    /**
+     * 修改密码。
+     * 验证当前密码后修改为新密码，并踢出已有会话。
+     */
     @PutMapping("/password")
     public R<Void> changePassword(@Valid @RequestBody ChangePasswordDTO dto) {
         SysUser user = currentUser();
@@ -89,6 +103,10 @@ public class MemberController {
         return R.ok();
     }
 
+    /**
+     * 发送邮箱变更验证码。
+     * 向新邮箱发送验证码，限制发送频率。
+     */
     @RateLimit(maxCount = 10, timeWindow = 3600, message = "验证码发送次数过多，请稍后再试")
     @PostMapping("/email/code")
     public R<Void> sendChangeEmailCode(@Valid @RequestBody EmailCodeDTO dto) {
@@ -100,6 +118,10 @@ public class MemberController {
         return R.ok();
     }
 
+    /**
+     * 变更邮箱。
+     * 校验验证码后将邮箱变更为新地址。
+     */
     @PutMapping("/email")
     public R<SysUser> changeEmail(@Valid @RequestBody ChangeEmailDTO dto) {
         String email = dto.getEmail().trim().toLowerCase();
@@ -116,6 +138,9 @@ public class MemberController {
         return R.ok(user);
     }
 
+    /**
+     * 上传用户头像。
+     */
     @RateLimit(maxCount = 10, timeWindow = 60, message = "上传过于频繁，请稍后再试")
     @PostMapping("/avatar")
     public R<Map<String, String>> uploadAvatar(@RequestParam("file") MultipartFile file) {
@@ -134,6 +159,9 @@ public class MemberController {
         return R.ok(Map.of("url", url));
     }
 
+    /**
+     * 分页查询当前用户的评论列表。
+     */
     @GetMapping("/comments")
     public R<Page<BlogComment>> comments(@RequestParam(defaultValue = "1") Integer pageNum,
                                          @RequestParam(defaultValue = "10") Integer pageSize) {
@@ -154,6 +182,10 @@ public class MemberController {
         return R.ok(page);
     }
 
+    /**
+     * 删除自己的评论。
+     * 仅删除评论内容，保留占位记录。
+     */
     @DeleteMapping("/comments/{id}")
     public R<Void> deleteOwnComment(@PathVariable Long id) {
         BlogComment comment = commentService.getById(id);
@@ -170,6 +202,9 @@ public class MemberController {
         return R.ok();
     }
 
+    /**
+     * 收藏文章。
+     */
     @PostMapping("/favorites/{articleId}")
     public R<Void> favorite(@PathVariable Long articleId) {
         BlogArticle article = articleService.getById(articleId);
@@ -188,6 +223,9 @@ public class MemberController {
         return R.ok();
     }
 
+    /**
+     * 取消收藏文章。
+     */
     @DeleteMapping("/favorites/{articleId}")
     public R<Void> unfavorite(@PathVariable Long articleId) {
         favoriteService.remove(new LambdaQueryWrapper<ArticleFavorite>()
@@ -196,6 +234,9 @@ public class MemberController {
         return R.ok();
     }
 
+    /**
+     * 查询文章收藏状态。
+     */
     @GetMapping("/favorites/{articleId}/status")
     public R<Map<String, Boolean>> favoriteStatus(@PathVariable Long articleId) {
         boolean favorited = favoriteService.count(new LambdaQueryWrapper<ArticleFavorite>()
@@ -204,6 +245,9 @@ public class MemberController {
         return R.ok(Map.of("favorited", favorited));
     }
 
+    /**
+     * 分页查询收藏文章列表。
+     */
     @GetMapping("/favorites")
     public R<Page<FavoriteArticleVO>> favorites(
             @RequestParam(defaultValue = "1") Integer pageNum,

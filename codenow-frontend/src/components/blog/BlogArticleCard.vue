@@ -1,19 +1,26 @@
 <template>
+  <!-- 博客文章卡片组件：展示文章标题、摘要、作者、分类、标签、封面图等信息 -->
   <article class="article-card" :class="{ 'has-cover': article.coverImage }">
+    <!-- 整个卡片的点击热区，点击跳转到文章详情页 -->
     <router-link
       :to="`/blog/article/${article.id}`"
       class="card-hit-area"
       :aria-label="`阅读文章：${article.title}`"
     />
 
+    <!-- 卡片内容区域 -->
     <div class="card-content">
+      <!-- 标题行：置顶标签 + 文章标题 -->
       <div class="title-row">
         <el-tag v-if="article.isTop" size="small" type="danger" effect="dark" class="top-tag">置顶</el-tag>
         <h2 class="card-title">{{ article.title }}</h2>
       </div>
+      <!-- 文章摘要 -->
       <p class="card-summary">{{ article.summary || '暂无摘要' }}</p>
 
+      <!-- 元信息区域：作者、分类、发布时间、阅读量、标签 -->
       <div class="card-meta">
+        <!-- 作者头像和名称 -->
         <router-link
           v-if="author"
           :to="`/blog/author/${author.userId}`"
@@ -23,6 +30,7 @@
           <img :src="avatarUrl(author.avatar)" alt="" @error="useDefaultAvatar" />
           {{ author.displayName }}
         </router-link>
+        <!-- 文章分类 -->
         <router-link
           v-if="showCategory && item.categoryName"
           :to="`/blog/category/${article.categoryId}`"
@@ -32,14 +40,17 @@
           <el-icon><Folder /></el-icon>
           {{ item.categoryName }}
         </router-link>
+        <!-- 发布时间 -->
         <time v-if="article.createTime" class="meta-item" :datetime="article.createTime">
           <el-icon><Clock /></el-icon>
           {{ formatDate(article.createTime) }}
         </time>
+        <!-- 阅读量 -->
         <span class="meta-item">
           <el-icon><View /></el-icon>
           {{ article.viewCount || 0 }} 阅读
         </span>
+        <!-- 文章标签（最多显示两个） -->
         <router-link
           v-for="tag in visibleTags"
           :key="tag.id"
@@ -49,10 +60,12 @@
         >
           {{ tag.name }}
         </router-link>
+        <!-- 超出两个标签时显示折叠计数 -->
         <span v-if="hiddenTagCount > 0" class="more-tags" :title="hiddenTagNames">+{{ hiddenTagCount }}</span>
       </div>
     </div>
 
+    <!-- 封面图区域（有封面图时显示） -->
     <div v-if="article.coverImage" class="card-cover">
       <img :src="article.coverImage" :alt="`${article.title}封面`" loading="lazy" />
     </div>
@@ -60,11 +73,17 @@
 </template>
 
 <script setup>
+/**
+ * 博客文章卡片组件
+ * 在博客列表页展示文章摘要信息，包含标题、摘要、作者头像、分类、标签、发布时间、阅读量和封面图。
+ * 标签最多展示两个，超出部分折叠为计数显示。
+ */
 import { computed } from 'vue'
 import { Clock, Folder, View } from '@element-plus/icons-vue'
 import { formatDate } from '@/utils/format'
 import { avatarUrl, useDefaultAvatar } from '@/utils/avatar'
 
+/** 组件属性：item 文章数据对象，showCategory 是否显示分类链接 */
 const props = defineProps({
   item: {
     type: Object,
@@ -76,13 +95,20 @@ const props = defineProps({
   },
 })
 
+/** 文章对象 */
 const article = computed(() => props.item.article)
+/** 作者对象 */
 const author = computed(() => props.item.author || null)
+/** 文章标签列表 */
 const tags = computed(() => props.item.tags || [])
+/** 可见标签（最多两个），卡片最多展示两个标签，剩余标签折叠成计数，防止元信息区域挤压标题和封面 */
 const visibleTags = computed(() => tags.value.slice(0, 2))
+/** 被隐藏的标签数量 */
 const hiddenTagCount = computed(() => Math.max(tags.value.length - visibleTags.value.length, 0))
+/** 被隐藏的标签名称列表（用于 hover 提示） */
 const hiddenTagNames = computed(() => tags.value.slice(2).map((tag) => tag.name).join('、'))
 
+/** 根据标签名称关键词返回对应的色调 CSS 类名，用于标签视觉分类 */
 function tagTone(name = '') {
   const value = name.toLowerCase()
   if (value.includes('java')) return 'tag-java'

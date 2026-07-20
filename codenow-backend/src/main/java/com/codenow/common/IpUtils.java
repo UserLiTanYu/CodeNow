@@ -14,14 +14,28 @@ public final class IpUtils {
     }
 
     /**
-     * 获取真实客户端 IP（限流专用，不信任 X-Forwarded-For）
+     * 获取真实客户端 IP 地址（限流专用）。
+     * <p>
+     * 直接使用 {@code request.getRemoteAddr()} 获取 TCP 连接的来源 IP，
+     * 不信任客户端可能伪造的 X-Forwarded-For 头，确保限流计数的准确性。
+     * </p>
+     *
+     * @param request HTTP 请求对象
+     * @return 真实客户端 IP 地址
      */
     public static String getRealIp(HttpServletRequest request) {
         return request.getRemoteAddr();
     }
 
     /**
-     * 获取代理 IP（日志专用，信任 Nginx 传递的 X-Forwarded-For）
+     * 获取代理后的客户端 IP 地址（日志专用）。
+     * <p>
+     * 优先从 X-Forwarded-For 头获取（经过可信 Nginx 代理时有效），
+     * 多个代理时取第一个 IP；其次尝试 X-Real-IP 头；最后回退到 {@code getRemoteAddr()}。
+     * </p>
+     *
+     * @param request HTTP 请求对象
+     * @return 代理后的客户端 IP 地址
      */
     public static String getProxyIp(HttpServletRequest request) {
         String ip = request.getHeader("X-Forwarded-For");

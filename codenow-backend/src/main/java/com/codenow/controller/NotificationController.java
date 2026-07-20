@@ -14,9 +14,17 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/member/notifications")
 @RequiredArgsConstructor
+/**
+ * 用户通知控制器。
+ * 提供通知列表查询、未读计数、标记已读等功能。
+ */
 public class NotificationController {
     private final UserNotificationService notificationService;
 
+    /**
+     * 分页查询当前用户的通知列表。
+     * 未读通知优先显示。
+     */
     @GetMapping
     public R<Page<UserNotification>> list(@RequestParam(defaultValue = "1") Integer pageNum,
                                           @RequestParam(defaultValue = "10") Integer pageSize) {
@@ -28,6 +36,9 @@ public class NotificationController {
                         .orderByDesc(UserNotification::getCreateTime)));
     }
 
+    /**
+     * 查询当前用户未读通知数量。
+     */
     @GetMapping("/unread-count")
     public R<Map<String, Long>> unreadCount() {
         long count = notificationService.count(new LambdaQueryWrapper<UserNotification>()
@@ -36,6 +47,9 @@ public class NotificationController {
         return R.ok(Map.of("count", count));
     }
 
+    /**
+     * 标记单条通知为已读。
+     */
     @PutMapping("/{id}/read")
     public R<Void> markRead(@PathVariable Long id) {
         UserNotification notification = notificationService.getOne(new LambdaQueryWrapper<UserNotification>()
@@ -47,6 +61,9 @@ public class NotificationController {
         return R.ok();
     }
 
+    /**
+     * 标记所有通知为已读。
+     */
     @PutMapping("/read-all")
     public R<Void> markAllRead() {
         UserNotification update = new UserNotification();

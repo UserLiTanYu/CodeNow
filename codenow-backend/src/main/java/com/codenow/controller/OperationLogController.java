@@ -15,10 +15,18 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/logs")
 @RequiredArgsConstructor
+/**
+ * 操作日志控制器。
+ * 提供操作日志的分页查询功能，供管理后台审计使用。
+ */
 public class OperationLogController {
 
     private final OperationLogService operationLogService;
 
+    /**
+     * 分页查询操作日志。
+     * 按时间倒序查询操作日志列表。
+     */
     @Operation(summary = "分页查询操作日志", description = "按时间倒序查询操作日志列表")
     @GetMapping
     public R<Page<SysOperationLog>> list(

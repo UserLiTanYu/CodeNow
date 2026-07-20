@@ -22,6 +22,10 @@ public class HealthController {
     @Autowired(required = false)
     JdbcTemplate jdbcTemplate;
 
+    /**
+     * 健康检查。
+     * 检查服务状态和数据库连接，返回当前 Flyway schema 版本。
+     */
     @Operation(summary = "健康检查")
     @GetMapping("/api/health")
     public R<Map<String, Object>> health() {

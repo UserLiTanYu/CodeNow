@@ -1,25 +1,33 @@
 <template>
   <section class="member-card">
+    <!-- 页面标题和全部已读按钮 -->
     <div class="heading"><div><h1>消息中心</h1><p>评论回复等站内通知</p></div><el-button :disabled="unreadCount === 0" @click="readAll">全部已读</el-button></div>
+    <!-- 通知列表 -->
     <div v-loading="loading" class="notification-list">
       <button v-for="item in notifications" :key="item.id" :class="['notification-item', { unread: !item.isRead }]" @click="open(item)">
         <span class="dot"></span><span class="content"><strong>{{ item.title }}</strong><span>{{ item.content }}</span><small>{{ formatDate(item.createTime) }}</small></span>
       </button>
       <el-empty v-if="!loading && notifications.length === 0" description="暂无消息" />
     </div>
+    <!-- 分页器 -->
     <el-pagination v-if="total > pageSize" v-model:current-page="pageNum" :page-size="pageSize" :total="total" layout="prev, pager, next" class="pagination" @current-change="load" />
   </section>
 </template>
 
 <script setup>
+/** 会员消息中心页面 - 查看和管理站内通知 */
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getNotifications, markAllNotificationsRead, markNotificationRead } from '@/api/member'
 import { formatDate } from '@/utils/format'
 const router = useRouter(); const notifications = ref([]); const loading = ref(false); const pageNum = ref(1); const pageSize = 10; const total = ref(0); const unreadCount = ref(0)
+/** 加载通知列表并统计未读数量 */
 async function load() { loading.value = true; try { const res = await getNotifications({ pageNum: pageNum.value, pageSize }); notifications.value = res.data.records; total.value = res.data.total; unreadCount.value = notifications.value.filter(item => !item.isRead).length } finally { loading.value = false } }
+/** 打开通知详情，标记为已读并跳转到相关文章 */
 async function open(item) { if (!item.isRead) { await markNotificationRead(item.id); item.isRead = 1; unreadCount.value = Math.max(0, unreadCount.value - 1) } if (item.articleId) router.push(`/blog/article/${item.articleId}`) }
+/** 全部标记为已读 */
 async function readAll() { await markAllNotificationsRead(); notifications.value.forEach(item => { item.isRead = 1 }); unreadCount.value = 0 }
+/** 页面挂载时加载通知列表 */
 onMounted(load)
 </script>
 

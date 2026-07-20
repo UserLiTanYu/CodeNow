@@ -1,9 +1,11 @@
 <template>
   <div class="blog-article">
+    <!-- 加载中骨架屏 -->
     <div v-if="loading" class="loading-box">
       <el-skeleton :rows="10" animated />
     </div>
     <template v-else-if="article">
+      <!-- 文章头部信息：标题、作者、分类、时间、阅读量、标签、收藏按钮 -->
       <div class="article-header">
         <h1 class="article-title">{{ article.title }}</h1>
         <div class="article-meta">
@@ -36,6 +38,7 @@
           {{ favorited ? '已收藏' : '收藏文章' }}
         </button>
       </div>
+      <!-- 文章正文内容（Markdown 渲染后的 HTML） -->
       <div class="article-body markdown-body" v-html="renderedContent"></div>
 
       <!-- 评论区 -->
@@ -68,6 +71,7 @@
         </div>
       </div>
     </template>
+    <!-- 文章不存在或加载失败时的空状态 -->
     <div v-else class="empty-box">
       <el-alert v-if="articleError" :title="articleError" type="error" show-icon :closable="false" />
       <el-empty :description="articleError ? '暂时无法显示文章' : '文章不存在'" />
@@ -76,6 +80,7 @@
 </template>
 
 <script setup>
+/** 博客文章详情页 - 展示文章内容、作者信息、标签、评论区和收藏功能 */
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Folder, Clock, Star, StarFilled, View } from '@element-plus/icons-vue'
@@ -125,7 +130,7 @@ import { addFavorite, getFavoriteStatus, removeFavorite } from '@/api/member'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 
-// 配置 marked 使用 highlight.js（v18 使用 marked-highlight 扩展）
+/** 配置 marked 使用 highlight.js 进行代码高亮（v18 使用 marked-highlight 扩展） */
 marked.use(markedHighlight({
   langPrefix: 'hljs language-',
   highlight(code, lang) {
@@ -153,16 +158,18 @@ const commentRootTotal = ref(0)
 const commentTotalCount = ref(0)
 const favorited = ref(false)
 const favoriteLoading = ref(false)
+/** 路由快速切换时递增请求序号，旧文章响应不得覆盖新文章页面 */
 let requestId = 0
 
-
+/** 将 Markdown 内容渲染为安全的 HTML（经过 DOMPurify 消毒） */
 const renderedContent = computed(() => {
   if (!article.value?.content) return ''
   const html = marked(article.value.content)
-  // 使用 DOMPurify 过滤 XSS，允许代码高亮的 class 属性
+  // 安全顺序固定为 Markdown/高亮生成 HTML 后再清洗；class 仅供代码高亮样式使用，勿随意扩大白名单。
   return DOMPurify.sanitize(html, { ADD_ATTR: ['class'] })
 })
 
+/** 获取文章详情数据 */
 async function fetchArticle(articleId) {
   const currentRequest = ++requestId
   loading.value = true
@@ -188,6 +195,7 @@ async function fetchArticle(articleId) {
   }
 }
 
+/** 获取文章收藏状态 */
 async function fetchFavoriteStatus() {
   const currentArticleId = route.params.id
   favorited.value = false
@@ -202,6 +210,7 @@ async function fetchFavoriteStatus() {
   }
 }
 
+/** 切换文章收藏状态 */
 async function toggleFavorite() {
   if (!userStore.isLoggedIn) {
     router.push({ path: '/login', query: { redirect: route.fullPath } })
@@ -223,6 +232,7 @@ async function toggleFavorite() {
   }
 }
 
+/** 获取评论树数据 */
 async function fetchComments() {
   const currentArticleId = route.params.id
   commentError.value = ''
@@ -244,10 +254,12 @@ async function fetchComments() {
   }
 }
 
+/** 页面挂载时加载文章详情 */
 onMounted(() => {
   fetchArticle(route.params.id)
 })
 
+/** 监听路由参数变化，切换文章时重新加载 */
 watch(
   () => route.params.id,
   (newId) => {

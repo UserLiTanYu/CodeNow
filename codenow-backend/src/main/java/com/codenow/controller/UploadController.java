@@ -19,11 +19,19 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/upload")
 @RequiredArgsConstructor
+/**
+ * 文件上传控制器。
+ * 提供图片上传和 ZIP 文章包导入功能。
+ */
 public class UploadController {
 
     private final ImageUploadService imageUploadService;
     private final ArticlePackageImportService articlePackageImportService;
 
+    /**
+     * 上传图片。
+     * 上传图片到已配置的存储服务，返回可访问的 URL。
+     */
     @RateLimit(maxCount = 10, timeWindow = 60, message = "上传过于频繁，请稍后再试")
     @OperationLog("上传图片")
     @Operation(summary = "上传图片", description = "上传图片到已配置的存储服务，返回可访问的 URL")
@@ -34,6 +42,10 @@ public class UploadController {
         return R.ok(result);
     }
 
+    /**
+     * 导入 ZIP 文章包。
+     * 读取一个 Markdown 文件，上传其引用的本地图片并重写图片地址。
+     */
     @RateLimit(maxCount = 5, timeWindow = 60, message = "文章包导入过于频繁，请稍后再试")
     @OperationLog("导入 ZIP 文章包")
     @Operation(summary = "导入 ZIP 文章包", description = "读取一个 Markdown 文件，上传其引用的本地图片并重写图片地址")

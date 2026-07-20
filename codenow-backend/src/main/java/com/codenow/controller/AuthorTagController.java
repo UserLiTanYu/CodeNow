@@ -20,10 +20,17 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/author/tags")
 @RequiredArgsConstructor
+/**
+ * 作者标签管理控制器。
+ * 提供作者对自身标签的增删改查功能，仅允许操作自己创建的标签。
+ */
 public class AuthorTagController {
 
     private final BlogTagService tagService;
 
+    /**
+     * 查询当前作者创建的标签列表。
+     */
     @Operation(summary = "查询我的标签列表")
     @GetMapping
     public R<List<BlogTag>> list() {
@@ -31,6 +38,10 @@ public class AuthorTagController {
         return R.ok(tagService.listByCreator(userId));
     }
 
+    /**
+     * 创建标签。
+     * 标签名称在同一作者下唯一。
+     */
     @Operation(summary = "创建标签")
     @PostMapping
     public R<BlogTag> create(@Valid @RequestBody TagDTO dto) {
@@ -47,6 +58,10 @@ public class AuthorTagController {
         return R.ok(tag);
     }
 
+    /**
+     * 修改标签。
+     * 仅允许修改自己创建的标签。
+     */
     @Operation(summary = "修改标签")
     @PutMapping("/{id}")
     public R<Void> update(@PathVariable Long id, @Valid @RequestBody TagDTO dto) {
@@ -63,6 +78,10 @@ public class AuthorTagController {
         return R.ok();
     }
 
+    /**
+     * 删除标签。
+     * 仅允许删除自己创建的标签。
+     */
     @Operation(summary = "删除标签")
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) {

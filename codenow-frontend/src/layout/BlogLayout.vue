@@ -1,9 +1,13 @@
 <template>
+  <!-- 博客前台布局组件：顶部导航栏 + 主内容区 + 侧边栏 + 页脚 -->
   <div class="blog-layout">
+    <!-- 顶部导航栏 -->
     <header class="blog-header">
       <div class="header-inner">
+        <!-- Logo 品牌标识 -->
         <router-link to="/blog" class="logo" aria-label="码上记博客首页">码上记</router-link>
 
+        <!-- 桌面端分类导航菜单 -->
         <nav class="nav-categories desktop-nav" aria-label="博客分类导航">
           <router-link to="/blog" class="nav-item">首页</router-link>
           <router-link to="/blog/authors" class="nav-item">作者</router-link>
@@ -21,7 +25,9 @@
           </div>
         </nav>
 
+        <!-- 头部右侧操作区域 -->
         <div class="header-actions">
+          <!-- 桌面端搜索框 -->
           <form class="desktop-search" role="search" @submit.prevent="submitSearch">
             <el-input
               v-model="searchKeyword"
@@ -34,18 +40,22 @@
             />
           </form>
 
+          <!-- 未登录时显示登录链接 -->
           <router-link v-if="!userStore.isLoggedIn" :to="loginTarget" class="login-link">
             <el-icon><User /></el-icon>
             <span>登录</span>
           </router-link>
+          <!-- 管理员入口：前往后台 -->
           <router-link v-if="userStore.isAdmin" to="/" class="login-link admin-link">
             <el-icon><Setting /></el-icon>
             <span>前往后台</span>
           </router-link>
+          <!-- 作者入口：作者工作台 -->
           <router-link v-if="userStore.canEnterAuthorConsole" to="/author-console/articles" class="login-link admin-link">
             <el-icon><EditPen /></el-icon>
             <span>作者工作台</span>
           </router-link>
+          <!-- 已登录用户下拉菜单 -->
           <el-dropdown v-if="userStore.isLoggedIn" trigger="click" @command="handleUserCommand">
             <button type="button" class="login-link user-trigger">
               <img class="header-user-avatar" :src="avatarUrl(userStore.userInfo?.avatar)" alt="用户头像" @error="useDefaultAvatar" />
@@ -64,6 +74,7 @@
             </template>
           </el-dropdown>
 
+          <!-- 移动端搜索按钮 -->
           <button
             type="button"
             class="header-icon-button mobile-search-trigger"
@@ -75,6 +86,7 @@
             <el-icon><Close v-if="mobileSearchOpen" /><Search v-else /></el-icon>
           </button>
 
+          <!-- 移动端菜单按钮 -->
           <button
             type="button"
             class="header-icon-button menu-trigger"
@@ -88,6 +100,7 @@
         </div>
       </div>
 
+      <!-- 移动端搜索面板（展开/收起动画） -->
       <Transition name="header-panel">
         <div v-if="mobileSearchOpen" id="mobile-search-panel" class="mobile-search-panel">
           <form role="search" @submit.prevent="submitSearch">
@@ -106,6 +119,7 @@
         </div>
       </Transition>
 
+      <!-- 移动端分类导航面板（展开/收起动画） -->
       <Transition name="header-panel">
         <nav
           v-if="mobileMenuOpen"
@@ -132,11 +146,15 @@
       </Transition>
     </header>
 
+    <!-- 页面主体区域：左侧主内容 + 右侧边栏 -->
     <div class="blog-body">
+      <!-- 主内容区域：渲染子路由组件 -->
       <main class="blog-main">
         <router-view />
       </main>
+      <!-- 右侧边栏 -->
       <aside class="blog-sidebar">
+        <!-- 作者页分类筛选（仅作者页面显示） -->
         <div v-if="isAuthorPage && categories.length" class="sidebar-section">
           <h3 class="sidebar-title">作者分类</h3>
           <div class="category-list">
@@ -150,6 +168,7 @@
             >{{ cat.name }}</button>
           </div>
         </div>
+        <!-- 热门文章列表 -->
         <div class="sidebar-section">
           <h3 class="sidebar-title">{{ isAuthorPage ? '作者热门文章' : '热门文章' }}</h3>
           <div v-if="hotArticles.length > 0" class="hot-list">
@@ -168,6 +187,7 @@
           </div>
           <p v-else class="empty-text">暂无热门文章</p>
         </div>
+        <!-- 标签云 -->
         <div class="sidebar-section">
           <h3 class="sidebar-title">{{ isAuthorPage ? '作者标签' : '标签' }}</h3>
           <div class="tag-cloud">
@@ -181,6 +201,7 @@
             </router-link>
           </div>
         </div>
+        <!-- 关于信息 -->
         <div class="sidebar-section">
           <h3 class="sidebar-title">关于</h3>
           <p class="about-text">一个支持 Markdown 写作的个人技术博客，帮助开发者记录和分享学习笔记。</p>
@@ -188,6 +209,7 @@
       </aside>
     </div>
 
+    <!-- 页脚 -->
     <footer class="blog-footer">
       <p>&copy; {{ new Date().getFullYear() }} 码上记 CodeNow. All rights reserved.</p>
     </footer>
@@ -195,6 +217,12 @@
 </template>
 
 <script setup>
+/**
+ * 博客前台布局组件
+ * 提供博客前台页面的整体布局框架，包含顶部导航栏、主内容区、右侧边栏和页脚。
+ * 支持桌面端和移动端响应式布局，移动端有折叠搜索面板和分类导航菜单。
+ * 侧边栏根据当前页面（普通博客页/作者页）动态加载不同的数据。
+ */
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Close, EditPen, Menu, Search, Setting, User, View } from '@element-plus/icons-vue'
@@ -207,18 +235,32 @@ import { ElMessage } from 'element-plus'
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+
+/** 博客分类列表（树形结构） */
 const categories = ref([])
+/** 标签列表 */
 const tags = ref([])
+/** 热门文章列表 */
 const hotArticles = ref([])
+/** 搜索关键词（从 URL query 参数初始化） */
 const searchKeyword = ref(typeof route.query.keyword === 'string' ? route.query.keyword : '')
+/** 移动端菜单是否展开 */
 const mobileMenuOpen = ref(false)
+/** 移动端搜索面板是否展开 */
 const mobileSearchOpen = ref(false)
+/** 移动端搜索输入框引用 */
 const mobileSearchInput = ref()
+/** 登录链接目标（携带当前页面作为重定向参数） */
 const loginTarget = computed(() => ({ path: '/login', query: { redirect: route.fullPath } }))
+/** 未读消息数量 */
 const unreadCount = ref(0)
+/** 当前是否为作者页面 */
 const isAuthorPage = computed(() => /^\/blog\/author\/\d+/.test(route.path))
+/** 作者ID（从路由参数提取） */
 const authorId = computed(() => route.params.id)
+/** 作者页选中的分类ID */
 const selectedAuthorCategoryId = ref(null)
+/** 将树形分类展平为一维列表（用于作者页侧边栏分类筛选） */
 const flatCategories = computed(() => {
   const result = []
   for (const cat of categories.value) {
@@ -232,10 +274,12 @@ const flatCategories = computed(() => {
   return result
 })
 
+/** 标准化搜索关键词：去除首尾空格并限制最大长度为100字符 */
 function normalizedKeyword() {
   return searchKeyword.value.trim().slice(0, 100)
 }
 
+/** 提交搜索：关闭移动端面板后跳转到搜索结果页 */
 function submitSearch() {
   const keyword = normalizedKeyword()
   searchKeyword.value = keyword
@@ -244,6 +288,7 @@ function submitSearch() {
   router.push({ path: '/blog', query: keyword ? { keyword } : {} })
 }
 
+/** 清空搜索关键词并返回博客首页 */
 function clearSearch() {
   searchKeyword.value = ''
   if (route.query.keyword) {
@@ -251,10 +296,12 @@ function clearSearch() {
   }
 }
 
+/** 切换作者页分类筛选（再次点击同一分类取消筛选） */
 function selectAuthorCategory(catId) {
   selectedAuthorCategoryId.value = selectedAuthorCategoryId.value === catId ? null : catId
 }
 
+/** 切换移动端搜索面板的展开/收起状态，并自动聚焦输入框 */
 async function toggleMobileSearch() {
   mobileSearchOpen.value = !mobileSearchOpen.value
   mobileMenuOpen.value = false
@@ -264,11 +311,13 @@ async function toggleMobileSearch() {
   }
 }
 
+/** 切换移动端分类导航菜单的展开/收起状态 */
 function toggleMobileMenu() {
   mobileMenuOpen.value = !mobileMenuOpen.value
   mobileSearchOpen.value = false
 }
 
+/** 处理用户下拉菜单命令：跳转到对应页面或执行退出登录 */
 async function handleUserCommand(command) {
   if (command === 'profile') return router.push('/blog/profile')
   if (command === 'comments') return router.push('/blog/comments')
@@ -283,6 +332,7 @@ async function handleUserCommand(command) {
   }
 }
 
+/** 根据标签名称关键词返回对应的色调 CSS 类名 */
 function tagTone(name = '') {
   const value = name.toLowerCase()
   if (value.includes('java')) return 'tag-java'
@@ -293,6 +343,7 @@ function tagTone(name = '') {
   return 'tag-default'
 }
 
+/** 监听 URL 搜索关键词变化，同步到本地搜索框状态 */
 watch(
   () => route.query.keyword,
   (keyword) => {
@@ -300,6 +351,10 @@ watch(
   },
 )
 
+/**
+ * 监听完整路由变化，动态加载侧边栏数据
+ * 侧栏数据跟随完整路由切换：作者页使用作者范围，其他博客页恢复站点全局范围。
+ */
 watch(
   () => route.fullPath,
   async () => {
@@ -315,7 +370,7 @@ watch(
           getPublicAuthorTags(authorId.value),
           getPublicAuthorArticles(authorId.value, { pageNum: 1, pageSize: 3, sort: 'mostViewed' }),
         ])
-        // Only apply if still on same author page
+        // 当前检查只能确认回写时仍在作者页；未捕获请求发起时的作者 ID，不能隔离作者之间的交叠请求。
         if (isAuthorPage.value && String(authorId.value) === route.params.id) {
           categories.value = catRes.data || []
           tags.value = tagRes.data || []
@@ -344,6 +399,7 @@ watch(
   },
 )
 
+/** 组件挂载：获取用户信息、未读消息数，加载侧边栏数据 */
 onMounted(async () => {
   if (userStore.token && !userStore.userInfo) {
     userStore.fetchUserInfo().catch(() => {})

@@ -20,10 +20,17 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/categories")
 @RequiredArgsConstructor
+/**
+ * 管理员分类管理控制器。
+ * 提供管理员对分类的增删改查功能。
+ */
 public class CategoryController {
 
     private final BlogCategoryService categoryService;
 
+    /**
+     * 查询当前管理员的分类列表（树形结构）。
+     */
     @Operation(summary = "查询分类列表")
     @GetMapping
     public R<List<BlogCategory>> list() {
@@ -31,6 +38,9 @@ public class CategoryController {
         return R.ok(categoryService.listTreeByAuthor(userId));
     }
 
+    /**
+     * 新增分类。
+     */
     @OperationLog("管理员新增分类")
     @Operation(summary = "新增分类")
     @PostMapping
@@ -43,6 +53,9 @@ public class CategoryController {
         return R.ok();
     }
 
+    /**
+     * 修改分类。
+     */
     @OperationLog("管理员修改分类")
     @Operation(summary = "修改分类")
     @PutMapping("/{id}")
@@ -56,6 +69,9 @@ public class CategoryController {
         return R.ok();
     }
 
+    /**
+     * 删除分类。
+     */
     @OperationLog("管理员删除分类")
     @Operation(summary = "删除分类")
     @DeleteMapping("/{id}")

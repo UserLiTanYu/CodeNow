@@ -33,6 +33,9 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 认证入口。验证码、失败锁定、密码哈希和会话失效共同构成登录与账号恢复的安全边界。
+ */
 @Tag(name = "认证管理")
 @RestController
 @RequestMapping("/api/auth")
@@ -44,11 +47,18 @@ public class AuthController {
     private final LoginSecurityService loginSecurityService;
     private final LoginLogService loginLogService;
 
+    /**
+     * 获取图形验证码。
+     */
     @GetMapping("/captcha")
     public R<CaptchaVO> captcha() {
         return R.ok(loginSecurityService.createCaptcha());
     }
 
+    /**
+     * 用户登录。
+     * 支持用户名或邮箱加密码登录，包含验证码校验、失败次数锁定等安全机制。
+     */
     @RateLimit(maxCount = 5, timeWindow = 60, message = "登录尝试过于频繁，请 1 分钟后再试")
     @OperationLog("用户登录")
     @Operation(summary = "登录", description = "用户名或邮箱加密码登录")
@@ -59,6 +69,7 @@ public class AuthController {
             return R.error(400, "请输入用户名或邮箱");
         }
         String normalizedAccount = account.trim();
+        // 先消费图形验证码，再查询账号和校验密码，降低自动化撞库成本。
         try {
             loginSecurityService.verifyCaptcha(dto.getCaptchaId(), dto.getCaptchaCode());
         } catch (BusinessException e) {
@@ -93,6 +104,10 @@ public class AuthController {
         return R.ok(loginResult(user));
     }
 
+    /**
+     * 发送注册验证码。
+     * 向指定邮箱发送注册验证码，限制发送频率。
+     */
     @RateLimit(maxCount = 10, timeWindow = 3600, message = "验证码发送次数过多，请稍后再试")
     @PostMapping("/register/code")
     public R<Void> sendRegisterCode(@Valid @RequestBody EmailCodeDTO dto) {
@@ -104,6 +119,10 @@ public class AuthController {
         return R.ok();
     }
 
+    /**
+     * 用户注册。
+     * 校验验证码后创建新用户账号。
+     */
     @RateLimit(maxCount = 10, timeWindow = 600, message = "注册尝试次数过多，请 10 分钟后再试")
     @PostMapping("/register")
     @Transactional
@@ -135,6 +154,10 @@ public class AuthController {
         return R.ok();
     }
 
+    /**
+     * 发送密码重置验证码。
+     * 向已注册邮箱发送密码重置验证码。
+     */
     @RateLimit(maxCount = 10, timeWindow = 3600, message = "验证码发送次数过多，请稍后再试")
     @PostMapping("/password/code")
     public R<Void> sendResetCode(@Valid @RequestBody EmailCodeDTO dto) {
@@ -145,6 +168,10 @@ public class AuthController {
         return R.ok();
     }
 
+    /**
+     * 重置密码。
+     * 校验验证码后重置用户密码，并踢出已有会话。
+     */
     @RateLimit(maxCount = 10, timeWindow = 600, message = "密码重置次数过多，请 10 分钟后再试")
     @PostMapping("/password/reset")
     @Transactional
@@ -161,6 +188,10 @@ public class AuthController {
         return R.ok();
     }
 
+    /**
+     * 用户登出。
+     * 清除当前会话。
+     */
     @OperationLog("用户登出")
     @PostMapping("/logout")
     public R<Void> logout() {
@@ -168,6 +199,9 @@ public class AuthController {
         return R.ok();
     }
 
+    /**
+     * 获取当前登录用户信息。
+     */
     @GetMapping("/me")
     public R<SysUser> me() {
         SysUser user = currentActiveUser();

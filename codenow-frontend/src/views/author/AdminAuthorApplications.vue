@@ -1,6 +1,7 @@
 <template>
   <div class="page-container">
     <el-card shadow="never">
+      <!-- 页面标题和刷新按钮 -->
       <div class="toolbar">
         <div>
           <h2>作者申请审批</h2>
@@ -8,6 +9,7 @@
         </div>
         <el-button :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
       </div>
+      <!-- 筛选表单：按状态和关键词筛选申请记录 -->
       <el-form :inline="true" class="filters" @submit.prevent="search">
         <el-form-item label="状态">
           <el-select v-model="query.status" clearable placeholder="全部状态" style="width: 150px" @change="search">
@@ -23,6 +25,7 @@
         <el-form-item><el-button type="primary" @click="search">查询</el-button></el-form-item>
       </el-form>
 
+      <!-- 申请列表表格 -->
       <el-table v-loading="loading" :data="rows" stripe>
         <el-table-column label="申请人" min-width="180">
           <template #default="{ row }">
@@ -51,11 +54,13 @@
         </el-table-column>
       </el-table>
 
+      <!-- 分页器 -->
       <div class="pagination">
         <el-pagination v-model:current-page="query.pageNum" v-model:page-size="query.pageSize" layout="total, sizes, prev, pager, next" :total="total" @current-change="load" @size-change="search" />
       </div>
     </el-card>
 
+    <!-- 申请详情抽屉 -->
     <el-drawer v-model="drawerOpen" title="作者申请详情" size="560px">
       <template v-if="detail">
         <el-descriptions :column="1" border>
@@ -79,6 +84,7 @@
 </template>
 
 <script setup>
+/** 管理员作者申请审批页面 - 审核、通过、驳回和撤销作者申请 */
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
@@ -89,15 +95,21 @@ const rows = ref([])
 const total = ref(0)
 const drawerOpen = ref(false)
 const detail = ref(null)
+/** 查询参数：页码、每页条数、状态筛选、关键词搜索 */
 const query = reactive({ pageNum: 1, pageSize: 10, status: 'PENDING', keyword: '' })
+/** 申请状态对应的显示文本和标签类型映射 */
 const statusMeta = {
   PENDING: { label: '审核中', type: 'warning' }, APPROVED: { label: '已通过', type: 'success' },
   REJECTED: { label: '未通过', type: 'danger' }, CANCELED: { label: '已撤回', type: 'info' },
 }
 
+/** 格式化时间为中文本地格式 */
 function formatTime(value) { return value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '-' }
+
+/** 重置到第一页并重新加载列表 */
 function search() { query.pageNum = 1; load() }
 
+/** 加载申请列表数据 */
 async function load() {
   loading.value = true
   try {
@@ -107,12 +119,17 @@ async function load() {
   } finally { loading.value = false }
 }
 
+/** 查看申请详情，打开详情抽屉 */
 async function showDetail(row) {
   const res = await getAuthorApplication(row.id)
   detail.value = res.data
   drawerOpen.value = true
 }
 
+/**
+ * 通过作者申请
+ * 审批操作完成后关闭详情并重新读取列表，以服务端最终状态为准，不在本地猜测状态机结果
+ */
 async function approve(row) {
   const { value } = await ElMessageBox.prompt('可填写通过意见（选填）', '通过作者申请', {
     confirmButtonText: '确认通过', cancelButtonText: '取消', inputPlaceholder: '资料完整，欢迎加入',
@@ -124,6 +141,7 @@ async function approve(row) {
   await load()
 }
 
+/** 驳回作者申请，需填写驳回原因 */
 async function reject(row) {
   const { value } = await ElMessageBox.prompt('请说明未通过原因，申请人可以修改后重新提交。', '驳回作者申请', {
     confirmButtonText: '确认驳回', cancelButtonText: '取消', inputType: 'textarea', inputPlaceholder: '请输入具体审核意见',
@@ -135,6 +153,7 @@ async function reject(row) {
   await load()
 }
 
+/** 撤销已通过的作者资格，需填写撤销原因 */
 async function revoke(row) {
   const { value } = await ElMessageBox.prompt('撤销后用户将恢复为普通读者，历史文章不会下线。', '撤销作者资格', {
     confirmButtonText: '确认撤销', cancelButtonText: '取消', inputType: 'textarea', inputPlaceholder: '请输入撤销原因',
@@ -146,6 +165,7 @@ async function revoke(row) {
   await load()
 }
 
+/** 页面挂载时加载申请列表 */
 onMounted(load)
 </script>
 
