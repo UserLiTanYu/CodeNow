@@ -33,6 +33,7 @@ public class TagController {
     @Operation(summary = "查询标签列表", description = "查询全部标签")
     @GetMapping
     public R<List<BlogTag>> list() {
+        //查询全部标签列表
         return R.ok(tagService.list());
     }
 
@@ -43,9 +44,13 @@ public class TagController {
     @Operation(summary = "新增标签", description = "创建一个新标签")
     @PostMapping
     public R<Void> save(@Valid @RequestBody TagDTO dto) {
+        //创建标签实体类
         BlogTag tag = new BlogTag();
+        //将DTO参数复制到实体对象中
         BeanUtils.copyProperties(dto, tag);
+        //调用业务层保存标签到数据库
         tagService.save(tag);
+        //返回正确的响应结果
         return R.ok();
     }
 
@@ -58,13 +63,19 @@ public class TagController {
     public R<Void> update(
             @Parameter(description = "标签 ID", example = "1") @PathVariable Long id,
             @Valid @RequestBody TagDTO dto) {
+        //根据标签ID查询标签信息
         BlogTag tag = tagService.getById(id);
+        //标签不存在时返回404错误
         if (tag == null) {
             return R.error(404, "标签不存在");
         }
+        //将DTO参数复制到实体对象中
         BeanUtils.copyProperties(dto, tag);
+        //设置标签ID，确保更新的是指定标签
         tag.setId(id);
+        //调用业务层更新标签
         tagService.updateById(tag);
+        //返回正确的响应结果
         return R.ok();
     }
 
@@ -76,7 +87,9 @@ public class TagController {
     @DeleteMapping("/{id}")
     public R<Void> delete(
             @Parameter(description = "标签 ID", example = "1") @PathVariable Long id) {
+        //调用业务层逻辑删除标签
         tagService.removeById(id);
+        //返回正确的响应结果
         return R.ok();
     }
 }

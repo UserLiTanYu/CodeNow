@@ -36,6 +36,7 @@ public class AuthorUploadController {
     @Operation(summary = "作者上传图片", description = "上传文章封面或正文图片，返回可访问 URL")
     @PostMapping("/image")
     public R<Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file) {
+        //调用图片上传服务，将图片上传到已配置的存储服务，返回可访问的URL
         return R.ok(Map.of("url", imageUploadService.upload(file)));
     }
 }

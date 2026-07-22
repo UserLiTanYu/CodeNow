@@ -29,13 +29,15 @@ public class HealthController {
     @Operation(summary = "健康检查")
     @GetMapping("/api/health")
     public R<Map<String, Object>> health() {
+        //构建健康检查响应数据
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("status", "UP");
         data.put("timestamp", LocalDateTime.now().toString());
 
+        //如果数据库连接可用，查询Flyway schema版本信息
         if (jdbcTemplate != null) {
             try {
-                // 查询 Flyway schema 版本
+                //查询Flyway schema版本
                 String version = jdbcTemplate.query(
                         "SELECT installed_rank, version, description, success FROM flyway_schema_history ORDER BY installed_rank DESC LIMIT 1",
                         rs -> rs.next() ? rs.getString("version") + " (" + rs.getString("description") + ")" : "no migrations"
@@ -43,10 +45,12 @@ public class HealthController {
                 data.put("dbSchemaVersion", version);
                 data.put("database", "connected");
             } catch (Exception e) {
+                //数据库查询失败时记录错误信息
                 data.put("database", "error: " + e.getMessage());
             }
         }
 
+        //返回健康检查结果
         return R.ok(data);
     }
 }

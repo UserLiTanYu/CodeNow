@@ -48,6 +48,7 @@ public class PublicAuthorController {
             @RequestParam(required = false) String keyword,
             @Parameter(description = "排序方式：popular（热门）或 latest（最近活跃）")
             @RequestParam(defaultValue = "popular") String sort) {
+        //分页查询公开作者列表，支持关键词搜索和排序方式筛选
         return R.ok(service.pagePublicAuthors(pageNum, pageSize, keyword, sort));
     }
 
@@ -58,6 +59,7 @@ public class PublicAuthorController {
     @Operation(summary = "查看作者公开主页")
     @GetMapping("/{userId}")
     public R<PublicAuthorVO> detail(@PathVariable Long userId) {
+        //根据用户ID查询作者公开主页信息
         return R.ok(service.getPublicAuthor(userId));
     }
 
@@ -76,6 +78,7 @@ public class PublicAuthorController {
             @RequestParam(defaultValue = "latest") String sort,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) Long tagId) {
+        //分页查询指定作者的已发布文章，支持排序方式、分类和标签筛选
         return R.ok(service.pagePublicAuthorArticles(userId, pageNum, pageSize, sort, categoryId, tagId));
     }
 
@@ -87,6 +90,7 @@ public class PublicAuthorController {
     @Operation(summary = "查询作者的分类列表", description = "返回指定作者创建的分类（树形结构）")
     @GetMapping("/{userId}/categories")
     public R<List<BlogCategory>> authorCategories(@PathVariable Long userId) {
+        //查询指定作者创建的分类树形结构
         return R.ok(categoryService.listTreeByAuthor(userId));
     }
 
@@ -98,6 +102,7 @@ public class PublicAuthorController {
     @Operation(summary = "查询作者的标签列表", description = "返回指定作者创建的标签")
     @GetMapping("/{userId}/tags")
     public R<List<BlogTag>> authorTags(@PathVariable Long userId) {
+        //查询指定作者创建的标签列表
         return R.ok(tagService.listByCreator(userId));
     }
 }

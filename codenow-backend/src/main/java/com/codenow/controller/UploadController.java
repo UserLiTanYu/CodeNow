@@ -37,8 +37,11 @@ public class UploadController {
     @Operation(summary = "上传图片", description = "上传图片到已配置的存储服务，返回可访问的 URL")
     @PostMapping("/image")
     public R<Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file) {
+        //创建响应结果Map
         Map<String, String> result = new HashMap<>();
+        //调用图片上传服务，将图片上传到已配置的存储服务，返回可访问的URL
         result.put("url", imageUploadService.upload(file));
+        //返回上传结果
         return R.ok(result);
     }
 
@@ -51,6 +54,7 @@ public class UploadController {
     @Operation(summary = "导入 ZIP 文章包", description = "读取一个 Markdown 文件，上传其引用的本地图片并重写图片地址")
     @PostMapping("/article-package")
     public R<ArticlePackageVO> importArticlePackage(@RequestParam("file") MultipartFile file) {
+        //调用文章包导入服务，读取ZIP文件中的Markdown文件，上传引用的本地图片并重写图片地址
         return R.ok(articlePackageImportService.importPackage(file));
     }
 }

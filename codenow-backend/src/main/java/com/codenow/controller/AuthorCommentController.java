@@ -39,8 +39,10 @@ public class AuthorCommentController {
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @Parameter(description = "文章 ID（可选）") @RequestParam(required = false) Long articleId) {
+        //获取当前登录用户ID和管理员状态
         long userId = StpUtil.getLoginIdAsLong();
         boolean admin = StpUtil.hasRole("ADMIN");
+        //调用业务层分页查询评论，管理员可查看所有作者的评论，普通作者只能查看自己文章的评论
         return R.ok(commentService.pageAuthorComments(pageNum, pageSize, articleId, userId, admin));
     }
 
@@ -51,9 +53,12 @@ public class AuthorCommentController {
     @Operation(summary = "删除作者文章下的评论及其全部回复")
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) {
+        //获取当前登录用户ID和管理员状态
         long userId = StpUtil.getLoginIdAsLong();
         boolean admin = StpUtil.hasRole("ADMIN");
+        //调用业务层删除评论及其所有子评论（含权限校验）
         commentService.deleteAuthorCommentWithChildren(id, userId, admin);
+        //返回正确的响应结果
         return R.ok();
     }
 }

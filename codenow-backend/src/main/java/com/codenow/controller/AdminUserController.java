@@ -35,14 +35,18 @@ public class AdminUserController {
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String keyword) {
+        //构建查询条件：支持按用户名、昵称或邮箱模糊搜索，按创建时间倒序排列
         LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<SysUser>()
                 .and(keyword != null && !keyword.isBlank(), query -> query
                         .like(SysUser::getUsername, keyword.trim())
                         .or().like(SysUser::getNickname, keyword.trim())
                         .or().like(SysUser::getEmail, keyword.trim()))
                 .orderByDesc(SysUser::getCreateTime);
+        //分页查询用户列表，限制每页最多100条
         Page<SysUser> page = userService.page(new Page<>(pageNum, Math.min(pageSize, 100)), wrapper);
+        //清除密码字段，避免敏感信息泄露
         page.getRecords().forEach(user -> user.setPassword(null));
+        //返回脱敏后的用户分页数据
         return R.ok(page);
     }
 
@@ -52,26 +56,35 @@ public class AdminUserController {
      */
     @PutMapping("/{id}/status")
     public R<Void> updateStatus(@PathVariable Long id, @Valid @RequestBody UserStatusDTO dto) {
+        //禁止管理员修改自己的状态，防止误操作导致账号锁定
         if (id.equals(StpUtil.getLoginIdAsLong())) {
             return R.error(400, "不能修改当前登录账号的状态");
         }
+        //根据用户ID查询用户信息
         SysUser user = userService.getById(id);
+        //用户不存在时返回404错误
         if (user == null) {
             return R.error(404, "用户不存在");
         }
+        //禁止通过此接口禁用管理员账号
         if (UserRole.ADMIN.equalsIgnoreCase(user.getRole())) {
             return R.error(400, "不能通过此接口禁用管理员");
         }
+        //禁用用户时必须填写原因
         if (UserStatus.BANNED.equals(dto.getStatus()) && (dto.getReason() == null || dto.getReason().trim().isBlank())) {
             return R.error(400, "禁用用户时必须填写原因");
         }
+        //设置用户状态、禁用原因和禁用时间
         user.setStatus(dto.getStatus());
         user.setBanReason(UserStatus.BANNED.equals(dto.getStatus()) ? dto.getReason().trim() : null);
         user.setBannedAt(UserStatus.BANNED.equals(dto.getStatus()) ? java.time.LocalDateTime.now() : null);
+        //更新用户信息到数据库
         userService.updateById(user);
+        //禁用用户时自动踢出其所有会话
         if (UserStatus.BANNED.equals(dto.getStatus())) {
             StpUtil.kickout(id);
         }
+        //返回正确的响应结果
         return R.ok();
     }
 
@@ -86,6 +99,7 @@ public class AdminUserController {
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) String account,
             @RequestParam(required = false) Integer success) {
+        //构建查询条件：支持按用户ID、账号名称和登录结果筛选，按创建时间倒序排列
         return R.ok(loginLogService.page(new Page<>(pageNum, Math.min(pageSize, 100)),
                 new LambdaQueryWrapper<LoginLog>()
                         .eq(userId != null, LoginLog::getUserId, userId)

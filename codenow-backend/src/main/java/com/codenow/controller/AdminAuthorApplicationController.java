@@ -32,6 +32,7 @@ public class AdminAuthorApplicationController {
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String keyword) {
+        //调用业务层分页查询方法，传入分页参数和筛选条件，返回管理员视角的申请列表
         return R.ok(applicationService.pageAdmin(pageNum, pageSize, status, keyword));
     }
 
@@ -40,6 +41,7 @@ public class AdminAuthorApplicationController {
      */
     @GetMapping("/author-applications/{id}")
     public R<AuthorApplicationVO> detail(@PathVariable Long id) {
+        //根据申请ID查询详细的申请信息
         return R.ok(applicationService.detail(id));
     }
 
@@ -50,7 +52,9 @@ public class AdminAuthorApplicationController {
     @PutMapping("/author-applications/{id}/approve")
     public R<Void> approve(@PathVariable Long id,
                            @Valid @RequestBody(required = false) AuthorApplicationReviewDTO dto) {
+        //获取当前登录管理员ID，调用业务层通过申请方法，可选传入审核备注
         applicationService.approve(id, StpUtil.getLoginIdAsLong(), dto == null ? null : dto.getReviewRemark());
+        //返回正确的响应结果
         return R.ok();
     }
 
@@ -60,7 +64,9 @@ public class AdminAuthorApplicationController {
     @OperationLog("驳回作者申请")
     @PutMapping("/author-applications/{id}/reject")
     public R<Void> reject(@PathVariable Long id, @Valid @RequestBody AuthorApplicationReviewDTO dto) {
+        //获取当前登录管理员ID，调用业务层驳回申请方法，必须传入驳回原因
         applicationService.reject(id, StpUtil.getLoginIdAsLong(), dto.getReviewRemark());
+        //返回正确的响应结果
         return R.ok();
     }
 
@@ -70,7 +76,9 @@ public class AdminAuthorApplicationController {
     @OperationLog("撤销作者资格")
     @PutMapping("/users/{id}/author-role/revoke")
     public R<Void> revoke(@PathVariable Long id, @Valid @RequestBody AuthorRoleRevokeDTO dto) {
+        //获取当前登录管理员ID，调用业务层撤销作者资格方法，必须传入撤销原因
         applicationService.revokeAuthor(id, StpUtil.getLoginIdAsLong(), dto.getReason());
+        //返回正确的响应结果
         return R.ok();
     }
 }

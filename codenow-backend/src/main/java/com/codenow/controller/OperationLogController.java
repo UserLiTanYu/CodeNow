@@ -32,10 +32,12 @@ public class OperationLogController {
     public R<Page<SysOperationLog>> list(
             @Parameter(description = "当前页码", example = "1") @RequestParam(defaultValue = "1") Integer pageNum,
             @Parameter(description = "每页条数", example = "10") @RequestParam(defaultValue = "10") Integer pageSize) {
+        //分页查询操作日志，按创建时间倒序排列
         Page<SysOperationLog> page = operationLogService.page(
                 new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<SysOperationLog>().orderByDesc(SysOperationLog::getCreateTime)
         );
+        //返回操作日志分页数据
         return R.ok(page);
     }
 }

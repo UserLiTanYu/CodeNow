@@ -37,14 +37,18 @@ public class LocalFileController {
             @PathVariable String month,
             @PathVariable String day,
             @PathVariable String filename) throws Exception {
+        //根据日期路径和文件名解析本地文件路径
         Path path = storageService.resolve(String.join("/", year, month, day, filename));
+        //文件不存在时返回404
         if (!Files.isRegularFile(path)) {
             return ResponseEntity.notFound().build();
         }
+        //探测文件的MIME类型
         String contentType = Files.probeContentType(path);
         MediaType mediaType = contentType == null
                 ? MediaType.APPLICATION_OCTET_STREAM
                 : MediaType.parseMediaType(contentType);
+        //返回文件资源，设置7天缓存策略
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.maxAge(7, TimeUnit.DAYS).cachePublic())
                 .contentType(mediaType)

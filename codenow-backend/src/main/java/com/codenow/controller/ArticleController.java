@@ -38,6 +38,7 @@ public class ArticleController {
             @Parameter(description = "每页条数", example = "10") @RequestParam(defaultValue = "10") Integer pageSize,
             @Parameter(description = "分类 ID（可选，按分类筛选）") @RequestParam(required = false) Long categoryId,
             @Parameter(description = "标签 ID（可选，按标签筛选）") @RequestParam(required = false) Long tagId) {
+        //调用业务层分页查询方法，传入分页参数和筛选条件，返回包含文章列表的分页结果
         return R.ok(articleService.pageArticleVO(pageNum, pageSize, categoryId, tagId));
     }
 
@@ -49,10 +50,13 @@ public class ArticleController {
     @GetMapping("/{id}")
     public R<ArticleVO> getById(
             @Parameter(description = "文章 ID", example = "1") @PathVariable Long id) {
+        //根据文章ID查询文章详情视图对象（包含分类名称和标签列表）
         ArticleVO vo = articleService.getArticleVOById(id);
+        //文章不存在时返回404错误
         if (vo == null) {
             return R.error(404, "文章不存在");
         }
+        //返回文章详情
         return R.ok(vo);
     }
 
@@ -64,9 +68,13 @@ public class ArticleController {
     @Operation(summary = "新增文章", description = "创建一篇新文章，可同时关联标签")
     @PostMapping
     public R<Void> save(@Valid @RequestBody ArticleDTO dto) {
+        //创建博客文章实体类
         BlogArticle article = new BlogArticle();
+        //将参数传入实体类
         BeanUtils.copyProperties(dto, article);
+        //调用业务方法，传入文章实体和标签id列表
         articleService.saveArticleWithTags(article, dto.getTagIds());
+        //返回正确的响应结果
         return R.ok();
     }
 
@@ -80,13 +88,19 @@ public class ArticleController {
     public R<Void> update(
             @Parameter(description = "文章 ID", example = "1") @PathVariable Long id,
             @Valid @RequestBody ArticleDTO dto) {
+        //根据文章ID查询原文章记录，用于后续更新
         BlogArticle article = articleService.getById(id);
+        //文章不存在时返回404错误
         if (article == null) {
             return R.error(404, "文章不存在");
         }
+        //将DTO中的新参数复制到已查询到的实体对象中
         BeanUtils.copyProperties(dto, article);
+        //确保实体ID与路径参数一致，防止误更新其他记录
         article.setId(id);
+        //调用业务层更新方法，在同一事务中更新文章内容和标签关联
         articleService.updateArticleWithTags(article, dto.getTagIds());
+        //返回正确的响应结果
         return R.ok();
     }
 
@@ -99,7 +113,9 @@ public class ArticleController {
     @DeleteMapping("/{id}")
     public R<Void> delete(
             @Parameter(description = "文章 ID", example = "1") @PathVariable Long id) {
+        //调用业务层逻辑删除方法，仅标记删除状态，保留标签关联以便后续恢复
         articleService.deleteArticleWithTags(id);
+        //返回正确的响应结果
         return R.ok();
     }
 
@@ -112,9 +128,12 @@ public class ArticleController {
     @PutMapping("/{id}/status")
     public R<Void> toggleStatus(
             @Parameter(description = "文章 ID", example = "1") @PathVariable Long id) {
+        //调用业务层状态切换方法，使用原子SQL避免并发竞态问题
         if (!articleService.toggleStatus(id)) {
+            //切换失败说明文章不存在，返回404错误
             return R.error(404, "文章不存在");
         }
+        //返回正确的响应结果
         return R.ok();
     }
 
@@ -127,9 +146,12 @@ public class ArticleController {
     @PutMapping("/{id}/top")
     public R<Void> toggleTop(
             @Parameter(description = "文章 ID", example = "1") @PathVariable Long id) {
+        //调用业务层置顶切换方法，使用原子SQL避免并发竞态问题
         if (!articleService.toggleTop(id)) {
+            //切换失败说明文章不存在，返回404错误
             return R.error(404, "文章不存在");
         }
+        //返回正确的响应结果
         return R.ok();
     }
 }
