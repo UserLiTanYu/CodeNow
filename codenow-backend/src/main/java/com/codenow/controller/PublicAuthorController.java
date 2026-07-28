@@ -65,7 +65,7 @@ public class PublicAuthorController {
 
     /**
      * 查看作者已发布文章。
-     * 支持按排序方式、分类和标签筛选。
+     * 支持按排序方式、分类、标签和关键词筛选。
      */
     @RateLimit(maxCount = 30, timeWindow = 10, message = "请求过于频繁，请稍后再试")
     @Operation(summary = "查看作者已发布文章")
@@ -74,12 +74,13 @@ public class PublicAuthorController {
             @PathVariable Long userId,
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            @Parameter(description = "排序方式：latest（最新）或 mostViewed（最多阅读）")
+            @Parameter(description = "排序方式：learning（学习顺序）、latest（最新）或 mostViewed（最多阅读）")
             @RequestParam(defaultValue = "latest") String sort,
             @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false) Long tagId) {
-        //分页查询指定作者的已发布文章，支持排序方式、分类和标签筛选
-        return R.ok(service.pagePublicAuthorArticles(userId, pageNum, pageSize, sort, categoryId, tagId));
+            @RequestParam(required = false) Long tagId,
+            @RequestParam(required = false) String keyword) {
+        //分页查询指定作者的已发布文章，支持排序方式、分类、标签和关键词筛选
+        return R.ok(service.pagePublicAuthorArticles(userId, pageNum, pageSize, sort, categoryId, tagId, keyword));
     }
 
     /**
@@ -90,6 +91,7 @@ public class PublicAuthorController {
     @Operation(summary = "查询作者的分类列表", description = "返回指定作者创建的分类（树形结构）")
     @GetMapping("/{userId}/categories")
     public R<List<BlogCategory>> authorCategories(@PathVariable Long userId) {
+        service.getPublicAuthor(userId);
         //查询指定作者创建的分类树形结构
         return R.ok(categoryService.listTreeByAuthor(userId));
     }
@@ -102,6 +104,7 @@ public class PublicAuthorController {
     @Operation(summary = "查询作者的标签列表", description = "返回指定作者创建的标签")
     @GetMapping("/{userId}/tags")
     public R<List<BlogTag>> authorTags(@PathVariable Long userId) {
+        service.getPublicAuthor(userId);
         //查询指定作者创建的标签列表
         return R.ok(tagService.listByCreator(userId));
     }

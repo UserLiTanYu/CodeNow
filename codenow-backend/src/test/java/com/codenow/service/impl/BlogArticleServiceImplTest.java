@@ -166,10 +166,10 @@ class BlogArticleServiceImplTest {
         mockPage.setTotal(0);
         mockPage.setRecords(Collections.emptyList());
 
-        when(articleMapper.selectPublishedArticlePage(any(Page.class), anyList(), isNull(), isNull(), eq("latest")))
+        when(articleMapper.selectPublishedArticlePage(any(Page.class), anyList(), isNull(), isNull(), isNull(), eq("latest")))
                 .thenReturn(mockPage);
 
-        Page<ArticleVO> result = articleService.pagePublishedArticles(1, 10, null, null, null, "latest");
+        Page<ArticleVO> result = articleService.pagePublishedArticles(1, 10, null, null, null, null, "latest");
 
         assertNotNull(result);
         assertEquals(0, result.getTotal());
@@ -180,42 +180,54 @@ class BlogArticleServiceImplTest {
         Page<BlogArticle> mockPage = new Page<>(1, 10);
         mockPage.setTotal(0);
         mockPage.setRecords(Collections.emptyList());
-        when(articleMapper.selectPublishedArticlePage(any(Page.class), anyList(), isNull(), eq("Spring Boot"), eq("learning")))
+        when(articleMapper.selectPublishedArticlePage(any(Page.class), anyList(), isNull(), isNull(), eq("Spring Boot"), eq("learning")))
                 .thenReturn(mockPage);
 
-        articleService.pagePublishedArticles(1, 10, null, null, "  Spring Boot  ", null);
+        articleService.pagePublishedArticles(1, 10, null, null, null, "  Spring Boot  ", null);
 
-        verify(articleMapper).selectPublishedArticlePage(any(Page.class), anyList(), isNull(), eq("Spring Boot"), eq("learning"));
+        verify(articleMapper).selectPublishedArticlePage(any(Page.class), anyList(), isNull(), isNull(), eq("Spring Boot"), eq("learning"));
     }
 
     @Test
     void pagePublishedArticles_shouldRejectOverlongKeyword() {
         BusinessException exception = assertThrows(BusinessException.class,
-                () -> articleService.pagePublishedArticles(1, 10, null, null, "x".repeat(101), "latest"));
+                () -> articleService.pagePublishedArticles(1, 10, null, null, null, "x".repeat(101), "latest"));
 
         assertEquals(400, exception.getCode());
-        verify(articleMapper, never()).selectPublishedArticlePage(any(), any(), any(), any(), any());
+        verify(articleMapper, never()).selectPublishedArticlePage(any(), any(), any(), any(), any(), any());
     }
 
     @Test
     void pagePublishedArticles_shouldPassMostViewedSort() {
         Page<BlogArticle> mockPage = new Page<>(1, 10);
         mockPage.setRecords(Collections.emptyList());
-        when(articleMapper.selectPublishedArticlePage(any(Page.class), anyList(), isNull(), isNull(), eq("mostViewed")))
+        when(articleMapper.selectPublishedArticlePage(any(Page.class), anyList(), isNull(), isNull(), isNull(), eq("mostViewed")))
                 .thenReturn(mockPage);
 
-        articleService.pagePublishedArticles(1, 10, null, null, null, "mostViewed");
+        articleService.pagePublishedArticles(1, 10, null, null, null, null, "mostViewed");
 
-        verify(articleMapper).selectPublishedArticlePage(any(Page.class), anyList(), isNull(), isNull(), eq("mostViewed"));
+        verify(articleMapper).selectPublishedArticlePage(any(Page.class), anyList(), isNull(), isNull(), isNull(), eq("mostViewed"));
+    }
+
+    @Test
+    void pagePublishedArticles_shouldPassAuthorId() {
+        Page<BlogArticle> mockPage = new Page<>(1, 10);
+        mockPage.setRecords(Collections.emptyList());
+        when(articleMapper.selectPublishedArticlePage(any(Page.class), anyList(), isNull(), eq(1L), isNull(), eq("learning")))
+                .thenReturn(mockPage);
+
+        articleService.pagePublishedArticles(1, 10, null, null, 1L, null, "learning");
+
+        verify(articleMapper).selectPublishedArticlePage(any(Page.class), anyList(), isNull(), eq(1L), isNull(), eq("learning"));
     }
 
     @Test
     void pagePublishedArticles_shouldRejectUnknownSort() {
         BusinessException exception = assertThrows(BusinessException.class,
-                () -> articleService.pagePublishedArticles(1, 10, null, null, null, "random"));
+                () -> articleService.pagePublishedArticles(1, 10, null, null, null, null, "random"));
 
         assertEquals(400, exception.getCode());
-        verify(articleMapper, never()).selectPublishedArticlePage(any(), any(), any(), any(), any());
+        verify(articleMapper, never()).selectPublishedArticlePage(any(), any(), any(), any(), any(), any());
     }
 
     @Test

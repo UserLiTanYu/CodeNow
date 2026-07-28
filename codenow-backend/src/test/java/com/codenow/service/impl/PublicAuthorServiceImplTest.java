@@ -124,13 +124,13 @@ class PublicAuthorServiceImplTest {
         article.setStatus(1);
         Page<BlogArticle> source = new Page<>(1, 10, 1);
         source.setRecords(List.of(article));
-        when(articleMapper.selectPublishedAuthorArticlePage(any(Page.class), eq(7L), eq("latest"), eq(null), eq(null)))
+        when(articleMapper.selectPublishedAuthorArticlePage(any(Page.class), eq(7L), eq("latest"), eq(null), eq(null), eq("Redis")))
                 .thenReturn(source);
         ArticleVO articleVO = new ArticleVO();
         articleVO.setArticle(article);
         when(articleService.buildArticleVOBatch(List.of(article))).thenReturn(List.of(articleVO));
 
-        Page<ArticleVO> result = service.pagePublicAuthorArticles(7L, 1, 10, "latest", null, null);
+        Page<ArticleVO> result = service.pagePublicAuthorArticles(7L, 1, 10, "latest", null, null, "  Redis  ");
 
         assertEquals(1, result.getTotal());
         assertEquals(21L, result.getRecords().getFirst().getArticle().getId());
@@ -141,7 +141,7 @@ class PublicAuthorServiceImplTest {
         when(mapper.selectPublicAuthorByUserId(8L)).thenReturn(null);
 
         BusinessException exception = assertThrows(BusinessException.class,
-                () -> service.pagePublicAuthorArticles(8L, 1, 10, "latest", null, null));
+                () -> service.pagePublicAuthorArticles(8L, 1, 10, "latest", null, null, null));
 
         assertEquals(404, exception.getCode());
         verifyNoInteractions(articleMapper, articleService);
@@ -150,7 +150,7 @@ class PublicAuthorServiceImplTest {
     @Test
     void pagePublicAuthorArticlesRejectsUnsupportedSort() {
         BusinessException exception = assertThrows(BusinessException.class,
-                () -> service.pagePublicAuthorArticles(7L, 1, 10, "learning", null, null));
+                () -> service.pagePublicAuthorArticles(7L, 1, 10, "random", null, null, null));
 
         assertEquals(400, exception.getCode());
         verifyNoInteractions(articleMapper, articleService);

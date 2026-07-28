@@ -5,6 +5,7 @@
  */
 import { createRouter, createWebHistory } from 'vue-router'
 import { invalidateAuthSession } from '@/utils/authSession'
+import { normalizeRedirectTarget } from '@/utils/routeRedirect'
 
 /**
  * Vue Router 实例
@@ -79,13 +80,19 @@ const router = createRouter({
           meta: { title: '登录日志' },
           component: () => import('@/views/user/LoginLogList.vue'),
         },
+        {
+          path: 'site-profile',
+          name: 'site-profile',
+          meta: { title: '个人简介' },
+          component: () => import('@/views/site/SiteProfileEdit.vue'),
+        },
       ],
     },
     {
       path: '/author-console',
       component: () => import('@/layout/AuthorLayout.vue'),
       redirect: '/author-console/articles',
-      meta: { allowedRoles: ['AUTHOR', 'ADMIN'] },
+      meta: { allowedRoles: ['AUTHOR'] },
       children: [
         {
           path: 'articles',
@@ -116,6 +123,12 @@ const router = createRouter({
           name: 'author-tags',
           meta: { title: '标签管理' },
           component: () => import('@/views/author/AuthorTagList.vue'),
+        },
+        {
+          path: 'profile',
+          name: 'author-profile',
+          meta: { title: '作者资料' },
+          component: () => import('@/views/author/AuthorProfileEdit.vue'),
         },
       ],
     },
@@ -251,9 +264,10 @@ export async function verifyToken(token) {
  * @returns {Object} 登录路由位置对象，包含 name 和 query
  */
 function loginLocation(to) {
+  const redirect = normalizeRedirectTarget(to.fullPath)
   return {
     name: 'login',
-    query: to.fullPath && to.fullPath !== '/' ? { redirect: to.fullPath } : {},
+    query: redirect && redirect !== '/' ? { redirect } : {},
   }
 }
 

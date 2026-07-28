@@ -28,13 +28,13 @@ export const getHotArticles = () => request.get('/blog/articles/hot')
  * 获取博客分类列表
  * @returns {Promise<Object>} 分类列表数据（树形结构）
  */
-export const getBlogCategories = () => request.get('/blog/categories')
+export const getBlogCategories = (params) => request.get('/blog/categories', { params })
 
 /**
  * 获取博客标签列表
  * @returns {Promise<Object>} 标签列表数据
  */
-export const getBlogTags = () => request.get('/blog/tags')
+export const getBlogTags = (params) => request.get('/blog/tags', { params })
 
 /**
  * 获取公开作者列表（分页）
@@ -48,7 +48,12 @@ export const getPublicAuthors = (params) => request.get('/blog/authors', { param
  * @param {number|string} id - 作者 ID
  * @returns {Promise<Object>} 作者详情数据
  */
-export const getPublicAuthor = (id) => request.get(`/blog/authors/${id}`)
+export const getPublicAuthor = (id, config) => config
+  ? request.get(`/blog/authors/${id}`, config)
+  : request.get(`/blog/authors/${id}`)
+
+/** 获取管理员在博客首页展示的公开简介。 */
+export const getSiteProfile = () => request.get('/blog/site-profile')
 
 /**
  * 获取指定作者的文章列表（分页）

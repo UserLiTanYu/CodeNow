@@ -11,14 +11,23 @@ vi.mock('@/utils/request', () => ({ default: request }))
 
 import {
   createAuthorArticle,
+  createAuthorCategory,
+  createAuthorTag,
   deleteAuthorArticle,
+  deleteAuthorCategory,
   deleteAuthorComment,
+  deleteAuthorTag,
   getAuthorArticle,
   getAuthorArticles,
+  getAuthorCategories,
   getAuthorComments,
+  getAuthorProfile,
   getAuthorTags,
   toggleAuthorArticleStatus,
   updateAuthorArticle,
+  updateAuthorCategory,
+  updateAuthorProfile,
+  updateAuthorTag,
   uploadAuthorImage,
 } from './authorConsole'
 
@@ -63,5 +72,38 @@ describe('author console api', () => {
     expect(request.post).toHaveBeenCalledWith('/author/upload/image', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
+  })
+
+  it('uses author-scoped category and tag CRUD endpoints', () => {
+    const category = { name: 'Java' }
+    const tag = { name: 'Spring Boot' }
+
+    getAuthorCategories()
+    createAuthorCategory(category)
+    updateAuthorCategory(3, category)
+    deleteAuthorCategory(3)
+    getAuthorTags()
+    createAuthorTag(tag)
+    updateAuthorTag(4, tag)
+    deleteAuthorTag(4)
+
+    expect(request.get).toHaveBeenNthCalledWith(1, '/author/categories')
+    expect(request.post).toHaveBeenNthCalledWith(1, '/author/categories', category)
+    expect(request.put).toHaveBeenNthCalledWith(1, '/author/categories/3', category)
+    expect(request.delete).toHaveBeenNthCalledWith(1, '/author/categories/3')
+    expect(request.get).toHaveBeenNthCalledWith(2, '/author/tags')
+    expect(request.post).toHaveBeenNthCalledWith(2, '/author/tags', tag)
+    expect(request.put).toHaveBeenNthCalledWith(2, '/author/tags/4', tag)
+    expect(request.delete).toHaveBeenNthCalledWith(2, '/author/tags/4')
+  })
+
+  it('uses the current author profile endpoint for reading and updating', () => {
+    const profile = { bio: '专注后端开发', expertise: ['Java'] }
+
+    getAuthorProfile()
+    updateAuthorProfile(profile)
+
+    expect(request.get).toHaveBeenCalledWith('/author/profile')
+    expect(request.put).toHaveBeenCalledWith('/author/profile', profile)
   })
 })

@@ -18,6 +18,15 @@ public interface BlogTagService extends IService<BlogTag> {
      */
     List<BlogTag> listByCreator(Long creatorId);
 
+    /** 创建当前作者的标签。 */
+    BlogTag createAuthorTag(String name, Long authorId);
+
+    /** 修改当前作者自己的标签。 */
+    void updateAuthorTag(Long id, String name, Long authorId);
+
+    /** 删除当前作者自己且未被文章引用的标签。 */
+    void deleteAuthorTag(Long id, Long authorId);
+
     /**
      * 仅返回至少关联了一篇已发布文章的标签
      *

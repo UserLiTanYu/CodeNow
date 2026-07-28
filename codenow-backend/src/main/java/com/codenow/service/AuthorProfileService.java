@@ -1,6 +1,7 @@
 package com.codenow.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.codenow.dto.AuthorProfileUpdateDTO;
 import com.codenow.entity.AuthorProfile;
 
 /**
@@ -15,4 +16,7 @@ public interface AuthorProfileService extends IService<AuthorProfile> {
      * @return 作者资料，不存在时返回 null
      */
     AuthorProfile getByUserId(Long userId);
+
+    /** 更新指定作者自己的公开资料。 */
+    AuthorProfile updateAuthorProfile(Long userId, AuthorProfileUpdateDTO dto);
 }

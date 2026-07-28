@@ -30,8 +30,8 @@ export const useUserStore = defineStore('user', () => {
   /** @type {import('vue').ComputedRef<boolean>} 是否为作者角色 */
   const isAuthor = computed(() => userInfo.value?.role?.toUpperCase() === 'AUTHOR')
 
-  /** @type {import('vue').ComputedRef<boolean>} 是否可以进入作者控制台（作者或管理员） */
-  const canEnterAuthorConsole = computed(() => ['AUTHOR', 'ADMIN'].includes(userInfo.value?.role?.toUpperCase()))
+  /** @type {import('vue').ComputedRef<boolean>} 是否可以进入作者控制台（仅作者） */
+  const canEnterAuthorConsole = computed(() => isAuthor.value)
 
   /**
    * 清除会话状态（内存中的 Token 和用户信息）

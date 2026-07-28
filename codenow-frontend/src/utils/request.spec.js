@@ -34,6 +34,21 @@ describe('authentication response handling', () => {
     })
   })
 
+  it('normalizes an encoded localized path before redirecting to login', () => {
+    router.currentRoute.value = {
+      path: '/author-console/articles',
+      fullPath: '/author-console/articles?keyword=%E4%BD%9C%E8%80%85',
+    }
+    const replace = vi.spyOn(router, 'replace').mockResolvedValue()
+
+    redirectToLogin()
+
+    expect(replace).toHaveBeenCalledWith({
+      name: 'login',
+      query: { redirect: '/author-console/articles?keyword=作者' },
+    })
+  })
+
   it('handles a business 401 response from a protected endpoint', async () => {
     localStorage.setItem('token', 'expired-token')
     router.currentRoute.value = { path: '/articles', fullPath: '/articles' }

@@ -50,12 +50,13 @@ public class BlogController {
             @Parameter(description = "每页条数", example = "10") @RequestParam(defaultValue = "10") Integer pageSize,
             @Parameter(description = "分类 ID（可选）") @RequestParam(required = false) Long categoryId,
             @Parameter(description = "标签 ID（可选）") @RequestParam(required = false) Long tagId,
+            @Parameter(description = "文章拥有者用户 ID（可选）") @RequestParam(required = false) Long authorId,
             @Parameter(description = "搜索关键词，匹配标题、摘要、分类和标签（可选）")
             @RequestParam(required = false) String keyword,
             @Parameter(description = "排序方式：learning（学习顺序）、latest（最新发布）或 mostViewed（最多阅读）")
             @RequestParam(defaultValue = "learning") String sort) {
         //调用业务层分页查询已发布文章，支持分类、标签、关键词筛选和多种排序方式
-        return R.ok(articleService.pagePublishedArticles(pageNum, pageSize, categoryId, tagId, keyword, sort));
+        return R.ok(articleService.pagePublishedArticles(pageNum, pageSize, categoryId, tagId, authorId, keyword, sort));
     }
 
     /**
@@ -110,9 +111,12 @@ public class BlogController {
      */
     @Operation(summary = "查询所有分类", description = "仅返回至少有一篇已发布文章的分类")
     @GetMapping("/categories")
-    public R<List<BlogCategory>> listCategories() {
-        //查询分类树形结构，仅包含至少有一篇已发布文章的分类
-        return R.ok(categoryService.listTreeByPublishedArticles());
+    public R<List<BlogCategory>> listCategories(
+            @Parameter(description = "分类拥有者用户 ID（可选）") @RequestParam(required = false) Long ownerId) {
+        //指定拥有者时返回其分类树，否则返回全站已发布文章分类
+        return R.ok(ownerId == null
+                ? categoryService.listTreeByPublishedArticles()
+                : categoryService.listTreeByAuthor(ownerId));
     }
 
     /**
@@ -121,8 +125,11 @@ public class BlogController {
      */
     @Operation(summary = "查询所有标签", description = "仅返回至少关联了一篇已发布文章的标签")
     @GetMapping("/tags")
-    public R<List<BlogTag>> listTags() {
-        //查询标签列表，仅包含至少关联了一篇已发布文章的标签
-        return R.ok(tagService.listByPublishedArticles());
+    public R<List<BlogTag>> listTags(
+            @Parameter(description = "标签拥有者用户 ID（可选）") @RequestParam(required = false) Long ownerId) {
+        //指定拥有者时返回其标签，否则返回全站已发布文章标签
+        return R.ok(ownerId == null
+                ? tagService.listByPublishedArticles()
+                : tagService.listByCreator(ownerId));
     }
 }

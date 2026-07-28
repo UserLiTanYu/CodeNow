@@ -185,8 +185,8 @@ public interface BlogArticleMapper extends BaseMapper<BlogArticle> {
      * <ul>
      *   <li>通过 author_profile 和 sys_user 关联校验作者身份有效（角色为 AUTHOR、状态为 ACTIVE）</li>
      *   <li>仅查询已发布（status=1）且未删除的文章</li>
-     *   <li>支持按分类ID和标签ID过滤</li>
-     *   <li>排序支持 mostViewed（按浏览量倒序）和默认（按创建时间倒序）</li>
+     *   <li>支持按分类ID、标签ID和关键词过滤</li>
+     *   <li>排序支持 learning（学习顺序）、latest（最新）和 mostViewed（最多阅读）</li>
      * </ul>
      * </p>
      *
@@ -195,6 +195,7 @@ public interface BlogArticleMapper extends BaseMapper<BlogArticle> {
      * @param sort       排序方式，"mostViewed" 按浏览量排序，其他值按创建时间排序
      * @param categoryId 分类ID，为 null 时不过滤
      * @param tagId      标签ID，为 null 时不过滤
+     * @param keyword    搜索关键词，为 null 时不过滤
      * @return 分页结果，包含已发布文章列表
      */
     @Select("""
@@ -206,6 +207,10 @@ public interface BlogArticleMapper extends BaseMapper<BlogArticle> {
               AND u.role = 'AUTHOR'
               AND u.status = 'ACTIVE'
               AND u.is_deleted = 0
+            LEFT JOIN blog_category c
+              ON c.id = a.category_id AND c.is_deleted = 0
+            LEFT JOIN blog_category pc
+              ON pc.id = c.parent_id AND pc.is_deleted = 0
             WHERE a.author_id = #{authorId}
               AND a.status = 1
               AND a.is_deleted = 0
@@ -218,10 +223,32 @@ public interface BlogArticleMapper extends BaseMapper<BlogArticle> {
                 WHERE rel.article_id = a.id AND rel.tag_id = #{tagId} AND rel.is_deleted = 0
               )
             </if>
-            ORDER BY
+            <if test="keyword != null and keyword != ''">
+              AND (
+                LOCATE(#{keyword}, a.title) &gt; 0
+                OR LOCATE(#{keyword}, COALESCE(a.summary, '')) &gt; 0
+                OR LOCATE(#{keyword}, COALESCE(c.name, '')) &gt; 0
+                OR LOCATE(#{keyword}, COALESCE(pc.name, '')) &gt; 0
+                OR EXISTS (
+                  SELECT 1
+                  FROM blog_article_tag search_rel
+                  INNER JOIN blog_tag t
+                    ON t.id = search_rel.tag_id AND t.is_deleted = 0
+                  WHERE search_rel.article_id = a.id
+                    AND search_rel.is_deleted = 0
+                    AND LOCATE(#{keyword}, t.name) &gt; 0
+                )
+              )
+            </if>
+            ORDER BY a.is_top DESC,
             <choose>
               <when test="sort == 'mostViewed'">
                 a.view_count DESC, a.create_time DESC, a.id DESC
+              </when>
+              <when test="sort == 'learning'">
+                COALESCE(pc.sort, c.sort) ASC,
+                CASE WHEN pc.id IS NULL THEN 0 ELSE c.sort END ASC,
+                a.sort ASC, a.create_time ASC, a.id ASC
               </when>
               <otherwise>
                 a.create_time DESC, a.id DESC
@@ -234,7 +261,8 @@ public interface BlogArticleMapper extends BaseMapper<BlogArticle> {
             @Param("authorId") Long authorId,
             @Param("sort") String sort,
             @Param("categoryId") Long categoryId,
-            @Param("tagId") Long tagId);
+            @Param("tagId") Long tagId,
+            @Param("keyword") String keyword);
 
     /**
      * 分页查询全站已发布的文章列表（前台首页/搜索页用）。
@@ -253,6 +281,7 @@ public interface BlogArticleMapper extends BaseMapper<BlogArticle> {
      * @param page        分页参数
      * @param categoryIds 分类ID列表，为 null 或空时不过滤
      * @param tagId       标签ID，为 null 时不过滤
+     * @param authorId    文章拥有者用户ID，为 null 时不过滤
      * @param keyword     搜索关键词，为 null 或空时不过滤
      * @param sort        排序方式，"mostViewed" / "latest" / 其他值
      * @return 分页结果，包含已发布文章列表
@@ -267,6 +296,9 @@ public interface BlogArticleMapper extends BaseMapper<BlogArticle> {
               ON pc.id = c.parent_id AND pc.is_deleted = 0
             WHERE a.is_deleted = 0
               AND a.status = 1
+            <if test="authorId != null">
+              AND a.author_id = #{authorId}
+            </if>
             <if test="categoryIds != null and !categoryIds.isEmpty()">
               AND a.category_id IN
               <foreach collection="categoryIds" item="categoryId" open="(" separator="," close=")">
@@ -319,6 +351,7 @@ public interface BlogArticleMapper extends BaseMapper<BlogArticle> {
             Page<BlogArticle> page,
             @Param("categoryIds") java.util.List<Long> categoryIds,
             @Param("tagId") Long tagId,
+            @Param("authorId") Long authorId,
             @Param("keyword") String keyword,
             @Param("sort") String sort);
 }

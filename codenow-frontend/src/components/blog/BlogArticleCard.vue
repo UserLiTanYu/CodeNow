@@ -18,22 +18,12 @@
       <!-- 文章摘要 -->
       <p class="card-summary">{{ article.summary || '暂无摘要' }}</p>
 
-      <!-- 元信息区域：作者、分类、发布时间、阅读量、标签 -->
+      <!-- 元信息区域：分类、发布时间、阅读量、标签 -->
       <div class="card-meta">
-        <!-- 作者头像和名称 -->
-        <router-link
-          v-if="author"
-          :to="`/blog/author/${author.userId}`"
-          class="meta-link author-link"
-          @click.stop
-        >
-          <img :src="avatarUrl(author.avatar)" alt="" @error="useDefaultAvatar" />
-          {{ author.displayName }}
-        </router-link>
         <!-- 文章分类 -->
         <router-link
           v-if="showCategory && item.categoryName"
-          :to="`/blog/category/${article.categoryId}`"
+          :to="categoryTarget"
           class="meta-link category-link"
           @click.stop
         >
@@ -54,7 +44,7 @@
         <router-link
           v-for="tag in visibleTags"
           :key="tag.id"
-          :to="`/blog/tag/${tag.id}`"
+          :to="tagTarget(tag.id)"
           :class="['meta-link', 'tag-link', tagTone(tag.name)]"
           @click.stop
         >
@@ -81,7 +71,6 @@
 import { computed } from 'vue'
 import { Clock, Folder, View } from '@element-plus/icons-vue'
 import { formatDate } from '@/utils/format'
-import { avatarUrl, useDefaultAvatar } from '@/utils/avatar'
 
 /** 组件属性：item 文章数据对象，showCategory 是否显示分类链接 */
 const props = defineProps({
@@ -93,14 +82,36 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  contextAuthorId: {
+    type: [Number, String],
+    default: null,
+  },
+  contextRootPath: {
+    type: String,
+    default: '',
+  },
 })
 
 /** 文章对象 */
 const article = computed(() => props.item.article)
-/** 作者对象 */
-const author = computed(() => props.item.author || null)
 /** 文章标签列表 */
 const tags = computed(() => props.item.tags || [])
+/** 分类链接；按调用页面指定的根路径或作者主页保持筛选上下文。 */
+const categoryTarget = computed(() => {
+  if (props.contextRootPath) {
+    return { path: props.contextRootPath, query: { categoryId: article.value.categoryId } }
+  }
+  return props.contextAuthorId
+    ? { path: `/blog/author/${props.contextAuthorId}`, query: { categoryId: article.value.categoryId } }
+    : `/blog/category/${article.value.categoryId}`
+})
+/** 标签链接；按调用页面指定的根路径或作者主页保持筛选上下文。 */
+function tagTarget(tagId) {
+  if (props.contextRootPath) return { path: props.contextRootPath, query: { tagId } }
+  return props.contextAuthorId
+    ? { path: `/blog/author/${props.contextAuthorId}`, query: { tagId } }
+    : `/blog/tag/${tagId}`
+}
 /** 可见标签（最多两个），卡片最多展示两个标签，剩余标签折叠成计数，防止元信息区域挤压标题和封面 */
 const visibleTags = computed(() => tags.value.slice(0, 2))
 /** 被隐藏的标签数量 */
@@ -123,10 +134,10 @@ function tagTone(name = '') {
 <style scoped>
 .article-card {
   position: relative;
-  margin-bottom: var(--blog-space-4);
-  padding: 20px 24px;
+  margin-bottom: 10px;
+  padding: 14px 18px;
   display: flex;
-  gap: var(--blog-space-5);
+  gap: 14px;
   overflow: hidden;
   border: 1px solid var(--blog-color-border);
   border-radius: var(--blog-radius-card);
@@ -157,7 +168,7 @@ function tagTone(name = '') {
   flex: 1;
 }
 .title-row {
-  margin-bottom: 7px;
+  margin-bottom: 4px;
   display: flex;
   align-items: center;
   gap: var(--blog-space-2);
@@ -165,9 +176,9 @@ function tagTone(name = '') {
 .card-title {
   margin: 0;
   color: var(--blog-color-text);
-  font-size: 21px;
+  font-size: 18px;
   font-weight: 600;
-  line-height: 1.45;
+  line-height: 1.35;
   overflow: hidden;
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -179,12 +190,12 @@ function tagTone(name = '') {
   border-radius: var(--blog-radius-tag);
 }
 .card-summary {
-  margin: 0 0 12px;
+  margin: 0 0 7px;
   overflow: hidden;
   display: -webkit-box;
   color: #707986;
-  font-size: 15px;
-  line-height: 1.6;
+  font-size: 13px;
+  line-height: 1.45;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 1;
 }
@@ -192,10 +203,10 @@ function tagTone(name = '') {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: var(--blog-space-2) var(--blog-space-4);
+  gap: 5px 12px;
   color: var(--blog-color-text-muted);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.4;
 }
 .meta-item,
 .meta-link {
@@ -213,26 +224,16 @@ function tagTone(name = '') {
 .meta-link:hover {
   color: var(--blog-color-primary);
 }
-.author-link {
-  font-weight: 600;
-}
-.author-link img {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--blog-color-background);
-}
 .meta-link:focus-visible {
   outline: 3px solid rgba(64, 158, 255, 0.3);
   outline-offset: 2px;
 }
 .tag-link,
 .more-tags {
-  padding: var(--blog-space-1) var(--blog-space-2);
+  padding: 2px 7px;
   border-radius: var(--blog-radius-tag);
   background: var(--blog-color-background);
-  font-size: 12px;
+  font-size: 11px;
 }
 .tag-link:hover {
   background: var(--blog-color-primary-soft);
@@ -252,8 +253,8 @@ function tagTone(name = '') {
   color: var(--blog-color-text-muted);
 }
 .card-cover {
-  width: 180px;
-  height: 110px;
+  width: 150px;
+  height: 88px;
   flex-shrink: 0;
   overflow: hidden;
   border-radius: var(--blog-radius-card);
@@ -272,14 +273,14 @@ function tagTone(name = '') {
 
 @media (max-width: 640px) {
   .article-card {
-    padding: var(--blog-space-4);
-    gap: var(--blog-space-4);
+    padding: 12px 14px;
+    gap: 12px;
   }
   .card-title {
-    font-size: 18px;
+    font-size: 16px;
   }
   .card-summary {
-    font-size: 14px;
+    font-size: 12px;
   }
   .card-cover {
     width: 112px;

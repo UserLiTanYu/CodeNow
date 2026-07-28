@@ -138,12 +138,13 @@ public interface BlogArticleService extends IService<BlogArticle> {
      * @param pageSize   每页数量
      * @param categoryId 分类ID（可选）
      * @param tagId      标签ID（可选）
+     * @param authorId   文章拥有者用户ID（可选）
      * @param keyword    搜索关键词（可选）
      * @param sort       排序方式（可选）
      * @return 分页结果
      */
     Page<ArticleVO> pagePublishedArticles(Integer pageNum, Integer pageSize, Long categoryId, Long tagId,
-                                          String keyword, String sort);
+                                          Long authorId, String keyword, String sort);
 
     /**
      * 查询已发布文章详情（用户端），同时浏览量 +1

@@ -7,6 +7,7 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
 import { invalidateAuthSession } from '@/utils/authSession'
+import { normalizeRedirectTarget } from '@/utils/routeRedirect'
 
 /**
  * Axios 请求实例
@@ -29,8 +30,9 @@ export function redirectToLogin() {
   const currentRoute = router.currentRoute.value
   if (currentRoute.path === '/login') return
 
-  const query = currentRoute.fullPath && currentRoute.fullPath !== '/'
-    ? { redirect: currentRoute.fullPath }
+  const redirect = normalizeRedirectTarget(currentRoute.fullPath)
+  const query = redirect && redirect !== '/'
+    ? { redirect }
     : {}
   router.replace({ name: 'login', query })
 }
@@ -81,7 +83,9 @@ request.interceptors.response.use(
       if (isUnauthorized(res.code) && !isLoginRequest(response.config)) {
         redirectToLogin()
       }
-      ElMessage.error(res.message || '请求失败')
+      if (!response.config?.silentError) {
+        ElMessage.error(res.message || '请求失败')
+      }
       return Promise.reject(new Error(res.message))
     }
     return res
@@ -92,7 +96,9 @@ request.interceptors.response.use(
     if ((isUnauthorized(status) || isUnauthorized(code)) && !isLoginRequest(error.config)) {
       redirectToLogin()
     }
-    ElMessage.error(error.response?.data?.message || error.message || '网络错误')
+    if (!error.config?.silentError) {
+      ElMessage.error(error.response?.data?.message || error.message || '网络错误')
+    }
     return Promise.reject(error)
   }
 )

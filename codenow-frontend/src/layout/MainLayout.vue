@@ -44,6 +44,10 @@
           <el-icon><Key /></el-icon>
           <span>登录日志</span>
         </el-menu-item>
+        <el-menu-item index="/site-profile">
+          <el-icon><User /></el-icon>
+          <span>个人简介</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
     <!-- 右侧内容区域 -->
@@ -109,6 +113,7 @@ const routeTitle = computed(() => {
     '/users': '用户管理',
     '/author-applications': '作者申请审批',
     '/login-logs': '登录日志',
+    '/site-profile': '个人简介',
   }
   return map[route.path] || '文章管理'
 })

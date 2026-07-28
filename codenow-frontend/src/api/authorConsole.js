@@ -137,3 +137,11 @@ export const uploadAuthorImage = (formData) =>
   request.post('/author/upload/image', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
+
+// ==================== 作者资料 ====================
+
+/** 查询当前作者公开资料。 */
+export const getAuthorProfile = () => request.get('/author/profile')
+
+/** 更新当前作者公开资料。 */
+export const updateAuthorProfile = (data) => request.put('/author/profile', data)

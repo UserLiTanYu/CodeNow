@@ -365,13 +365,14 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
      * @param pageSize   每页大小
      * @param categoryId 分类 ID（可选）
      * @param tagId      标签 ID（可选）
+     * @param authorId   文章拥有者用户 ID（可选）
      * @param keyword    搜索关键词（可选）
      * @param sort       排序方式：learning（默认）、latest、mostViewed
      * @return 分页结果
      */
     @Override
     public Page<ArticleVO> pagePublishedArticles(Integer pageNum, Integer pageSize, Long categoryId, Long tagId,
-                                                 String keyword, String sort) {
+                                                 Long authorId, String keyword, String sort) {
         String normalizedKeyword = keyword == null ? null : keyword.trim();
         if (normalizedKeyword != null && normalizedKeyword.length() > 100) {
             throw new BusinessException(400, "搜索关键词不能超过 100 个字符");
@@ -388,7 +389,7 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         List<Long> categoryIds = categoryId == null ? Collections.emptyList() : selfAndDescendantCategoryIds(categoryId);
 
         Page<BlogArticle> articlePage = baseMapper.selectPublishedArticlePage(
-                new Page<>(pageNum, pageSize), categoryIds, tagId, normalizedKeyword, normalizedSort);
+                new Page<>(pageNum, pageSize), categoryIds, tagId, authorId, normalizedKeyword, normalizedSort);
 
         Page<ArticleVO> voPage = new Page<>(articlePage.getCurrent(), articlePage.getSize(), articlePage.getTotal());
         voPage.setRecords(buildArticleVOBatch(articlePage.getRecords()));

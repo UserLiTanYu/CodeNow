@@ -86,15 +86,19 @@ public class PublicAuthorServiceImpl implements PublicAuthorService {
      * @param userId     作者用户 ID
      * @param pageNum    页码
      * @param pageSize   每页大小
-     * @param sort       排序方式：latest（默认）、mostViewed
+     * @param sort       排序方式：learning、latest（默认）、mostViewed
      * @param categoryId 分类 ID（可选，需属于该作者）
      * @param tagId      标签 ID（可选，需属于该作者）
+     * @param keyword    搜索关键词（可选）
      * @return 分页结果
      */
     @Override
-    public Page<ArticleVO> pagePublicAuthorArticles(Long userId, Integer pageNum, Integer pageSize, String sort, Long categoryId, Long tagId) {
+    public Page<ArticleVO> pagePublicAuthorArticles(
+            Long userId, Integer pageNum, Integer pageSize, String sort,
+            Long categoryId, Long tagId, String keyword) {
         validatePage(pageNum, pageSize);
         String normalizedSort = normalizeArticleSort(sort);
+        String normalizedKeyword = normalizeKeyword(keyword);
         // This check deliberately happens before the article query so revoked, banned,
         // deleted or incomplete authors cannot be enumerated through this endpoint.
         getPublicAuthor(userId);
@@ -116,7 +120,7 @@ public class PublicAuthorServiceImpl implements PublicAuthorService {
         }
 
         Page<BlogArticle> source = articleMapper.selectPublishedAuthorArticlePage(
-                new Page<>(pageNum, pageSize), userId, normalizedSort, categoryId, tagId);
+                new Page<>(pageNum, pageSize), userId, normalizedSort, categoryId, tagId, normalizedKeyword);
         Page<ArticleVO> result = new Page<>(source.getCurrent(), source.getSize(), source.getTotal());
         result.setRecords(articleService.buildArticleVOBatch(source.getRecords()));
         return result;
@@ -147,7 +151,7 @@ public class PublicAuthorServiceImpl implements PublicAuthorService {
 
     private String normalizeArticleSort(String sort) {
         String normalized = sort == null || sort.isBlank() ? "latest" : sort.trim();
-        if (!List.of("latest", "mostViewed").contains(normalized)) {
+        if (!List.of("learning", "latest", "mostViewed").contains(normalized)) {
             throw new BusinessException(400, "不支持的作者文章排序方式");
         }
         return normalized;

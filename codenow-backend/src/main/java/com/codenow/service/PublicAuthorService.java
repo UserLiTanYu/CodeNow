@@ -37,7 +37,10 @@ public interface PublicAuthorService {
      * @param sort       排序方式（可选）
      * @param categoryId 分类ID（可选）
      * @param tagId      标签ID（可选）
+     * @param keyword    搜索关键词（可选）
      * @return 分页结果
      */
-    Page<ArticleVO> pagePublicAuthorArticles(Long userId, Integer pageNum, Integer pageSize, String sort, Long categoryId, Long tagId);
+    Page<ArticleVO> pagePublicAuthorArticles(
+            Long userId, Integer pageNum, Integer pageSize, String sort,
+            Long categoryId, Long tagId, String keyword);
 }

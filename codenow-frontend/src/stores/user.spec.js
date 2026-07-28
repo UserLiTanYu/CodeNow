@@ -12,7 +12,7 @@ describe('user store author console access', () => {
     ['USER', false],
     ['AUTHOR', true],
     ['author', true],
-    ['ADMIN', true],
+    ['ADMIN', false],
   ])('reports author console access for role %s', (role, expected) => {
     const store = useUserStore()
     store.userInfo = { role }

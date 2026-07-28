@@ -1,59 +1,59 @@
 <template>
   <div>
     <!-- 工具栏：新增一级分类按钮和提示信息 -->
-    <div class=”toolbar”>
-      <el-button type=”primary” @click=”openDialog()”>新增一级分类</el-button>
-      <span class=”toolbar-tip”>分类支持多级结构；删除前需先清空子分类和文章。</span>
+    <div class="toolbar">
+      <el-button type="primary" @click="openDialog()">新增一级分类</el-button>
+      <span class="toolbar-tip">分类支持多级结构；删除前需先清空子分类和文章。</span>
     </div>
 
     <!-- 分类树形表格 -->
     <el-table
-      :data=”categories”
-      v-loading=”loading”
-      row-key=”id”
-      :tree-props=”{ children: 'children' }”
+      :data="categories"
+      v-loading="loading"
+      row-key="id"
+      :tree-props="{ children: 'children' }"
       stripe
     >
-      <el-table-column prop=”name” label=”分类名称” min-width=”200” />
-      <el-table-column prop=”description” label=”描述” min-width=”260” />
-      <el-table-column prop=”sort” label=”排序” width=”90” />
-      <el-table-column prop=”createTime” label=”创建时间” width=”180” :formatter=”formatDateCell” />
+      <el-table-column prop="name" label="分类名称" min-width="200" />
+      <el-table-column prop="description" label="描述" min-width="260" />
+      <el-table-column prop="sort" label="排序" width="90" />
+      <el-table-column prop="createTime" label="创建时间" width="180" :formatter="formatDateCell" />
       <!-- 操作列：新增子分类、编辑、删除 -->
-      <el-table-column label=”操作” width=”280” fixed=”right”>
-        <template #default=”{ row }”>
-          <el-button size=”small” type=”primary” plain @click=”openDialog(null, row.id)”>新增子分类</el-button>
-          <el-button size=”small” @click=”openDialog(row)”>编辑</el-button>
-          <el-button size=”small” type=”danger” @click=”handleDelete(row)”>删除</el-button>
+      <el-table-column label="操作" width="280" fixed="right">
+        <template #default="{ row }">
+          <el-button size="small" type="primary" plain @click="openDialog(null, row.id)">新增子分类</el-button>
+          <el-button size="small" @click="openDialog(row)">编辑</el-button>
+          <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
 
     <!-- 新增/编辑分类对话框 -->
-    <el-dialog v-model=”dialogVisible” :title=”dialogTitle” width=”460px”>
-      <el-form ref=”formRef” :model=”form” :rules=”rules” label-width=”90px”>
-        <el-form-item label=”父分类”>
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="460px">
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="90px">
+        <el-form-item label="父分类">
           <el-cascader
-            v-model=”form.parentId”
-            :options=”parentOptions”
-            :props=”{ emitPath: false, checkStrictly: true }”
-            placeholder=”留空表示一级分类”
+            v-model="form.parentId"
+            :options="parentOptions"
+            :props="{ emitPath: false, checkStrictly: true }"
+            placeholder="留空表示一级分类"
             clearable
-            style=”width: 100%”
+            style="width: 100%"
           />
         </el-form-item>
-        <el-form-item label=”名称” prop=”name”>
-          <el-input v-model=”form.name” maxlength=”50” />
+        <el-form-item label="名称" prop="name">
+          <el-input v-model="form.name" maxlength="50" />
         </el-form-item>
-        <el-form-item label=”描述”>
-          <el-input v-model=”form.description” type=”textarea” maxlength=”200” show-word-limit />
+        <el-form-item label="描述">
+          <el-input v-model="form.description" type="textarea" maxlength="200" show-word-limit />
         </el-form-item>
-        <el-form-item label=”排序”>
-          <el-input-number v-model=”form.sort” :min=”0” :max=”9999” />
+        <el-form-item label="排序">
+          <el-input-number v-model="form.sort" :min="0" :max="9999" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click=”dialogVisible = false”>取消</el-button>
-        <el-button type=”primary” :loading=”saving” @click=”handleSave”>确定</el-button>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="saving" @click="handleSave">确定</el-button>
       </template>
     </el-dialog>
   </div>
@@ -124,7 +124,7 @@ async function handleSave() {
 
 /** 删除分类（需二次确认） */
 async function handleDelete(row) {
-  await ElMessageBox.confirm(`确定删除分类”${row.name}”？`, '删除分类', { type: 'warning' })
+  await ElMessageBox.confirm(`确定删除分类"${row.name}"？`, '删除分类', { type: 'warning' })
   await deleteCategory(row.id)
   ElMessage.success('删除成功')
   await loadCategories()

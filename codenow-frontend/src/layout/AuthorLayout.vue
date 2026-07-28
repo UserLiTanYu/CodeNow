@@ -33,6 +33,10 @@
           <el-icon><ChatDotRound /></el-icon>
           <span>文章评论</span>
         </el-menu-item>
+        <el-menu-item index="/author-console/profile">
+          <el-icon><User /></el-icon>
+          <span>作者资料</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
     <!-- 右侧内容区域 -->
@@ -75,7 +79,7 @@
  * 侧边栏展示作者身份信息和功能菜单，顶部头部栏显示页面标题和用户操作。
  */
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowDown, ChatDotRound, Document, FolderOpened, House, PriceTag } from '@element-plus/icons-vue'
+import { ArrowDown, ChatDotRound, Document, FolderOpened, House, PriceTag, User } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { avatarUrl, useDefaultAvatar } from '@/utils/avatar'
