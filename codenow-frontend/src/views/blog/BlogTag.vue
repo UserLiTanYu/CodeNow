@@ -1,5 +1,6 @@
 <template>
   <div class="blog-tag">
+    <!-- 页面头部：标签名称和排序选择 -->
     <header class="page-header">
       <div>
         <span class="page-eyebrow">标签</span>
@@ -13,11 +14,13 @@
         </el-select>
       </label>
     </header>
+    <!-- 加载中骨架屏 -->
     <div v-if="loading" class="loading-box">
       <el-skeleton :rows="5" animated />
     </div>
     <template v-else>
       <el-alert v-if="errorMessage" :title="errorMessage" type="error" show-icon :closable="false" class="error-alert" />
+      <!-- 文章列表为空时的提示 -->
       <div v-if="articles.length === 0" class="empty-box">
         <el-empty description="该标签下暂无文章" />
       </div>
@@ -38,6 +41,7 @@
 </template>
 
 <script setup>
+/** 博客标签文章列表页 - 展示指定标签下的文章，支持排序 */
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BlogArticleCard from '@/components/blog/BlogArticleCard.vue'
@@ -54,6 +58,7 @@ const total = ref(0)
 const errorMessage = ref('')
 const selectedSort = ref(route.query.sort === 'mostViewed' ? 'mostViewed' : 'latest')
 
+/** 加载标签下的文章列表 */
 async function fetchArticles() {
   loading.value = true
   errorMessage.value = ''
@@ -75,6 +80,7 @@ async function fetchArticles() {
   }
 }
 
+/** 获取标签名称 */
 async function fetchTagName() {
   try {
     const res = await getBlogTags()
@@ -85,11 +91,16 @@ async function fetchTagName() {
   }
 }
 
+/**
+ * 切换排序方式并更新 URL
+ * 将排序编码到查询参数，URL 是刷新和历史导航时的状态来源
+ */
 function changeSort() {
   const query = selectedSort.value === 'latest' ? {} : { sort: selectedSort.value }
   router.push({ path: route.path, query })
 }
 
+/** 监听路由参数变化，切换标签或排序时重新加载数据 */
 watch(
   () => [route.params.id, route.query.sort],
   ([, sort]) => {

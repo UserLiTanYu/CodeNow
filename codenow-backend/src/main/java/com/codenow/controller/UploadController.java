@@ -19,26 +19,42 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/upload")
 @RequiredArgsConstructor
+/**
+ * 文件上传控制器。
+ * 提供图片上传和 ZIP 文章包导入功能。
+ */
 public class UploadController {
 
     private final ImageUploadService imageUploadService;
     private final ArticlePackageImportService articlePackageImportService;
 
+    /**
+     * 上传图片。
+     * 上传图片到已配置的存储服务，返回可访问的 URL。
+     */
     @RateLimit(maxCount = 10, timeWindow = 60, message = "上传过于频繁，请稍后再试")
     @OperationLog("上传图片")
     @Operation(summary = "上传图片", description = "上传图片到已配置的存储服务，返回可访问的 URL")
     @PostMapping("/image")
     public R<Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file) {
+        //创建响应结果Map
         Map<String, String> result = new HashMap<>();
+        //调用图片上传服务，将图片上传到已配置的存储服务，返回可访问的URL
         result.put("url", imageUploadService.upload(file));
+        //返回上传结果
         return R.ok(result);
     }
 
+    /**
+     * 导入 ZIP 文章包。
+     * 读取一个 Markdown 文件，上传其引用的本地图片并重写图片地址。
+     */
     @RateLimit(maxCount = 5, timeWindow = 60, message = "文章包导入过于频繁，请稍后再试")
     @OperationLog("导入 ZIP 文章包")
     @Operation(summary = "导入 ZIP 文章包", description = "读取一个 Markdown 文件，上传其引用的本地图片并重写图片地址")
     @PostMapping("/article-package")
     public R<ArticlePackageVO> importArticlePackage(@RequestParam("file") MultipartFile file) {
+        //调用文章包导入服务，读取ZIP文件中的Markdown文件，上传引用的本地图片并重写图片地址
         return R.ok(articlePackageImportService.importPackage(file));
     }
 }

@@ -2,15 +2,18 @@
   <div class="auth-page">
     <router-link to="/blog" class="back-link">← 返回博客</router-link>
     <el-card class="auth-card" shadow="never">
+      <!-- 品牌标识 -->
       <div class="brand">码上记</div>
       <h1>{{ pageTitle }}</h1>
       <p class="subtitle">{{ pageSubtitle }}</p>
 
+      <!-- 登录/注册标签页切换 -->
       <el-tabs v-if="mode !== 'reset'" v-model="mode" stretch>
         <el-tab-pane label="登录" name="login" />
         <el-tab-pane label="注册" name="register" />
       </el-tabs>
 
+      <!-- 登录表单 -->
       <el-form v-if="mode === 'login'" ref="loginFormRef" :model="loginForm" :rules="loginRules" @keyup.enter="handleLogin">
         <el-form-item prop="account">
           <el-input v-model="loginForm.account" placeholder="用户名或邮箱" size="large" maxlength="100" />
@@ -31,6 +34,7 @@
         <el-button type="primary" size="large" class="submit-button" :loading="loading" @click="handleLogin">登录</el-button>
       </el-form>
 
+      <!-- 注册表单 -->
       <el-form v-else-if="mode === 'register'" ref="registerFormRef" :model="registerForm" :rules="registerRules">
         <el-form-item prop="username">
           <el-input v-model="registerForm.username" placeholder="用户名（4-30 位字母、数字或下划线）" size="large" maxlength="30" />
@@ -63,6 +67,7 @@
         <el-button type="primary" size="large" class="submit-button" :loading="loading" @click="handleRegister">注册</el-button>
       </el-form>
 
+      <!-- 重置密码表单 -->
       <el-form v-else ref="resetFormRef" :model="resetForm" :rules="resetRules">
         <el-form-item prop="email">
           <el-input v-model="resetForm.email" placeholder="注册邮箱" size="large" maxlength="100" />
@@ -89,6 +94,7 @@
 </template>
 
 <script setup>
+/** 登录/注册/重置密码页面 - 统一的用户认证入口 */
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -98,6 +104,7 @@ import { useUserStore } from '@/stores/user'
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
+/** 当前模式：login-登录、register-注册、reset-重置密码 */
 const mode = ref(route.query.mode === 'register' ? 'register' : 'login')
 const loading = ref(false)
 const codeLoading = ref(false)
@@ -107,17 +114,22 @@ const registerFormRef = ref()
 const resetFormRef = ref()
 let timer
 
+/** 登录表单数据 */
 const loginForm = reactive({ account: '', password: '', captchaId: '', captchaCode: '' })
 const captchaImage = ref('')
+/** 注册表单数据 */
 const registerForm = reactive({ username: '', email: '', verificationCode: '', password: '', confirmPassword: '', agreementAccepted: false })
+/** 重置密码表单数据 */
 const resetForm = reactive({ email: '', verificationCode: '', newPassword: '', confirmPassword: '' })
 const emailRule = { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
 
+/** 登录表单校验规则 */
 const loginRules = {
   account: [{ required: true, message: '请输入用户名或邮箱', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
   captchaCode: [{ required: true, message: '请输入图形验证码', trigger: 'blur' }],
 }
+/** 注册表单校验规则 */
 const registerRules = {
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
@@ -129,6 +141,7 @@ const registerRules = {
   confirmPassword: [{ validator: (_, value, callback) => value === registerForm.password ? callback() : callback(new Error('两次密码不一致')), trigger: 'blur' }],
   agreementAccepted: [{ validator: (_, value, callback) => value ? callback() : callback(new Error('请先同意用户协议和隐私政策')), trigger: 'change' }],
 }
+/** 重置密码表单校验规则 */
 const resetRules = {
   email: [{ required: true, message: '请输入邮箱', trigger: 'blur' }, emailRule],
   verificationCode: [{ required: true, pattern: /^\d{6}$/, message: '请输入 6 位验证码', trigger: 'blur' }],
@@ -136,14 +149,18 @@ const resetRules = {
   confirmPassword: [{ validator: (_, value, callback) => value === resetForm.newPassword ? callback() : callback(new Error('两次密码不一致')), trigger: 'blur' }],
 }
 
+/** 页面标题，根据当前模式动态显示 */
 const pageTitle = computed(() => mode.value === 'register' ? '创建读者账号' : mode.value === 'reset' ? '重置密码' : '欢迎回来')
+/** 页面副标题，根据当前模式动态显示 */
 const pageSubtitle = computed(() => mode.value === 'register' ? '注册后即可评论和收藏文章' : mode.value === 'reset' ? '通过注册邮箱验证身份' : '登录后继续阅读与交流')
 
+/** 切换模式时重置验证码倒计时 */
 watch(mode, () => {
   clearInterval(timer)
   codeSeconds.value = 0
 })
 
+/** 启动验证码发送倒计时（60秒） */
 function startCountdown() {
   codeSeconds.value = 60
   clearInterval(timer)
@@ -153,6 +170,7 @@ function startCountdown() {
   }, 1000)
 }
 
+/** 发送邮箱验证码 */
 async function handleSendCode(scene) {
   const email = scene === 'register' ? registerForm.email : resetForm.email
   if (!/^\S+@\S+\.\S+$/.test(email)) {
@@ -170,12 +188,17 @@ async function handleSendCode(scene) {
   }
 }
 
+/** 处理登录请求 */
 async function handleLogin() {
   if (!await loginFormRef.value.validate().catch(() => false)) return
   loading.value = true
   try {
     const res = await userStore.login(loginForm.account.trim(), loginForm.password, loginForm.captchaId, loginForm.captchaCode)
     ElMessage.success('登录成功')
+    /**
+     * 只接受单斜杠开头的站内路径并拒绝 //host，防止登录后的开放重定向
+     * 根据用户角色跳转到不同页面
+     */
     const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/') && !route.query.redirect.startsWith('//')
       ? route.query.redirect
       : res.data.role?.toUpperCase() === 'ADMIN'
@@ -190,6 +213,7 @@ async function handleLogin() {
   }
 }
 
+/** 加载图形验证码 */
 async function loadCaptcha() {
   captchaImage.value = ''
   try {
@@ -201,6 +225,7 @@ async function loadCaptcha() {
   }
 }
 
+/** 处理注册请求 */
 async function handleRegister() {
   if (!await registerFormRef.value.validate().catch(() => false)) return
   loading.value = true
@@ -221,6 +246,7 @@ async function handleRegister() {
   }
 }
 
+/** 处理重置密码请求 */
 async function handleReset() {
   if (!await resetFormRef.value.validate().catch(() => false)) return
   loading.value = true
@@ -234,7 +260,9 @@ async function handleReset() {
   }
 }
 
+/** 组件卸载前清除倒计时定时器 */
 onBeforeUnmount(() => clearInterval(timer))
+/** 页面挂载时加载图形验证码 */
 onMounted(loadCaptcha)
 </script>
 

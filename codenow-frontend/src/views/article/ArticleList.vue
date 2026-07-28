@@ -1,5 +1,6 @@
 <template>
   <div>
+    <!-- 工具栏：新增文章按钮 + 分类/标签筛选器 -->
     <div class="toolbar">
       <el-button type="primary" @click="router.push('/articles/edit')">新增文章</el-button>
       <div class="filters">
@@ -19,6 +20,7 @@
       </div>
     </div>
 
+    <!-- 文章列表表格 -->
     <el-table :data="articles" stripe>
       <el-table-column label="标题" min-width="200">
         <template #default="{ row }">
@@ -41,6 +43,7 @@
         </template>
       </el-table-column>
       <el-table-column prop="article.createTime" label="创建时间" width="180" :formatter="formatDateCell" />
+      <!-- 操作列：编辑、置顶、发布/下架、删除 -->
       <el-table-column label="操作" width="310" fixed="right">
         <template #default="{ row }">
           <el-button size="small" @click="router.push('/articles/edit/' + row.article.id)">编辑</el-button>
@@ -55,6 +58,7 @@
       </el-table-column>
     </el-table>
 
+    <!-- 分页器 -->
     <el-pagination
       class="pagination"
       background
@@ -68,6 +72,7 @@
 </template>
 
 <script setup>
+/** 管理员文章列表页面 - 支持分类/标签筛选、分页、置顶、发布状态切换和删除操作 */
 import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -78,6 +83,7 @@ import { categoryCascaderOptions } from '@/utils/categoryTree'
 import { formatDateCell } from '@/utils/format'
 
 const router = useRouter()
+/** 列表页状态保存在当前标签页的 sessionStorage，编辑返回后恢复分页和筛选条件 */
 const LIST_STATE_KEY = 'codenow:article-list-state'
 const savedState = readSavedState()
 const articles = ref([])
@@ -88,8 +94,10 @@ const pageNum = ref(savedState.pageNum || 1)
 const pageSize = ref(7)
 const filterCategoryId = ref(savedState.categoryId || null)
 const filterTagId = ref(savedState.tagId || null)
+/** 将分类列表转换为级联选择器所需的树形结构 */
 const categoryOptions = computed(() => categoryCascaderOptions(categories.value))
 
+/** 从 sessionStorage 读取上次保存的列表状态（分页、筛选条件） */
 function readSavedState() {
   try {
     return JSON.parse(sessionStorage.getItem(LIST_STATE_KEY)) || {}
@@ -98,6 +106,7 @@ function readSavedState() {
   }
 }
 
+/** 将当前列表状态保存到 sessionStorage，便于编辑返回后恢复 */
 function saveListState() {
   sessionStorage.setItem(LIST_STATE_KEY, JSON.stringify({
     pageNum: pageNum.value,
@@ -106,11 +115,13 @@ function saveListState() {
   }))
 }
 
+/** 加载文章列表数据，支持分类和标签筛选 */
 async function loadArticles() {
   const params = { pageNum: pageNum.value, pageSize: pageSize.value }
   if (filterCategoryId.value) params.categoryId = filterCategoryId.value
   if (filterTagId.value) params.tagId = filterTagId.value
   const res = await getArticles(params)
+  // 当前页无数据且总记录数大于0时，自动跳转到最后一页
   if (res.data.records.length === 0 && pageNum.value > 1 && res.data.total > 0) {
     pageNum.value = Math.ceil(res.data.total / pageSize.value)
     return loadArticles()
@@ -120,29 +131,34 @@ async function loadArticles() {
   saveListState()
 }
 
+/** 筛选条件变更时重置到第一页并重新加载 */
 function handleFilterChange() {
   pageNum.value = 1
   loadArticles()
 }
 
+/** 并行加载分类和标签筛选选项 */
 async function loadFilters() {
   const [catRes, tagRes] = await Promise.all([getCategories(), getTags()])
   categories.value = catRes.data
   tags.value = tagRes.data
 }
 
+/** 切换文章发布/草稿状态 */
 async function toggleStatus(id) {
   await toggleArticleStatus(id)
   ElMessage.success('状态切换成功')
   loadArticles()
 }
 
+/** 切换文章置顶状态 */
 async function toggleTop(id) {
   await toggleArticleTop(id)
   ElMessage.success('置顶状态切换成功')
   loadArticles()
 }
 
+/** 删除文章（需二次确认） */
 async function handleDelete(id) {
   await ElMessageBox.confirm('确定删除该文章？', '提示', { type: 'warning' })
   await deleteArticle(id)
@@ -150,6 +166,7 @@ async function handleDelete(id) {
   loadArticles()
 }
 
+/** 页面挂载时加载文章列表和筛选选项 */
 onMounted(() => {
   loadArticles()
   loadFilters()

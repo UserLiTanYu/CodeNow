@@ -22,6 +22,17 @@ describe('authGuard', () => {
     })
   })
 
+  it('does not double-encode a localized target route', async () => {
+    await expect(authGuard({
+      path: '/author-console/articles',
+      fullPath: '/author-console/articles?keyword=%E4%BD%9C%E8%80%85',
+      meta: { allowedRoles: ['AUTHOR'] },
+    })).resolves.toEqual({
+      name: 'login',
+      query: { redirect: '/author-console/articles?keyword=作者' },
+    })
+  })
+
   it('requires login for the member profile', async () => {
     await expect(authGuard({ path: '/blog/profile', fullPath: '/blog/profile', meta: { requiresAuth: true } })).resolves.toEqual({
       name: 'login',
@@ -58,11 +69,13 @@ describe('authGuard', () => {
     const listRoute = routes.find((route) => route.name === 'author-articles')
     const editRoute = routes.find((route) => route.name === 'author-article-edit')
     const commentsRoute = routes.find((route) => route.name === 'author-comments')
+    const profileRoute = routes.find((route) => route.name === 'author-profile')
 
-    expect(consoleRoute?.meta.allowedRoles).toEqual(['AUTHOR', 'ADMIN'])
+    expect(consoleRoute?.meta.allowedRoles).toEqual(['AUTHOR'])
     expect(listRoute?.path).toBe('/author-console/articles')
     expect(editRoute?.path).toBe('/author-console/articles/edit/:id?')
     expect(commentsRoute?.path).toBe('/author-console/comments')
+    expect(profileRoute?.path).toBe('/author-console/profile')
   })
 
   it('registers public author discovery and profile routes without auth metadata', async () => {
@@ -92,7 +105,7 @@ describe('authGuard', () => {
   it.each([
     ['USER', { path: '/blog' }],
     ['AUTHOR', true],
-    ['ADMIN', true],
+    ['ADMIN', { path: '/blog' }],
   ])('applies author console allowed roles to %s', async (role, expected) => {
     localStorage.setItem('token', `${role.toLowerCase()}-token`)
     globalThis.fetch = vi.fn().mockResolvedValue({
@@ -104,7 +117,7 @@ describe('authGuard', () => {
     await expect(authGuard({
       path: '/author-console/articles',
       fullPath: '/author-console/articles',
-      meta: { allowedRoles: ['AUTHOR', 'ADMIN'] },
+      meta: { allowedRoles: ['AUTHOR'] },
     })).resolves.toEqual(expected)
   })
 
@@ -118,7 +131,7 @@ describe('authGuard', () => {
     const target = {
       path: '/author-console/articles',
       fullPath: '/author-console/articles',
-      meta: { allowedRoles: ['AUTHOR', 'ADMIN'] },
+      meta: { allowedRoles: ['AUTHOR'] },
     }
 
     await expect(authGuard(target)).resolves.toBe(true)

@@ -19,15 +19,24 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/author/upload")
 @RequiredArgsConstructor
+/**
+ * 作者图片上传控制器。
+ * 提供作者上传文章封面或正文图片的功能。
+ */
 public class AuthorUploadController {
 
     private final ImageUploadService imageUploadService;
 
+    /**
+     * 作者上传图片。
+     * 上传文章封面或正文图片，返回可访问的 URL。
+     */
     @RateLimit(maxCount = 10, timeWindow = 60, message = "上传过于频繁，请稍后再试")
     @OperationLog("作者上传图片")
     @Operation(summary = "作者上传图片", description = "上传文章封面或正文图片，返回可访问 URL")
     @PostMapping("/image")
     public R<Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file) {
+        //调用图片上传服务，将图片上传到已配置的存储服务，返回可访问的URL
         return R.ok(Map.of("url", imageUploadService.upload(file)));
     }
 }

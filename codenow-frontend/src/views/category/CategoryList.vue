@@ -1,10 +1,12 @@
 <template>
   <div>
+    <!-- 工具栏：新增一级分类按钮和提示信息 -->
     <div class="toolbar">
       <el-button type="primary" @click="openDialog()">新增一级分类</el-button>
       <span class="toolbar-tip">分类支持多级结构；删除前需先清空子分类和文章。</span>
     </div>
 
+    <!-- 分类树形表格 -->
     <el-table
       :data="categories"
       v-loading="loading"
@@ -16,6 +18,7 @@
       <el-table-column prop="description" label="描述" min-width="260" />
       <el-table-column prop="sort" label="排序" width="90" />
       <el-table-column prop="createTime" label="创建时间" width="180" :formatter="formatDateCell" />
+      <!-- 操作列：新增子分类、编辑、删除 -->
       <el-table-column label="操作" width="280" fixed="right">
         <template #default="{ row }">
           <el-button size="small" type="primary" plain @click="openDialog(null, row.id)">新增子分类</el-button>
@@ -25,6 +28,7 @@
       </el-table-column>
     </el-table>
 
+    <!-- 新增/编辑分类对话框 -->
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="460px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="90px">
         <el-form-item label="父分类">
@@ -56,12 +60,14 @@
 </template>
 
 <script setup>
+/** 管理员分类管理页面 - 支持多级分类的增删改查操作 */
 import { computed, reactive, ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCategories, createCategory, updateCategory, deleteCategory } from '@/api/category'
 import { categoryCascaderOptions } from '@/utils/categoryTree'
 import { formatDateCell } from '@/utils/format'
 
+/** 分类树由后端统一返回；表格、父分类选择器和删除约束均以同一棵树为数据源 */
 const categories = ref([])
 const loading = ref(false)
 const dialogVisible = ref(false)
@@ -69,11 +75,15 @@ const saving = ref(false)
 const isEdit = ref(false)
 const editId = ref(null)
 const formRef = ref()
+/** 分类表单数据 */
 const form = reactive({ name: '', description: '', parentId: null, sort: 0 })
 const rules = { name: [{ required: true, message: '请输入分类名称', trigger: 'blur' }] }
+/** 对话框标题，根据编辑/新增模式动态显示 */
 const dialogTitle = computed(() => isEdit.value ? '编辑分类' : form.parentId ? '新增子分类' : '新增一级分类')
+/** 父分类级联选择器选项，编辑时排除自身子树 */
 const parentOptions = computed(() => categoryCascaderOptions(categories.value, editId.value))
 
+/** 加载分类树数据 */
 async function loadCategories() {
   loading.value = true
   try {
@@ -84,6 +94,7 @@ async function loadCategories() {
   }
 }
 
+/** 打开新增/编辑分类对话框 */
 function openDialog(row, parentId = null) {
   isEdit.value = Boolean(row)
   editId.value = row?.id || null
@@ -94,6 +105,7 @@ function openDialog(row, parentId = null) {
   dialogVisible.value = true
 }
 
+/** 保存分类（新增或更新） */
 async function handleSave() {
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
@@ -110,13 +122,15 @@ async function handleSave() {
   }
 }
 
+/** 删除分类（需二次确认） */
 async function handleDelete(row) {
-  await ElMessageBox.confirm(`确定删除分类“${row.name}”？`, '删除分类', { type: 'warning' })
+  await ElMessageBox.confirm(`确定删除分类"${row.name}"？`, '删除分类', { type: 'warning' })
   await deleteCategory(row.id)
   ElMessage.success('删除成功')
   await loadCategories()
 }
 
+/** 页面挂载时加载分类数据 */
 onMounted(loadCategories)
 </script>
 

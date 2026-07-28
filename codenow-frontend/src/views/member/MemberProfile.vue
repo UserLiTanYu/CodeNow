@@ -1,5 +1,6 @@
 <template>
   <section class="member-card">
+    <!-- 页面标题和快捷导航链接 -->
     <div class="member-heading">
       <div><h1>个人中心</h1><p>管理头像、公开资料和账号安全</p></div>
       <div class="member-links">
@@ -9,8 +10,11 @@
       </div>
     </div>
 
+    <!-- 加载中骨架屏 -->
     <el-skeleton v-if="loading" :rows="8" animated />
+    <!-- 个人中心标签页：个人资料、修改邮箱、修改密码 -->
     <el-tabs v-else v-model="activeTab">
+      <!-- 个人资料标签页 -->
       <el-tab-pane label="个人资料" name="profile">
         <div class="avatar-row">
           <el-avatar :size="72" :src="avatarUrl(profile.avatar)" @error="handleProfileAvatarError" />
@@ -27,6 +31,7 @@
         </el-form>
       </el-tab-pane>
 
+      <!-- 修改邮箱标签页 -->
       <el-tab-pane label="修改邮箱" name="email">
         <el-form label-position="top" class="profile-form">
           <el-form-item label="当前邮箱"><el-input :model-value="profile.email" disabled /></el-form-item>
@@ -43,6 +48,7 @@
         </el-form>
       </el-tab-pane>
 
+      <!-- 修改密码标签页 -->
       <el-tab-pane label="修改密码" name="password">
         <el-form label-position="top" class="profile-form">
           <el-form-item label="当前密码"><el-input v-model="passwordForm.currentPassword" type="password" show-password /></el-form-item>
@@ -56,6 +62,7 @@
 </template>
 
 <script setup>
+/** 会员个人中心页面 - 管理个人资料、头像、邮箱和密码 */
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -74,25 +81,33 @@ const emailSaving = ref(false)
 const emailCodeLoading = ref(false)
 const passwordSaving = ref(false)
 const emailSeconds = ref(0)
+/** 个人资料数据 */
 const profile = reactive({ username: '', email: '', nickname: '', avatar: '', role: '' })
+/** 角色显示元数据 */
 const roleMeta = computed(() => ({
   ADMIN: { label: '管理员', type: 'danger' },
   AUTHOR: { label: '作者', type: 'success' },
   USER: { label: '普通用户', type: 'info' },
 }[profile.role?.toUpperCase()] || { label: '普通用户', type: 'info' }))
+/** 修改邮箱表单数据 */
 const emailForm = reactive({ email: '', verificationCode: '' })
+/** 修改密码表单数据 */
 const passwordForm = reactive({ currentPassword: '', newPassword: '', confirmPassword: '' })
+/** 邮件验证码倒计时只用于交互提示，真正的发送冷却由后端 Redis 原子限制 */
 let timer
 
+/** 处理头像加载失败 */
 function handleProfileAvatarError() {
   profile.avatar = ''
 }
 
+/** 加载个人资料数据 */
 async function loadProfile() {
   loading.value = true
   try { const res = await getProfile(); Object.assign(profile, res.data) } finally { loading.value = false }
 }
 
+/** 保存个人资料（昵称） */
 async function saveProfile() {
   if (!profile.nickname.trim()) return ElMessage.warning('昵称不能为空')
   saving.value = true
@@ -104,6 +119,7 @@ async function saveProfile() {
   } finally { saving.value = false }
 }
 
+/** 上传头像 */
 async function handleAvatarUpload({ file }) {
   if (file.size > 5 * 1024 * 1024) return ElMessage.warning('头像不能超过 5MB')
   avatarLoading.value = true
@@ -116,6 +132,7 @@ async function handleAvatarUpload({ file }) {
   } finally { avatarLoading.value = false }
 }
 
+/** 发送邮箱验证码 */
 async function sendEmailCode() {
   if (!/^\S+@\S+\.\S+$/.test(emailForm.email)) return ElMessage.warning('请输入正确的新邮箱')
   emailCodeLoading.value = true
@@ -127,6 +144,7 @@ async function sendEmailCode() {
   } finally { emailCodeLoading.value = false }
 }
 
+/** 保存新邮箱 */
 async function saveEmail() {
   if (!/^\S+@\S+\.\S+$/.test(emailForm.email) || !/^\d{6}$/.test(emailForm.verificationCode)) {
     return ElMessage.warning('请填写正确的新邮箱和6位验证码')
@@ -139,6 +157,7 @@ async function saveEmail() {
   } finally { emailSaving.value = false }
 }
 
+/** 修改密码（修改后需重新登录） */
 async function savePassword() {
   if (passwordForm.newPassword.length < 8 || passwordForm.newPassword.length > 72) return ElMessage.warning('新密码长度应为8-72位')
   if (passwordForm.newPassword !== passwordForm.confirmPassword) return ElMessage.warning('两次新密码不一致')
@@ -151,7 +170,9 @@ async function savePassword() {
   } finally { passwordSaving.value = false }
 }
 
+/** 页面挂载时加载个人资料 */
 onMounted(loadProfile)
+/** 组件卸载前清除倒计时定时器 */
 onBeforeUnmount(() => clearInterval(timer))
 </script>
 

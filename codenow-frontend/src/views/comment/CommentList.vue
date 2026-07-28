@@ -1,5 +1,6 @@
 <template>
   <div>
+    <!-- 评论列表表格 -->
     <el-table :data="comments" v-loading="loading" stripe>
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column prop="nickname" label="昵称" width="120" />
@@ -12,6 +13,7 @@
       </el-table-column>
       <el-table-column prop="ip" label="IP 地址" width="130" />
       <el-table-column prop="createTime" label="评论时间" width="180" :formatter="formatDateCell" />
+      <!-- 操作列：删除评论 -->
       <el-table-column label="操作" width="80" fixed="right">
         <template #default="{ row }">
           <el-button size="small" type="danger" @click="handleDelete(row.id)">删除</el-button>
@@ -19,6 +21,7 @@
       </el-table-column>
     </el-table>
 
+    <!-- 分页器 -->
     <el-pagination
       class="pagination"
       background
@@ -34,6 +37,7 @@
 </template>
 
 <script setup>
+/** 管理员评论管理页面 - 查看和删除所有评论 */
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getComments, deleteComment } from '@/api/comment'
@@ -45,6 +49,7 @@ const total = ref(0)
 const pageNum = ref(1)
 const pageSize = ref(10)
 
+/** 加载评论列表数据 */
 async function fetchComments() {
   loading.value = true
   try {
@@ -56,6 +61,7 @@ async function fetchComments() {
   }
 }
 
+/** 删除评论及其所有回复（需二次确认） */
 async function handleDelete(id) {
   await ElMessageBox.confirm('删除评论将同时删除其所有回复，确定继续？', '提示', { type: 'warning' })
   await deleteComment(id)
@@ -63,6 +69,7 @@ async function handleDelete(id) {
   fetchComments()
 }
 
+/** 页面挂载时加载评论列表 */
 onMounted(() => {
   fetchComments()
 })

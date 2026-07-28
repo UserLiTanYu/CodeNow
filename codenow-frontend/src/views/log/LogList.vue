@@ -1,5 +1,6 @@
 <template>
   <div>
+    <!-- 操作日志列表表格 -->
     <el-table :data="logs" v-loading="loading" stripe>
       <el-table-column prop="username" label="操作人" width="100" />
       <el-table-column prop="operation" label="操作类型" width="140" />
@@ -13,6 +14,7 @@
           </el-tag>
         </template>
       </el-table-column>
+      <!-- 请求参数列：悬停查看详细参数 -->
       <el-table-column label="请求参数" min-width="200">
         <template #default="{ row }">
           <el-popover trigger="hover" width="400" v-if="row.params && row.params !== '{}'">
@@ -27,6 +29,7 @@
       <el-table-column prop="createTime" label="操作时间" width="180" :formatter="formatDateCell" />
     </el-table>
 
+    <!-- 分页器 -->
     <el-pagination
       class="pagination"
       background
@@ -42,6 +45,7 @@
 </template>
 
 <script setup>
+/** 管理员操作日志页面 - 查看系统操作日志记录 */
 import { ref, onMounted } from 'vue'
 import request from '@/utils/request'
 import { formatDateCell } from '@/utils/format'
@@ -52,6 +56,7 @@ const total = ref(0)
 const pageNum = ref(1)
 const pageSize = ref(13)
 
+/** 格式化 JSON 参数为可读的缩进格式 */
 function formatParams(params) {
   try {
     return JSON.stringify(JSON.parse(params), null, 2)
@@ -60,6 +65,7 @@ function formatParams(params) {
   }
 }
 
+/** 加载操作日志列表数据 */
 async function fetchLogs() {
   loading.value = true
   try {
@@ -73,6 +79,7 @@ async function fetchLogs() {
   }
 }
 
+/** 页面挂载时加载日志列表 */
 onMounted(() => {
   fetchLogs()
 })

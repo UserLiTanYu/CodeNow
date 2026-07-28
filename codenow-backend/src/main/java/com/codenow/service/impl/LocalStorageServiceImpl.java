@@ -15,6 +15,9 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
+/**
+ * 本地文件存储实现。所有路径在读写前规范化，并确认仍位于配置根目录内以防目录穿越。
+ */
 @Service
 @ConditionalOnProperty(name = "storage.type", havingValue = "local")
 public class LocalStorageServiceImpl implements StorageService {
@@ -25,6 +28,12 @@ public class LocalStorageServiceImpl implements StorageService {
         this.storageRoot = Path.of(storagePath).toAbsolutePath().normalize();
     }
 
+    /**
+     * 上传文件到本地存储
+     *
+     * @param file 待上传的文件
+     * @return 文件访问 URL
+     */
     @Override
     public String upload(MultipartFile file) {
         try {
@@ -34,11 +43,20 @@ public class LocalStorageServiceImpl implements StorageService {
         }
     }
 
+    /**
+     * 上传文件到本地存储。
+     * 服务端生成 UUID 文件名，按日期组织目录，路径规范化后校验防止目录穿越。
+     *
+     * @param originalFilename 原始文件名
+     * @param content          文件内容
+     * @return 文件访问 URL
+     */
     @Override
     public String upload(String originalFilename, byte[] content) {
         String extension = extension(originalFilename);
         String datePath = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
         String filename = UUID.randomUUID() + "." + extension;
+        // 服务端生成 UUID 文件名，不使用客户端原始路径，避免覆盖和路径注入。
         Path destination = storageRoot.resolve(datePath).resolve(filename).normalize();
         ensureWithinStorage(destination);
         try {
@@ -52,12 +70,23 @@ public class LocalStorageServiceImpl implements StorageService {
         }
     }
 
+    /**
+     * 判断 URL 是否为本服务管理的文件地址
+     *
+     * @param url 文件 URL
+     * @return 是否为受管 URL
+     */
     @Override
     public boolean isManagedUrl(String url) {
         return url != null && url.startsWith("/api/blog/files/")
                 && url.length() > "/api/blog/files/".length();
     }
 
+    /**
+     * 删除本地存储文件
+     *
+     * @param url 文件 URL
+     */
     @Override
     public void delete(String url) {
         if (url == null || !url.startsWith("/api/blog/files/")) {

@@ -1,5 +1,6 @@
 <template>
   <section class="article-list-card">
+    <!-- 页面标题和新建文章按钮 -->
     <div class="list-heading">
       <div>
         <h2>我的文章</h2>
@@ -8,6 +9,7 @@
       <el-button type="primary" @click="router.push('/author-console/articles/edit')">新建文章</el-button>
     </div>
 
+    <!-- 分类和标签筛选器 -->
     <div class="filters">
       <el-cascader
         aria-label="按分类筛选"
@@ -23,11 +25,13 @@
       </el-select>
     </div>
 
+    <!-- 加载失败时的错误提示 -->
     <div v-if="loadError" class="load-error">
       <el-alert :title="loadError" type="error" show-icon :closable="false" />
       <el-button type="primary" @click="loadArticles">重新加载</el-button>
     </div>
 
+    <!-- 文章列表表格 -->
     <el-table v-loading="loading" :data="articles" stripe>
       <el-table-column label="标题" min-width="200">
         <template #default="{ row }">{{ row.article.title }}</template>
@@ -70,6 +74,7 @@
 </template>
 
 <script setup>
+/** 作者文章列表页面 - 管理自己的草稿和已发布文章，支持筛选和状态切换 */
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -89,9 +94,12 @@ const filterCategoryId = ref(null)
 const filterTagId = ref(null)
 const loading = ref(false)
 const loadError = ref('')
+/** 筛选或分页快速切换时，只允许最后一次请求更新表格和 loading 状态 */
 let latestRequestId = 0
+/** 将分类列表转换为级联选择器所需的树形结构 */
 const categoryOptions = computed(() => categoryCascaderOptions(categories.value))
 
+/** 加载作者文章列表，支持分类和标签筛选 */
 async function loadArticles() {
   const requestId = ++latestRequestId
   loading.value = true
@@ -102,6 +110,7 @@ async function loadArticles() {
     if (filterTagId.value) params.tagId = filterTagId.value
     const response = await getAuthorArticles(params)
     if (requestId !== latestRequestId) return
+    // 当前页无数据且总记录数大于0时，自动跳转到最后一页
     if (response.data.records.length === 0 && pageNum.value > 1 && response.data.total > 0) {
       pageNum.value = Math.ceil(response.data.total / pageSize)
       return loadArticles()
@@ -115,17 +124,20 @@ async function loadArticles() {
   }
 }
 
+/** 筛选条件变更时重置到第一页并重新加载 */
 function handleFilterChange() {
   pageNum.value = 1
   loadArticles()
 }
 
+/** 切换文章发布/草稿状态 */
 async function toggleStatus(id) {
   await toggleAuthorArticleStatus(id)
   ElMessage.success('状态切换成功')
   loadArticles()
 }
 
+/** 删除文章（需二次确认） */
 async function handleDelete(id) {
   await ElMessageBox.confirm('确定删除该文章？', '提示', { type: 'warning' })
   await deleteAuthorArticle(id)
@@ -133,6 +145,7 @@ async function handleDelete(id) {
   loadArticles()
 }
 
+/** 页面挂载时并行加载文章列表、分类和标签筛选选项 */
 onMounted(async () => {
   const articlesPromise = loadArticles()
   const [categoryResult, tagResult] = await Promise.allSettled([getBlogCategories(), getAuthorTags()])

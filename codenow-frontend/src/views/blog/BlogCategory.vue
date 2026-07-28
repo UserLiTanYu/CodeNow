@@ -1,5 +1,6 @@
 <template>
   <div class="blog-category">
+    <!-- 页面头部：分类名称、描述、子分类导航和排序选择 -->
     <header class="page-header">
       <div>
         <span class="page-eyebrow">分类</span>
@@ -20,11 +21,13 @@
         </el-select>
       </label>
     </header>
+    <!-- 加载中骨架屏 -->
     <div v-if="loading" class="loading-box">
       <el-skeleton :rows="5" animated />
     </div>
     <template v-else>
       <el-alert v-if="errorMessage" :title="errorMessage" type="error" show-icon :closable="false" class="error-alert" />
+      <!-- 文章列表为空时的提示 -->
       <div v-if="articles.length === 0" class="empty-box">
         <el-empty description="该分类下暂无文章" />
       </div>
@@ -45,6 +48,7 @@
 </template>
 
 <script setup>
+/** 博客分类文章列表页 - 展示指定分类下的文章，支持子分类导航和排序 */
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BlogArticleCard from '@/components/blog/BlogArticleCard.vue'
@@ -64,6 +68,7 @@ const total = ref(0)
 const errorMessage = ref('')
 const selectedSort = ref(['latest', 'mostViewed'].includes(route.query.sort) ? route.query.sort : 'learning')
 
+/** 加载分类下的文章列表 */
 async function fetchArticles() {
   loading.value = true
   errorMessage.value = ''
@@ -85,6 +90,7 @@ async function fetchArticles() {
   }
 }
 
+/** 获取分类名称、描述和子分类列表 */
 async function fetchCategoryName() {
   try {
     const res = await getBlogCategories()
@@ -97,11 +103,16 @@ async function fetchCategoryName() {
   }
 }
 
+/**
+ * 切换排序方式并更新 URL
+ * 非默认排序才写入 URL，保证链接可分享且浏览器前进、后退能够恢复状态
+ */
 function changeSort() {
   const query = selectedSort.value === 'learning' ? {} : { sort: selectedSort.value }
   router.push({ path: route.path, query })
 }
 
+/** 监听路由参数变化，切换分类或排序时重新加载数据 */
 watch(
   () => [route.params.id, route.query.sort],
   ([, sort]) => {

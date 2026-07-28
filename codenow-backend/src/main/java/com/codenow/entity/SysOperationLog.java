@@ -7,10 +7,14 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
+/**
+ * 系统操作日志实体类，记录用户在系统中的关键操作行为
+ */
 @Data
 @TableName("sys_operation_log")
 public class SysOperationLog {
 
+    /** 主键 ID */
     @TableId(type = IdType.AUTO)
     private Long id;
 

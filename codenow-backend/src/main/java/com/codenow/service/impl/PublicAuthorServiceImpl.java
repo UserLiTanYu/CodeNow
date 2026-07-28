@@ -5,8 +5,12 @@ import com.codenow.dto.ArticleVO;
 import com.codenow.dto.PublicAuthorRow;
 import com.codenow.dto.PublicAuthorVO;
 import com.codenow.entity.BlogArticle;
+import com.codenow.entity.BlogCategory;
+import com.codenow.entity.BlogTag;
 import com.codenow.exception.BusinessException;
 import com.codenow.mapper.BlogArticleMapper;
+import com.codenow.mapper.BlogCategoryMapper;
+import com.codenow.mapper.BlogTagMapper;
 import com.codenow.mapper.PublicAuthorMapper;
 import com.codenow.service.BlogArticleService;
 import com.codenow.service.PublicAuthorService;
@@ -17,7 +21,11 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 
+/**
+ * 公开作者查询服务。只暴露符合公开条件的作者，并校验文章筛选条件确实属于目标作者。
+ */
 @Service
 @RequiredArgsConstructor
 public class PublicAuthorServiceImpl implements PublicAuthorService {
@@ -26,8 +34,20 @@ public class PublicAuthorServiceImpl implements PublicAuthorService {
 
     private final PublicAuthorMapper mapper;
     private final BlogArticleMapper articleMapper;
+    private final BlogCategoryMapper categoryMapper;
+    private final BlogTagMapper tagMapper;
     private final BlogArticleService articleService;
 
+    /**
+     * 分页查询公开作者列表。
+     * 只暴露符合公开条件的作者，支持关键词搜索和多种排序方式。
+     *
+     * @param pageNum  页码
+     * @param pageSize 每页大小
+     * @param keyword  搜索关键词（可选）
+     * @param sort     排序方式：popular（默认）、latest、articles
+     * @return 分页结果
+     */
     @Override
     public Page<PublicAuthorVO> pagePublicAuthors(Integer pageNum, Integer pageSize, String keyword, String sort) {
         validatePage(pageNum, pageSize);
@@ -40,6 +60,13 @@ public class PublicAuthorServiceImpl implements PublicAuthorService {
         return result;
     }
 
+    /**
+     * 查询公开作者详情
+     *
+     * @param userId 作者用户 ID
+     * @return 公开作者视图对象
+     * @throws BusinessException 当作者不存在时抛出
+     */
     @Override
     public PublicAuthorVO getPublicAuthor(Long userId) {
         if (userId == null || userId < 1) {
@@ -52,15 +79,48 @@ public class PublicAuthorServiceImpl implements PublicAuthorService {
         return toVO(row);
     }
 
+    /**
+     * 分页查询公开作者的已发布文章。
+     * 先校验作者公开身份，再验证分类和标签归属权，最后查询文章列表。
+     *
+     * @param userId     作者用户 ID
+     * @param pageNum    页码
+     * @param pageSize   每页大小
+     * @param sort       排序方式：learning、latest（默认）、mostViewed
+     * @param categoryId 分类 ID（可选，需属于该作者）
+     * @param tagId      标签 ID（可选，需属于该作者）
+     * @param keyword    搜索关键词（可选）
+     * @return 分页结果
+     */
     @Override
-    public Page<ArticleVO> pagePublicAuthorArticles(Long userId, Integer pageNum, Integer pageSize, String sort) {
+    public Page<ArticleVO> pagePublicAuthorArticles(
+            Long userId, Integer pageNum, Integer pageSize, String sort,
+            Long categoryId, Long tagId, String keyword) {
         validatePage(pageNum, pageSize);
         String normalizedSort = normalizeArticleSort(sort);
+        String normalizedKeyword = normalizeKeyword(keyword);
         // This check deliberately happens before the article query so revoked, banned,
         // deleted or incomplete authors cannot be enumerated through this endpoint.
         getPublicAuthor(userId);
+
+        // Validate categoryId belongs to this author
+        if (categoryId != null) {
+            BlogCategory category = categoryMapper.selectById(categoryId);
+            if (category == null || !Objects.equals(category.getAuthorId(), userId)) {
+                throw new BusinessException(400, "分类不存在或不属于该作者");
+            }
+        }
+
+        // Validate tagId belongs to this author
+        if (tagId != null) {
+            BlogTag tag = tagMapper.selectById(tagId);
+            if (tag == null || !Objects.equals(tag.getCreatedBy(), userId)) {
+                throw new BusinessException(400, "标签不存在或不属于该作者");
+            }
+        }
+
         Page<BlogArticle> source = articleMapper.selectPublishedAuthorArticlePage(
-                new Page<>(pageNum, pageSize), userId, normalizedSort);
+                new Page<>(pageNum, pageSize), userId, normalizedSort, categoryId, tagId, normalizedKeyword);
         Page<ArticleVO> result = new Page<>(source.getCurrent(), source.getSize(), source.getTotal());
         result.setRecords(articleService.buildArticleVOBatch(source.getRecords()));
         return result;
@@ -91,7 +151,7 @@ public class PublicAuthorServiceImpl implements PublicAuthorService {
 
     private String normalizeArticleSort(String sort) {
         String normalized = sort == null || sort.isBlank() ? "latest" : sort.trim();
-        if (!List.of("latest", "mostViewed").contains(normalized)) {
+        if (!List.of("learning", "latest", "mostViewed").contains(normalized)) {
             throw new BusinessException(400, "不支持的作者文章排序方式");
         }
         return normalized;
@@ -104,6 +164,7 @@ public class PublicAuthorServiceImpl implements PublicAuthorService {
         vo.setAvatar(row.getAvatar());
         vo.setBio(row.getBio());
         vo.setExpertise(splitExpertise(row.getExpertise()));
+        // 历史资料也可能包含旧脏值，公开投影仅返回可解析的 HTTP/HTTPS 外链。
         vo.setWebsiteUrl(safeExternalUrl(row.getWebsiteUrl()));
         vo.setPortfolioUrl(safeExternalUrl(row.getPortfolioUrl()));
         vo.setArticleCount(row.getArticleCount() == null ? 0L : row.getArticleCount());

@@ -22,6 +22,11 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+/**
+ * ZIP 文章包导入器：压缩包大小、条目数、单项大小和总解压量构成四层内存保护；
+ * 文件名默认按 UTF-8 解码，仅文件名解码失败时回退 GBK，Markdown 正文始终要求 UTF-8。
+ * 路径归一化防御 ZIP Slip；同一图片只上传一次，失败后的对象删除属于补偿清理而非原子回滚。
+ */
 @Service
 @RequiredArgsConstructor
 public class ArticlePackageImportService {
@@ -38,6 +43,12 @@ public class ArticlePackageImportService {
 
     private final StorageService storageService;
 
+    /**
+     * 导入 ZIP 文章包，解析 Markdown 文件并上传图片到对象存储
+     *
+     * @param file ZIP 文件
+     * @return 文章包解析结果（标题、正文、图片数量）
+     */
     public ArticlePackageVO importPackage(MultipartFile file) {
         validateZip(file);
         PackageContent packageContent = readPackage(file);
@@ -47,6 +58,7 @@ public class ArticlePackageImportService {
             return new ArticlePackageVO(extractTitle(packageContent.markdownPath, rewrite.content),
                     rewrite.content, rewrite.imageCount);
         } catch (RuntimeException e) {
+            // 对象存储不参与数据库事务；后续步骤失败时删除本次已上传文件，完成补偿回滚。
             uploadedUrls.forEach(storageService::delete);
             throw e;
         }

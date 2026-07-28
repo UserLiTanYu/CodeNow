@@ -7,6 +7,8 @@ import com.codenow.dto.PublicAuthorVO;
 import com.codenow.entity.BlogArticle;
 import com.codenow.exception.BusinessException;
 import com.codenow.mapper.BlogArticleMapper;
+import com.codenow.mapper.BlogCategoryMapper;
+import com.codenow.mapper.BlogTagMapper;
 import com.codenow.mapper.PublicAuthorMapper;
 import com.codenow.service.BlogArticleService;
 import org.junit.jupiter.api.Test;
@@ -33,6 +35,12 @@ class PublicAuthorServiceImplTest {
 
     @Mock
     private BlogArticleMapper articleMapper;
+
+    @Mock
+    private BlogCategoryMapper categoryMapper;
+
+    @Mock
+    private BlogTagMapper tagMapper;
 
     @Mock
     private BlogArticleService articleService;
@@ -116,13 +124,13 @@ class PublicAuthorServiceImplTest {
         article.setStatus(1);
         Page<BlogArticle> source = new Page<>(1, 10, 1);
         source.setRecords(List.of(article));
-        when(articleMapper.selectPublishedAuthorArticlePage(any(Page.class), eq(7L), eq("latest")))
+        when(articleMapper.selectPublishedAuthorArticlePage(any(Page.class), eq(7L), eq("latest"), eq(null), eq(null), eq("Redis")))
                 .thenReturn(source);
         ArticleVO articleVO = new ArticleVO();
         articleVO.setArticle(article);
         when(articleService.buildArticleVOBatch(List.of(article))).thenReturn(List.of(articleVO));
 
-        Page<ArticleVO> result = service.pagePublicAuthorArticles(7L, 1, 10, "latest");
+        Page<ArticleVO> result = service.pagePublicAuthorArticles(7L, 1, 10, "latest", null, null, "  Redis  ");
 
         assertEquals(1, result.getTotal());
         assertEquals(21L, result.getRecords().getFirst().getArticle().getId());
@@ -133,7 +141,7 @@ class PublicAuthorServiceImplTest {
         when(mapper.selectPublicAuthorByUserId(8L)).thenReturn(null);
 
         BusinessException exception = assertThrows(BusinessException.class,
-                () -> service.pagePublicAuthorArticles(8L, 1, 10, "latest"));
+                () -> service.pagePublicAuthorArticles(8L, 1, 10, "latest", null, null, null));
 
         assertEquals(404, exception.getCode());
         verifyNoInteractions(articleMapper, articleService);
@@ -142,7 +150,7 @@ class PublicAuthorServiceImplTest {
     @Test
     void pagePublicAuthorArticlesRejectsUnsupportedSort() {
         BusinessException exception = assertThrows(BusinessException.class,
-                () -> service.pagePublicAuthorArticles(7L, 1, 10, "learning"));
+                () -> service.pagePublicAuthorArticles(7L, 1, 10, "random", null, null, null));
 
         assertEquals(400, exception.getCode());
         verifyNoInteractions(articleMapper, articleService);

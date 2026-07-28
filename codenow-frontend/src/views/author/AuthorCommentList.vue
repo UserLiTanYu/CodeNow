@@ -1,5 +1,6 @@
 <template>
   <section class="comment-list-card">
+    <!-- 页面标题 -->
     <div class="list-heading">
       <div>
         <h2>文章评论</h2>
@@ -7,6 +8,7 @@
       </div>
     </div>
 
+    <!-- 按文章筛选评论 -->
     <div class="filters">
       <el-select
         v-model="filterArticleId"
@@ -20,11 +22,13 @@
       </el-select>
     </div>
 
+    <!-- 加载失败时的错误提示 -->
     <div v-if="loadError" class="load-error">
       <el-alert :title="loadError" type="error" show-icon :closable="false" />
       <el-button type="primary" @click="loadComments">重新加载</el-button>
     </div>
 
+    <!-- 评论列表表格 -->
     <el-table v-loading="loading" :data="comments" stripe>
       <el-table-column prop="articleTitle" label="所属文章" min-width="180" show-overflow-tooltip />
       <el-table-column prop="nickname" label="评论者" width="120">
@@ -55,6 +59,7 @@
 </template>
 
 <script setup>
+/** 作者评论管理页面 - 查看并管理自己文章下的评论与回复 */
 import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { deleteAuthorComment, getAuthorArticles, getAuthorComments } from '@/api/authorConsole'
@@ -68,8 +73,10 @@ const pageSize = 10
 const filterArticleId = ref(null)
 const loading = ref(false)
 const loadError = ref('')
+/** 筛选、分页和删除后刷新可能交叠，只让最后发出的请求更新表格 */
 let latestRequestId = 0
 
+/** 加载评论列表，支持按文章筛选 */
 async function loadComments() {
   const requestId = ++latestRequestId
   loading.value = true
@@ -79,6 +86,7 @@ async function loadComments() {
     if (filterArticleId.value) params.articleId = filterArticleId.value
     const response = await getAuthorComments(params)
     if (requestId !== latestRequestId) return
+    // 当前页无数据且总记录数大于0时，自动跳转到最后一页
     if (response.data.records.length === 0 && pageNum.value > 1 && response.data.total > 0) {
       pageNum.value = Math.ceil(response.data.total / pageSize)
       return loadComments()
@@ -92,6 +100,7 @@ async function loadComments() {
   }
 }
 
+/** 加载作者的文章列表，用于筛选下拉框 */
 async function loadArticles() {
   try {
     const response = await getAuthorArticles({ pageNum: 1, pageSize: 100 })
@@ -101,11 +110,13 @@ async function loadArticles() {
   }
 }
 
+/** 筛选条件变更时重置到第一页并重新加载 */
 function handleFilterChange() {
   pageNum.value = 1
   loadComments()
 }
 
+/** 删除评论及其所有回复（需二次确认） */
 async function handleDelete(id) {
   await ElMessageBox.confirm('删除该评论会同时删除它的全部回复，是否继续？', '提示', { type: 'warning' })
   await deleteAuthorComment(id)
@@ -113,6 +124,7 @@ async function handleDelete(id) {
   await loadComments()
 }
 
+/** 页面挂载时并行加载评论列表和文章筛选选项 */
 onMounted(() => {
   loadComments()
   loadArticles()

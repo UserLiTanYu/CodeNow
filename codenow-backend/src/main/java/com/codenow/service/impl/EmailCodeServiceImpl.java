@@ -13,6 +13,10 @@ import org.springframework.stereotype.Service;
 import java.security.SecureRandom;
 import java.time.Duration;
 
+/**
+ * 邮箱验证码服务。不同业务场景使用独立 Redis Key，SET NX + TTL 原子建立发送冷却；
+ * 验证成功后执行 GET 再 DELETE，因此只提供通常意义的单次使用，不宣称并发消费严格原子。
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -30,31 +34,64 @@ public class EmailCodeServiceImpl implements EmailCodeService {
     @Value("${app.mail.from:}")
     private String mailFrom;
 
+    /**
+     * 发送注册验证码
+     *
+     * @param email 目标邮箱
+     */
     @Override
     public void sendRegisterCode(String email) {
         sendCode("register", email, "码上记注册验证码");
     }
 
+    /**
+     * 发送密码重置验证码
+     *
+     * @param email 目标邮箱
+     */
     @Override
     public void sendResetCode(String email) {
         sendCode("reset", email, "码上记密码重置验证码");
     }
 
+    /**
+     * 校验注册验证码
+     *
+     * @param email 邮箱
+     * @param code  验证码
+     */
     @Override
     public void verifyRegisterCode(String email, String code) {
         verifyCode("register", email, code);
     }
 
+    /**
+     * 校验密码重置验证码
+     *
+     * @param email 邮箱
+     * @param code  验证码
+     */
     @Override
     public void verifyResetCode(String email, String code) {
         verifyCode("reset", email, code);
     }
 
+    /**
+     * 发送邮箱变更验证码
+     *
+     * @param email 新邮箱地址
+     */
     @Override
     public void sendChangeEmailCode(String email) {
         sendCode("change-email", email, "码上记邮箱变更验证码");
     }
 
+    /**
+     * 校验邮箱变更验证码
+     *
+     * @param email 新邮箱地址
+     * @param code  验证码
+     */
     @Override
     public void verifyChangeEmailCode(String email, String code) {
         verifyCode("change-email", email, code);
@@ -63,6 +100,7 @@ public class EmailCodeServiceImpl implements EmailCodeService {
     private void sendCode(String scene, String email, String subject) {
         String normalizedEmail = normalize(email);
         String cooldownKey = cooldownKey(scene, normalizedEmail);
+        // SET NX + TTL 是原子操作，多实例部署时也只允许冷却窗口内的第一次发送。
         Boolean firstSend = redisTemplate.opsForValue().setIfAbsent(cooldownKey, "1", SEND_COOLDOWN);
         if (!Boolean.TRUE.equals(firstSend)) {
             throw new BusinessException(429, "验证码发送过于频繁，请稍后再试");

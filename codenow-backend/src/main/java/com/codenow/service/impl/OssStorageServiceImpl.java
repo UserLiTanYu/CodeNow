@@ -20,6 +20,9 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
+/**
+ * 阿里云 OSS 存储实现。只认配置 Bucket 下的 codenow/ 前缀为受管资源，删除操作忽略外部 URL。
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -29,6 +32,9 @@ public class OssStorageServiceImpl implements StorageService {
     private final StorageProperties storageProperties;
     private OSS ossClient;
 
+    /**
+     * 初始化阿里云 OSS 客户端
+     */
     @PostConstruct
     public void init() {
         try {
@@ -43,6 +49,9 @@ public class OssStorageServiceImpl implements StorageService {
         }
     }
 
+    /**
+     * 销毁时关闭 OSS 客户端连接
+     */
     @PreDestroy
     public void destroy() {
         if (ossClient != null) {
@@ -50,6 +59,12 @@ public class OssStorageServiceImpl implements StorageService {
         }
     }
 
+    /**
+     * 上传文件到阿里云 OSS
+     *
+     * @param file 待上传的文件
+     * @return 文件访问 URL
+     */
     @Override
     public String upload(MultipartFile file) {
         try {
@@ -59,6 +74,14 @@ public class OssStorageServiceImpl implements StorageService {
         }
     }
 
+    /**
+     * 上传文件到阿里云 OSS。
+     * 按日期组织目录，使用 UUID 生成文件名，上传后返回可访问的 HTTPS URL。
+     *
+     * @param originalFilename 原始文件名
+     * @param content          文件内容
+     * @return 文件访问 URL
+     */
     @Override
     public String upload(String originalFilename, byte[] content) {
         if (ossClient == null) {
@@ -90,6 +113,13 @@ public class OssStorageServiceImpl implements StorageService {
         }
     }
 
+    /**
+     * 判断 URL 是否为本服务管理的 OSS 文件地址。
+     * 只认配置 Bucket 下的 codenow/ 前缀为受管资源。
+     *
+     * @param url 文件 URL
+     * @return 是否为受管 URL
+     */
     @Override
     public boolean isManagedUrl(String url) {
         if (url == null) {
@@ -100,6 +130,12 @@ public class OssStorageServiceImpl implements StorageService {
         return url.startsWith(prefix) && url.length() > prefix.length();
     }
 
+    /**
+     * 删除 OSS 文件。
+     * 从 URL 中提取 objectName 后删除，忽略外部 URL。
+     *
+     * @param url 文件 URL
+     */
     @Override
     public void delete(String url) {
         if (ossClient == null || url == null) {

@@ -1,6 +1,16 @@
+/**
+ * 路由配置模块
+ * 定义应用的完整路由表，包括管理后台、作者控制台和博客前台三大模块
+ * 路由 meta 只负责前端导航体验；真正的身份与角色授权仍由后端 Sa-Token 拦截器执行
+ */
 import { createRouter, createWebHistory } from 'vue-router'
 import { invalidateAuthSession } from '@/utils/authSession'
+import { normalizeRedirectTarget } from '@/utils/routeRedirect'
 
+/**
+ * Vue Router 实例
+ * 使用 HTML5 History 模式，配置各模块路由和权限守卫
+ */
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -70,13 +80,19 @@ const router = createRouter({
           meta: { title: '登录日志' },
           component: () => import('@/views/user/LoginLogList.vue'),
         },
+        {
+          path: 'site-profile',
+          name: 'site-profile',
+          meta: { title: '个人简介' },
+          component: () => import('@/views/site/SiteProfileEdit.vue'),
+        },
       ],
     },
     {
       path: '/author-console',
       component: () => import('@/layout/AuthorLayout.vue'),
       redirect: '/author-console/articles',
-      meta: { allowedRoles: ['AUTHOR', 'ADMIN'] },
+      meta: { allowedRoles: ['AUTHOR'] },
       children: [
         {
           path: 'articles',
@@ -107,6 +123,12 @@ const router = createRouter({
           name: 'author-tags',
           meta: { title: '标签管理' },
           component: () => import('@/views/author/AuthorTagList.vue'),
+        },
+        {
+          path: 'profile',
+          name: 'author-profile',
+          meta: { title: '作者资料' },
+          component: () => import('@/views/author/AuthorProfileEdit.vue'),
         },
       ],
     },
@@ -206,10 +228,20 @@ router.afterEach((to) => {
   document.title = `${to.meta.title || '页面'} - 码上记`
 })
 
+/**
+ * 重置 Token 验证状态
+ * 保留给调用者和测试使用；受限路由会被故意重新验证
+ * @returns {void}
+ */
 export function resetTokenVerification() {
   // Kept for callers/tests; restricted routes are intentionally revalidated.
 }
 
+/**
+ * 向后端验证 Token 有效性
+ * @param {string} token - 用户认证 Token
+ * @returns {Promise<Object|false>} 有效时返回用户数据，无效返回 false
+ */
 export async function verifyToken(token) {
   const response = await fetch('/api/auth/me', {
     headers: { Authorization: token },
@@ -226,14 +258,27 @@ export async function verifyToken(token) {
   return result.code === 200 ? result.data : false
 }
 
+/**
+ * 构建登录页跳转位置，携带当前路径作为 redirect 参数
+ * @param {Object} to - 目标路由对象
+ * @returns {Object} 登录路由位置对象，包含 name 和 query
+ */
 function loginLocation(to) {
+  const redirect = normalizeRedirectTarget(to.fullPath)
   return {
     name: 'login',
-    query: to.fullPath && to.fullPath !== '/' ? { redirect: to.fullPath } : {},
+    query: redirect && redirect !== '/' ? { redirect } : {},
   }
 }
 
-// 路由守卫：/blog 路由公开访问，其他路由需要登录
+/**
+ * 路由全局前置守卫
+ * 受限路由每次访问都向 /auth/me 读取最新角色：显式 allowedRoles 优先，否则后台默认 ADMIN
+ * 401/403 清除会话；网络或 5xx 保留 Token，但角色受限页面失败关闭
+ * 这里只控制导航，后端才是授权边界
+ * @param {Object} to - 目标路由对象
+ * @returns {Promise<boolean|Object>} true 放行，对象则跳转到指定路由
+ */
 export async function authGuard(to) {
   const token = localStorage.getItem('token')
   const requiresAuth = Boolean(to.meta?.requiresAuth)
@@ -264,7 +309,7 @@ export async function authGuard(to) {
     resetTokenVerification()
     return loginLocation(to)
   } catch {
-    // Keep the token for a temporary outage, but never open a role-restricted shell.
+    // 临时故障不等于 Token 失效；仅登录页面可暂时放行，角色受限外壳绝不失败开放。
     return allowedRoles.length ? { path: '/blog' } : true
   }
 }

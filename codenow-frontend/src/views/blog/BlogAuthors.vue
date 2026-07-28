@@ -1,14 +1,6 @@
 <template>
   <div class="authors-page">
-    <section class="authors-hero">
-      <div>
-        <span class="eyebrow">AUTHOR DIRECTORY</span>
-        <h1>发现值得关注的作者</h1>
-        <p>从技术方向和持续创作中，找到适合你的学习伙伴。</p>
-      </div>
-      <strong class="author-total">{{ total }}<small> 位作者</small></strong>
-    </section>
-
+    <!-- 搜索和排序工具栏 -->
     <section class="authors-toolbar" aria-label="作者筛选与排序">
       <form role="search" class="author-search" @submit.prevent="submitSearch">
         <input
@@ -28,6 +20,7 @@
       </div>
     </section>
 
+    <!-- 加载状态和错误提示 -->
     <div v-if="loading" class="state-panel" aria-live="polite">正在加载作者…</div>
     <div v-else-if="errorMessage" class="state-panel error-state" role="alert">
       <strong>作者列表加载失败</strong>
@@ -35,6 +28,7 @@
       <button type="button" @click="fetchAuthors">重新加载</button>
     </div>
     <div v-else-if="authors.length === 0" class="state-panel">暂无符合条件的作者</div>
+    <!-- 作者卡片网格列表 -->
     <section v-else class="author-grid" aria-label="作者列表">
       <router-link
         v-for="author in authors"
@@ -70,6 +64,7 @@
 </template>
 
 <script setup>
+/** 作者发现页面 - 展示所有作者列表，支持搜索和多种排序方式 */
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getPublicAuthors } from '@/api/blog'
@@ -86,12 +81,15 @@ const errorMessage = ref('')
 const searchInput = ref('')
 const activeKeyword = ref('')
 const selectedSort = ref('popular')
+/** 搜索、排序和分页可能连续触发请求，用序号丢弃晚到的旧响应 */
 let requestId = 0
 
+/** 数字格式化为千分位分隔 */
 function formatNumber(value) {
   return Number(value || 0).toLocaleString('zh-CN')
 }
 
+/** 加载作者列表数据 */
 async function fetchAuthors() {
   const currentRequest = ++requestId
   loading.value = true
@@ -113,6 +111,7 @@ async function fetchAuthors() {
   }
 }
 
+/** 构建路由查询参数 */
 function routeQuery(keyword = activeKeyword.value, sort = selectedSort.value) {
   const query = {}
   if (keyword) query.keyword = keyword
@@ -120,17 +119,20 @@ function routeQuery(keyword = activeKeyword.value, sort = selectedSort.value) {
   return query
 }
 
+/** 提交搜索，更新 URL 查询参数 */
 function submitSearch() {
   const keyword = searchInput.value.trim().slice(0, 100)
   searchInput.value = keyword
   router.push({ path: '/blog/authors', query: routeQuery(keyword) })
 }
 
+/** 切换排序方式 */
 function selectSort(sort) {
   if (selectedSort.value === sort) return
   router.push({ path: '/blog/authors', query: routeQuery(activeKeyword.value, sort) })
 }
 
+/** 监听 URL 查询参数变化，同步搜索和排序状态 */
 watch(
   () => [route.query.keyword, route.query.sort],
   ([keyword, sort]) => {
@@ -146,16 +148,6 @@ watch(
 
 <style scoped>
 .authors-page { display: grid; gap: var(--blog-space-4); }
-.authors-hero {
-  padding: 28px 30px; display: flex; align-items: center; justify-content: space-between; gap: 24px;
-  border: 1px solid var(--blog-color-border); border-radius: var(--blog-radius-card);
-  background: linear-gradient(135deg, #f7fbff 0%, var(--blog-color-surface) 62%, #f3f8ff 100%);
-}
-.eyebrow { color: var(--blog-color-primary); font-size: 11px; font-weight: 700; letter-spacing: .16em; }
-.authors-hero h1 { margin: 6px 0 8px; color: var(--blog-color-text); font-size: 27px; line-height: 1.3; }
-.authors-hero p { margin: 0; color: var(--blog-color-text-secondary); line-height: 1.7; }
-.author-total { flex-shrink: 0; color: var(--blog-color-primary); font-size: 36px; }
-.author-total small { color: var(--blog-color-text-muted); font-size: 13px; font-weight: 500; }
 .authors-toolbar {
   padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
   border: 1px solid var(--blog-color-border); border-radius: var(--blog-radius-card); background: var(--blog-color-surface);
@@ -171,7 +163,7 @@ watch(
 .sort-switch { padding: 3px; display: flex; border: 1px solid var(--blog-color-border); border-radius: 8px; background: var(--blog-color-background); }
 .sort-switch button { min-height: 30px; padding: 0 12px; border: 0; border-radius: 5px; color: var(--blog-color-text-muted); background: transparent; cursor: pointer; }
 .sort-switch button.active { color: var(--blog-color-primary); background: var(--blog-color-surface); box-shadow: 0 1px 4px rgba(31,45,61,.1); font-weight: 600; }
-.author-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr)); gap: var(--blog-space-4); }
+.author-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--blog-space-4); }
 .author-card {
   min-width: 0; padding: 20px; display: flex; flex-direction: column; gap: 13px;
   border: 1px solid var(--blog-color-border); border-radius: var(--blog-radius-card); color: inherit;
@@ -191,34 +183,39 @@ watch(
 .view-profile b { margin-left: 3px; }
 .author-card:last-child:nth-child(odd) {
   grid-column: 1 / -1;
+  width: calc((100% - var(--blog-space-4)) / 2);
+  justify-self: start;
+  box-sizing: border-box;
+}
+.author-card:only-child {
+  width: min(100%, 900px);
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas: "head expertise" "bio profile";
   align-items: center;
 }
-.author-card:last-child:nth-child(odd) .author-card-head { grid-area: head; }
-.author-card:last-child:nth-child(odd) p { grid-area: bio; min-height: 0; }
-.author-card:last-child:nth-child(odd) .expertise-list { grid-area: expertise; justify-content: flex-end; }
-.author-card:last-child:nth-child(odd) .view-profile { grid-area: profile; justify-self: end; margin-top: 0; }
+.author-card:only-child .author-card-head { grid-area: head; }
+.author-card:only-child p { grid-area: bio; min-height: 0; }
+.author-card:only-child .expertise-list { grid-area: expertise; justify-content: flex-end; }
+.author-card:only-child .view-profile { grid-area: profile; justify-self: end; margin-top: 0; }
 .state-panel { min-height: 180px; padding: 32px; display: grid; place-content: center; gap: 10px; text-align: center; border: 1px solid var(--blog-color-border); border-radius: var(--blog-radius-card); color: var(--blog-color-text-muted); background: var(--blog-color-surface); }
 .error-state strong { color: var(--blog-color-text); }
 .error-state button { min-height: 34px; }
 .pagination-box { display: flex; justify-content: center; padding: 18px 0; }
 .author-search input:focus-visible, button:focus-visible, .author-card:focus-visible { outline: 3px solid rgba(51,126,204,.24); outline-offset: 2px; }
+@media (max-width: 900px) {
+  .author-grid { grid-template-columns: 1fr; }
+  .author-card:last-child:nth-child(odd) { width: 100%; grid-column: auto; }
+  .author-card:only-child { display: flex; }
+  .author-card:only-child .expertise-list { justify-content: flex-start; }
+  .author-card:only-child .view-profile { align-self: flex-start; margin-top: auto; }
+}
 @media (max-width: 760px) {
-  .authors-hero { padding: 22px; align-items: flex-start; }
-  .author-total { font-size: 28px; }
   .authors-toolbar { align-items: stretch; flex-direction: column; }
   .author-search input { width: 100%; }
   .sort-switch { align-self: flex-start; }
-  .author-grid { grid-template-columns: 1fr; }
-  .author-card:last-child:nth-child(odd) { display: flex; }
-  .author-card:last-child:nth-child(odd) .expertise-list { justify-content: flex-start; }
-  .author-card:last-child:nth-child(odd) .view-profile { align-self: flex-start; margin-top: auto; }
 }
 @media (max-width: 480px) {
-  .authors-hero { flex-direction: column; gap: 12px; }
-  .authors-hero h1 { font-size: 23px; }
   .author-search { flex-direction: column; }
   .author-search button { min-height: 38px; }
 }

@@ -14,9 +14,21 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * 评论树服务。根评论分页、后代按层加载；删除时按子节点到父节点的顺序维护树结构完整性。
+ */
 @Service
 public class CommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogComment> implements CommentService {
 
+    /**
+     * 获取文章评论树。
+     * 仅分页查询根评论，按层批量加载后代，查询次数与树深度相关而非评论总数。
+     *
+     * @param articleId 文章 ID
+     * @param pageNum   页码
+     * @param pageSize  每页大小
+     * @return 包含评论树结构的分页结果
+     */
     @Override
     public Page<BlogComment> getCommentTree(Long articleId, Integer pageNum, Integer pageSize) {
         // 仅分页查询根评论，避免一次性把文章的全部评论载入内存。
@@ -59,6 +71,14 @@ public class CommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogComme
         return rootPage;
     }
 
+    /**
+     * 分页查询评论列表（管理员用）
+     *
+     * @param pageNum   页码
+     * @param pageSize  每页大小
+     * @param articleId 文章 ID（可选，不传则查全部）
+     * @return 分页结果
+     */
     @Override
     public Page<BlogComment> pageComments(Integer pageNum, Integer pageSize, Long articleId) {
         LambdaQueryWrapper<BlogComment> wrapper = new LambdaQueryWrapper<BlogComment>()
@@ -67,6 +87,17 @@ public class CommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogComme
         return page(new Page<>(pageNum, pageSize), wrapper);
     }
 
+    /**
+     * 分页查询作者评论列表。
+     * 管理员可查看所有评论，普通作者只能查看自己文章下的评论。
+     *
+     * @param pageNum       页码
+     * @param pageSize      每页大小
+     * @param articleId     文章 ID（可选）
+     * @param currentUserId 当前登录用户 ID
+     * @param admin         是否为管理员
+     * @return 分页结果
+     */
     @Override
     public Page<BlogComment> pageAuthorComments(Integer pageNum, Integer pageSize, Long articleId,
                                                 Long currentUserId, boolean admin) {
@@ -76,6 +107,12 @@ public class CommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogComme
         return baseMapper.selectAuthorCommentPage(new Page<>(pageNum, pageSize), articleId, currentUserId, admin);
     }
 
+    /**
+     * 统计文章已审核通过的评论数量
+     *
+     * @param articleId 文章 ID
+     * @return 已审核评论数量
+     */
     @Override
     public long countApproved(Long articleId) {
         return count(new LambdaQueryWrapper<BlogComment>()
@@ -83,6 +120,12 @@ public class CommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogComme
                 .eq(BlogComment::getStatus, CommentStatus.APPROVED));
     }
 
+    /**
+     * 递归删除评论及其所有子评论。
+     * 后序遍历保证先删除后代，再删除自身，兼容数据库外键约束。
+     *
+     * @param id 评论 ID
+     */
     @Override
     @Transactional
     public void deleteWithChildren(Long id) {
@@ -92,6 +135,14 @@ public class CommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogComme
         removeById(id);
     }
 
+    /**
+     * 作者删除自己的评论及其子评论。
+     * 通过条件查询校验评论归属权后递归删除。
+     *
+     * @param id            评论 ID
+     * @param currentUserId 当前登录用户 ID
+     * @param admin         是否为管理员
+     */
     @Override
     @Transactional
     public void deleteAuthorCommentWithChildren(Long id, Long currentUserId, boolean admin) {
@@ -104,6 +155,7 @@ public class CommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogComme
     }
 
     private void deleteChildrenRecursive(Long parentId) {
+        // 后序遍历保证先删除后代，再删除直接子节点，兼容数据库外键约束。
         List<BlogComment> children = list(new LambdaQueryWrapper<BlogComment>()
                 .eq(BlogComment::getParentId, parentId));
         for (BlogComment child : children) {

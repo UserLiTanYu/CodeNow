@@ -19,24 +19,36 @@ import java.util.concurrent.TimeUnit;
 @RestController
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "storage.type", havingValue = "local")
+/**
+ * 本地文件访问控制器。
+ * 仅在 storage.type=local 时启用，提供本地存储文件的 HTTP 访问功能。
+ */
 public class LocalFileController {
 
     private final LocalStorageServiceImpl storageService;
 
+    /**
+     * 获取本地存储的文件。
+     * 根据日期路径和文件名返回文件资源，支持浏览器缓存。
+     */
     @GetMapping("/api/blog/files/{year}/{month}/{day}/{filename:.+}")
     public ResponseEntity<Resource> getFile(
             @PathVariable String year,
             @PathVariable String month,
             @PathVariable String day,
             @PathVariable String filename) throws Exception {
+        //根据日期路径和文件名解析本地文件路径
         Path path = storageService.resolve(String.join("/", year, month, day, filename));
+        //文件不存在时返回404
         if (!Files.isRegularFile(path)) {
             return ResponseEntity.notFound().build();
         }
+        //探测文件的MIME类型
         String contentType = Files.probeContentType(path);
         MediaType mediaType = contentType == null
                 ? MediaType.APPLICATION_OCTET_STREAM
                 : MediaType.parseMediaType(contentType);
+        //返回文件资源，设置7天缓存策略
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.maxAge(7, TimeUnit.DAYS).cachePublic())
                 .contentType(mediaType)

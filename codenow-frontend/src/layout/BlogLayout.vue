@@ -1,51 +1,38 @@
 <template>
+  <!-- 博客前台布局组件：顶部导航栏 + 主内容区 + 侧边栏 + 页脚 -->
   <div class="blog-layout">
+    <!-- 顶部导航栏 -->
     <header class="blog-header">
       <div class="header-inner">
+        <!-- Logo 品牌标识 -->
         <router-link to="/blog" class="logo" aria-label="码上记博客首页">码上记</router-link>
 
-        <nav class="nav-categories desktop-nav" aria-label="博客分类导航">
-          <router-link to="/blog" class="nav-item">首页</router-link>
-          <router-link to="/blog/authors" class="nav-item">作者</router-link>
-          <div
-            v-for="cat in categories"
-            :key="cat.id"
-            class="nav-category-group"
-          >
-            <router-link :to="`/blog/category/${cat.id}`" class="nav-item">{{ cat.name }}</router-link>
-            <div v-if="cat.children?.length" class="nav-submenu">
-              <router-link v-for="child in cat.children" :key="child.id" :to="`/blog/category/${child.id}`">
-                {{ child.name }}
-              </router-link>
-            </div>
-          </div>
+        <!-- 桌面端页面级导航；技术分类独立放在左侧栏 -->
+        <nav class="nav-categories desktop-nav" aria-label="博客主导航">
+          <router-link to="/blog" class="nav-item">文章</router-link>
+          <router-link to="/blog/authors" class="nav-item">作者广场</router-link>
+          <a href="#blog-about" class="nav-item">关于本站</a>
         </nav>
 
+        <!-- 头部右侧操作区域 -->
         <div class="header-actions">
-          <form class="desktop-search" role="search" @submit.prevent="submitSearch">
-            <el-input
-              v-model="searchKeyword"
-              :prefix-icon="Search"
-              placeholder="搜索文章、分类或标签"
-              aria-label="搜索文章、分类或标签"
-              maxlength="100"
-              clearable
-              @clear="clearSearch"
-            />
-          </form>
 
+          <!-- 未登录时显示登录链接 -->
           <router-link v-if="!userStore.isLoggedIn" :to="loginTarget" class="login-link">
             <el-icon><User /></el-icon>
             <span>登录</span>
           </router-link>
+          <!-- 管理员入口：前往后台 -->
           <router-link v-if="userStore.isAdmin" to="/" class="login-link admin-link">
             <el-icon><Setting /></el-icon>
             <span>前往后台</span>
           </router-link>
+          <!-- 作者入口：作者工作台 -->
           <router-link v-if="userStore.canEnterAuthorConsole" to="/author-console/articles" class="login-link admin-link">
             <el-icon><EditPen /></el-icon>
             <span>作者工作台</span>
           </router-link>
+          <!-- 已登录用户下拉菜单 -->
           <el-dropdown v-if="userStore.isLoggedIn" trigger="click" @command="handleUserCommand">
             <button type="button" class="login-link user-trigger">
               <img class="header-user-avatar" :src="avatarUrl(userStore.userInfo?.avatar)" alt="用户头像" @error="useDefaultAvatar" />
@@ -64,6 +51,7 @@
             </template>
           </el-dropdown>
 
+          <!-- 移动端搜索按钮 -->
           <button
             type="button"
             class="header-icon-button mobile-search-trigger"
@@ -75,6 +63,7 @@
             <el-icon><Close v-if="mobileSearchOpen" /><Search v-else /></el-icon>
           </button>
 
+          <!-- 移动端菜单按钮 -->
           <button
             type="button"
             class="header-icon-button menu-trigger"
@@ -88,6 +77,7 @@
         </div>
       </div>
 
+      <!-- 移动端搜索面板（展开/收起动画） -->
       <Transition name="header-panel">
         <div v-if="mobileSearchOpen" id="mobile-search-panel" class="mobile-search-panel">
           <form role="search" @submit.prevent="submitSearch">
@@ -106,6 +96,7 @@
         </div>
       </Transition>
 
+      <!-- 移动端分类导航面板（展开/收起动画） -->
       <Transition name="header-panel">
         <nav
           v-if="mobileMenuOpen"
@@ -113,43 +104,91 @@
           class="mobile-nav"
           aria-label="移动端博客分类导航"
         >
-          <router-link to="/blog" class="mobile-nav-item">首页</router-link>
-          <router-link to="/blog/authors" class="mobile-nav-item">作者</router-link>
+          <router-link to="/blog" class="mobile-nav-item">文章</router-link>
+          <router-link to="/blog/authors" class="mobile-nav-item">作者广场</router-link>
           <div
             v-for="cat in categories"
             :key="cat.id"
             class="mobile-category-group"
           >
-            <router-link :to="`/blog/category/${cat.id}`" class="mobile-nav-item mobile-root-item">{{ cat.name }}</router-link>
+            <router-link
+              :to="categoryTarget(cat.id)"
+              :class="['mobile-nav-item', 'mobile-root-item', { 'author-filter-active': isAuthorCategorySelected(cat.id) }]"
+              :exact-active-class="filterExactActiveClass"
+            >{{ cat.name }}</router-link>
             <router-link
               v-for="child in cat.children || []"
               :key="child.id"
-              :to="`/blog/category/${child.id}`"
-              class="mobile-nav-item mobile-child-item"
+              :to="categoryTarget(child.id)"
+              :class="['mobile-nav-item', 'mobile-child-item', { 'author-filter-active': isAuthorCategorySelected(child.id) }]"
+              :exact-active-class="filterExactActiveClass"
             >{{ child.name }}</router-link>
           </div>
         </nav>
       </Transition>
     </header>
 
-    <div class="blog-body">
+    <!-- 页面主体区域：作者广场使用全宽内容，其他页面保留左右侧栏 -->
+    <div :class="['blog-body', { 'sidebarless-layout': isSidebarlessPage }]">
+      <aside v-if="!isSidebarlessPage" class="blog-category-sidebar" aria-label="文章分类导航">
+        <section class="sidebar-section category-navigation">
+          <h3 class="category-navigation-title">文章分类</h3>
+          <router-link
+            :to="categoryHomeTarget"
+            :class="['category-all-link', { active: isCategoryHomeSelected }]"
+            :exact-active-class="filterExactActiveClass"
+          >
+            <span>全部文章</span>
+            <span v-if="articleTotal" class="category-count">{{ articleTotal }}</span>
+          </router-link>
+
+          <div class="category-tree">
+            <div v-for="cat in categories" :key="cat.id" class="category-tree-branch">
+              <div :class="['category-tree-row', { active: isCategoryBranchSelected(cat) }]">
+                <router-link
+                  :to="categoryTarget(cat.id)"
+                  :class="['category-tree-link', { active: isCategorySelected(cat.id) }]"
+                  :exact-active-class="filterExactActiveClass"
+                >{{ cat.name }}</router-link>
+                <button
+                  v-if="cat.children?.length"
+                  type="button"
+                  class="category-tree-toggle"
+                  :aria-expanded="isCategoryExpanded(cat.id)"
+                  :aria-controls="`category-children-${cat.id}`"
+                  :aria-label="`${isCategoryExpanded(cat.id) ? '折叠' : '展开'}${cat.name}的子分类`"
+                  @click="toggleCategory(cat.id)"
+                >
+                  <el-icon :class="{ expanded: isCategoryExpanded(cat.id) }"><ArrowRight /></el-icon>
+                </button>
+              </div>
+              <Transition name="category-children">
+                <div
+                  v-if="cat.children?.length && isCategoryExpanded(cat.id)"
+                  :id="`category-children-${cat.id}`"
+                  class="category-tree-children"
+                >
+                  <router-link
+                    v-for="child in cat.children"
+                    :key="child.id"
+                    :to="categoryTarget(child.id)"
+                    :class="['category-tree-child', { active: isCategorySelected(child.id) }]"
+                    :exact-active-class="filterExactActiveClass"
+                  >{{ child.name }}</router-link>
+                </div>
+              </Transition>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <!-- 主内容区域：渲染子路由组件 -->
       <main class="blog-main">
         <router-view />
       </main>
-      <aside class="blog-sidebar">
-        <div v-if="isAuthorPage && categories.length" class="sidebar-section">
-          <h3 class="sidebar-title">作者分类</h3>
-          <div class="category-list">
-            <button
-              v-for="cat in flatCategories"
-              :key="cat.id"
-              type="button"
-              class="category-item"
-              :class="{ active: selectedAuthorCategoryId === cat.id }"
-              @click="selectAuthorCategory(cat.id)"
-            >{{ cat.name }}</button>
-          </div>
-        </div>
+      <!-- 右侧边栏 -->
+      <aside v-if="!isSidebarlessPage" class="blog-sidebar">
+        <!-- 热门文章列表 -->
         <div class="sidebar-section">
           <h3 class="sidebar-title">{{ isAuthorPage ? '作者热门文章' : '热门文章' }}</h3>
           <div v-if="hotArticles.length > 0" class="hot-list">
@@ -168,26 +207,30 @@
           </div>
           <p v-else class="empty-text">暂无热门文章</p>
         </div>
+        <!-- 标签云 -->
         <div class="sidebar-section">
           <h3 class="sidebar-title">{{ isAuthorPage ? '作者标签' : '标签' }}</h3>
           <div class="tag-cloud">
             <router-link
-              v-for="tag in tags"
+              v-for="tag in orderedTags"
               :key="tag.id"
-              :to="`/blog/tag/${tag.id}`"
-              :class="['tag-item', tagTone(tag.name)]"
+              :to="tagTarget(tag.id)"
+              :class="['tag-item', tagTone(tag.name), { active: isAuthorTagSelected(tag.id) }]"
+              :exact-active-class="filterExactActiveClass"
             >
               {{ tag.name }}
             </router-link>
           </div>
         </div>
-        <div class="sidebar-section">
-          <h3 class="sidebar-title">关于</h3>
-          <p class="about-text">一个支持 Markdown 写作的个人技术博客，帮助开发者记录和分享学习笔记。</p>
+        <!-- 当前作者个人简介 -->
+        <div id="blog-about" class="sidebar-section">
+          <h3 class="sidebar-title">个人简介</h3>
+          <p class="about-text">{{ authorBio || '该作者暂未填写个人简介。' }}</p>
         </div>
       </aside>
     </div>
 
+    <!-- 页脚 -->
     <footer class="blog-footer">
       <p>&copy; {{ new Date().getFullYear() }} 码上记 CodeNow. All rights reserved.</p>
     </footer>
@@ -195,47 +238,106 @@
 </template>
 
 <script setup>
+/**
+ * 博客前台布局组件
+ * 提供博客前台页面的整体布局框架，包含顶部导航栏、主内容区、右侧边栏和页脚。
+ * 支持桌面端和移动端响应式布局，移动端有折叠搜索面板和分类导航菜单。
+ * 侧边栏根据当前页面（普通博客页/作者页）动态加载不同的数据。
+ */
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Close, EditPen, Menu, Search, Setting, User, View } from '@element-plus/icons-vue'
-import { getBlogCategories, getBlogTags, getHotArticles, getPublicAuthorCategories, getPublicAuthorTags, getPublicAuthorArticles } from '@/api/blog'
+import { ArrowRight, Close, EditPen, Menu, Search, Setting, User, View } from '@element-plus/icons-vue'
+import { getBlogArticles, getBlogCategories, getBlogTags, getHotArticles, getPublicAuthor, getPublicAuthorCategories, getPublicAuthorTags, getPublicAuthorArticles, getSiteProfile } from '@/api/blog'
+import { SITE_OWNER_ID } from '@/config/site'
 import { avatarUrl, useDefaultAvatar } from '@/utils/avatar'
 import { getUnreadNotificationCount } from '@/api/member'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
+import { normalizeRedirectTarget } from '@/utils/routeRedirect'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
-const categories = ref([])
-const tags = ref([])
-const hotArticles = ref([])
-const searchKeyword = ref(typeof route.query.keyword === 'string' ? route.query.keyword : '')
-const mobileMenuOpen = ref(false)
-const mobileSearchOpen = ref(false)
-const mobileSearchInput = ref()
-const loginTarget = computed(() => ({ path: '/login', query: { redirect: route.fullPath } }))
-const unreadCount = ref(0)
-const isAuthorPage = computed(() => /^\/blog\/author\/\d+/.test(route.path))
-const authorId = computed(() => route.params.id)
-const selectedAuthorCategoryId = ref(null)
-const flatCategories = computed(() => {
-  const result = []
-  for (const cat of categories.value) {
-    result.push({ id: cat.id, name: cat.name })
-    if (cat.children) {
-      for (const child of cat.children) {
-        result.push({ id: child.id, name: `  ${child.name}` })
-      }
-    }
-  }
-  return result
-})
 
+/** 博客分类列表（树形结构） */
+const categories = ref([])
+/** 标签列表 */
+const tags = ref([])
+/** 热门文章列表 */
+const hotArticles = ref([])
+/** 当前范围内的公开文章总数 */
+const articleTotal = ref(0)
+/** 当前内容作者的公开个人简介 */
+const authorBio = ref('')
+
+/** 左侧栏已展开的一级分类ID；初始为空，默认全部折叠。 */
+const expandedCategoryIds = ref(new Set())
+
+/** 右侧标签按知识体系展示；未列入的新增标签保持接口顺序并排在末尾。 */
+const TAG_DISPLAY_ORDER = [
+  'Java', 'Spring Boot', 'Mybatis-Plus', 'Vue 3', 'MySQL',
+  'Redis', 'Docker', 'Git', 'JavaScript', 'Element Plus', 'Linux', '设计模式',
+  'Java 入门与环境', 'Java 基础语法', '面向对象编程', 'Java 常用 API',
+  '集合框架', '异常与泛型', 'IO 与 NIO', '多线程与并发', 'JVM 基础', '现代 Java',
+  'Spring IoC 与 AOP', 'Spring MVC', 'MyBatis 与 MyBatis-Plus',
+  '认证与权限', 'Spring Cloud', '消息与任务', 'Spring 测试与监控',
+  'HTML 与 CSS', 'JavaScript 基础', 'TypeScript', 'React', '前端工程化',
+  '数据库与 SQL 基础', 'MySQL 核心', 'MySQL 运维', 'MongoDB', '数据访问实践',
+  'IntelliJ IDEA', 'VS Code', 'Maven 与 Gradle', 'CI/CD', '需求与架构设计',
+  '后端项目实战', '前端项目实战', '全栈联调', '测试与质量保障', '部署与运维',
+  '学习方法', 'Java 面试', '算法与数据结构', '计算机基础', '职业成长',
+]
+const tagDisplayRank = new Map(TAG_DISPLAY_ORDER.map((name, index) => [name, index]))
+const orderedTags = computed(() => [...tags.value].sort((left, right) =>
+  (tagDisplayRank.get(left.name) ?? Number.MAX_SAFE_INTEGER)
+  - (tagDisplayRank.get(right.name) ?? Number.MAX_SAFE_INTEGER)))
+/** 搜索关键词（从 URL query 参数初始化） */
+const searchKeyword = ref(typeof route.query.keyword === 'string' ? route.query.keyword : '')
+/** 移动端菜单是否展开 */
+const mobileMenuOpen = ref(false)
+/** 移动端搜索面板是否展开 */
+const mobileSearchOpen = ref(false)
+/** 移动端搜索输入框引用 */
+const mobileSearchInput = ref()
+/** 登录链接目标（携带当前页面作为重定向参数） */
+const loginTarget = computed(() => ({
+  path: '/login',
+  query: { redirect: normalizeRedirectTarget(route.fullPath) },
+}))
+/** 未读消息数量 */
+const unreadCount = ref(0)
+/** 当前是否为作者页面 */
+const isAuthorPage = computed(() => /^\/blog\/author\/\d+/.test(route.path))
+/** 作者广场独立使用全宽布局，不展示文章分类与推荐侧栏。 */
+const isAuthorsPage = computed(() => route.path === '/blog/authors')
+/** 个人功能、政策和作者广场使用独立单栏布局。 */
+const isSidebarlessPage = computed(() => isAuthorsPage.value
+  || /^\/blog\/(profile|favorites|comments|notifications|author-application|terms|privacy)$/.test(route.path))
+/** 公开博客首页使用站长作者范围。 */
+const isSiteHome = computed(() => route.path === '/blog')
+/** 作者ID（从路由参数提取） */
+const authorId = computed(() => route.params.id)
+/** 作者主页的数据作者范围；首页使用独立的管理员内容范围。 */
+const scopedAuthorId = computed(() => isAuthorPage.value ? authorId.value : null)
+const isAuthorScopedPage = computed(() => isAuthorPage.value || isSiteHome.value)
+/** 作者页选中的分类ID，以URL为唯一状态源。 */
+const selectedAuthorCategoryId = computed(() => route.query.categoryId ?? null)
+const filterExactActiveClass = computed(() => isAuthorScopedPage.value ? 'author-route-exact-match' : 'router-link-exact-active')
+/** 左侧“全部文章”的跳转目标。 */
+const categoryHomeTarget = computed(() => isAuthorPage.value && authorId.value
+  ? `/blog/author/${authorId.value}`
+  : '/blog')
+/** 左侧“全部文章”是否处于选中状态。 */
+const isCategoryHomeSelected = computed(() => isAuthorScopedPage.value
+  ? !route.query.categoryId && !route.query.tagId && (isAuthorPage.value || isSiteHome.value)
+  : route.path === '/blog')
+
+/** 标准化搜索关键词：去除首尾空格并限制最大长度为100字符 */
 function normalizedKeyword() {
   return searchKeyword.value.trim().slice(0, 100)
 }
 
+/** 提交搜索：关闭移动端面板后跳转到搜索结果页 */
 function submitSearch() {
   const keyword = normalizedKeyword()
   searchKeyword.value = keyword
@@ -244,6 +346,7 @@ function submitSearch() {
   router.push({ path: '/blog', query: keyword ? { keyword } : {} })
 }
 
+/** 清空搜索关键词并返回博客首页 */
 function clearSearch() {
   searchKeyword.value = ''
   if (route.query.keyword) {
@@ -251,10 +354,63 @@ function clearSearch() {
   }
 }
 
-function selectAuthorCategory(catId) {
-  selectedAuthorCategoryId.value = selectedAuthorCategoryId.value === catId ? null : catId
+/** 分类链接：首页和作者页保持作者上下文，其他页面进入全站分类页。 */
+function categoryTarget(categoryId) {
+  if (isAuthorPage.value && authorId.value) {
+    return { path: `/blog/author/${authorId.value}`, query: { categoryId } }
+  }
+  if (isSiteHome.value) return { path: '/blog', query: { categoryId } }
+  return `/blog/category/${categoryId}`
 }
 
+/** 标签链接：首页和作者页保持作者上下文，其他页面进入全站标签页。 */
+function tagTarget(tagId) {
+  if (isAuthorPage.value && authorId.value) {
+    return { path: `/blog/author/${authorId.value}`, query: { tagId } }
+  }
+  if (isSiteHome.value) return { path: '/blog', query: { tagId } }
+  return `/blog/tag/${tagId}`
+}
+
+/** 判断作者分类是否处于选中状态。 */
+function isAuthorCategorySelected(catId) {
+  return String(selectedAuthorCategoryId.value ?? '') === String(catId)
+}
+
+/** 判断指定分类是否是当前筛选条件。 */
+function isCategorySelected(categoryId) {
+  if (isAuthorScopedPage.value) return isAuthorCategorySelected(categoryId)
+  return route.path.startsWith('/blog/category/')
+    && String(route.params.id ?? '') === String(categoryId)
+}
+
+/** 一级分类或其任一子分类被选中时，标记该分支。 */
+function isCategoryBranchSelected(category) {
+  return isCategorySelected(category.id)
+    || category.children?.some(child => isCategorySelected(child.id))
+}
+
+/** 判断一级分类是否展开。 */
+function isCategoryExpanded(categoryId) {
+  return expandedCategoryIds.value.has(String(categoryId))
+}
+
+/** 切换一级分类的展开状态。 */
+function toggleCategory(categoryId) {
+  const id = String(categoryId)
+  const next = new Set(expandedCategoryIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  expandedCategoryIds.value = next
+}
+
+/** 判断作者标签是否处于选中状态。 */
+function isAuthorTagSelected(tagId) {
+  return isAuthorScopedPage.value && String(route.query.tagId ?? '') === String(tagId)
+}
+
+
+/** 切换移动端搜索面板的展开/收起状态，并自动聚焦输入框 */
 async function toggleMobileSearch() {
   mobileSearchOpen.value = !mobileSearchOpen.value
   mobileMenuOpen.value = false
@@ -264,11 +420,13 @@ async function toggleMobileSearch() {
   }
 }
 
+/** 切换移动端分类导航菜单的展开/收起状态 */
 function toggleMobileMenu() {
   mobileMenuOpen.value = !mobileMenuOpen.value
   mobileSearchOpen.value = false
 }
 
+/** 处理用户下拉菜单命令：跳转到对应页面或执行退出登录 */
 async function handleUserCommand(command) {
   if (command === 'profile') return router.push('/blog/profile')
   if (command === 'comments') return router.push('/blog/comments')
@@ -283,6 +441,7 @@ async function handleUserCommand(command) {
   }
 }
 
+/** 根据标签名称关键词返回对应的色调 CSS 类名 */
 function tagTone(name = '') {
   const value = name.toLowerCase()
   if (value.includes('java')) return 'tag-java'
@@ -293,6 +452,7 @@ function tagTone(name = '') {
   return 'tag-default'
 }
 
+/** 监听 URL 搜索关键词变化，同步到本地搜索框状态 */
 watch(
   () => route.query.keyword,
   (keyword) => {
@@ -300,74 +460,87 @@ watch(
   },
 )
 
+let sidebarRequestId = 0
+
+/** 根据当前作者范围加载分类、标签、热门文章和文章总数。 */
+async function loadSidebarData() {
+  const currentRequest = ++sidebarRequestId
+  const scopeId = scopedAuthorId.value
+  categories.value = []
+  tags.value = []
+  hotArticles.value = []
+  articleTotal.value = 0
+  authorBio.value = ''
+  if (isSidebarlessPage.value) return
+  try {
+    if (scopeId) {
+      // 先确认作者仍可公开访问，避免不存在或已下架作者触发多条附属接口错误提示。
+      const profileRes = await getPublicAuthor(scopeId, { silentError: true })
+      if (currentRequest !== sidebarRequestId) return
+      const [catRes, tagRes, artRes] = await Promise.all([
+        getPublicAuthorCategories(scopeId),
+        getPublicAuthorTags(scopeId),
+        getPublicAuthorArticles(scopeId, { pageNum: 1, pageSize: 3, sort: 'mostViewed' }),
+      ])
+      if (currentRequest !== sidebarRequestId) return
+      categories.value = catRes.data || []
+      tags.value = tagRes.data || []
+      hotArticles.value = (artRes.data?.records || []).slice(0, 3)
+      articleTotal.value = artRes.data?.total || 0
+      authorBio.value = profileRes?.data?.bio?.trim() || ''
+      return
+    }
+    if (isSiteHome.value) {
+      const [profileRes, catRes, tagRes, artRes] = await Promise.all([
+        getSiteProfile().catch(() => null),
+        getBlogCategories({ ownerId: SITE_OWNER_ID }),
+        getBlogTags({ ownerId: SITE_OWNER_ID }),
+        getBlogArticles({ pageNum: 1, pageSize: 3, sort: 'mostViewed', authorId: SITE_OWNER_ID }),
+      ])
+      if (currentRequest !== sidebarRequestId) return
+      categories.value = catRes.data || []
+      tags.value = tagRes.data || []
+      hotArticles.value = (artRes.data?.records || []).slice(0, 3)
+      articleTotal.value = artRes.data?.total || 0
+      authorBio.value = profileRes?.data?.bio?.trim() || ''
+      return
+    }
+    const [profileRes, catRes, tagRes, hotRes, articleRes] = await Promise.all([
+      getSiteProfile().catch(() => null),
+      getBlogCategories(),
+      getBlogTags(),
+      getHotArticles(),
+      getBlogArticles({ pageNum: 1, pageSize: 1 }),
+    ])
+    if (currentRequest !== sidebarRequestId) return
+    categories.value = catRes.data || []
+    tags.value = tagRes.data || []
+    hotArticles.value = (hotRes.data || []).slice(0, 3)
+    articleTotal.value = articleRes.data?.total || 0
+    authorBio.value = profileRes?.data?.bio?.trim() || ''
+  } catch {
+    // 辅助内容加载失败不影响文章主列表。
+  }
+}
+
+/** 仅在数据作用域变化时重新加载侧栏；搜索和筛选不重复请求相同导航数据。 */
 watch(
-  () => route.fullPath,
-  async () => {
-    mobileMenuOpen.value = false
-    if (isAuthorPage.value && authorId.value) {
-      try {
-        const [catRes, tagRes, artRes] = await Promise.all([
-          getPublicAuthorCategories(authorId.value),
-          getPublicAuthorTags(authorId.value),
-          getPublicAuthorArticles(authorId.value, { pageNum: 1, pageSize: 3, sort: 'mostViewed' }),
-        ])
-        categories.value = catRes.data || []
-        tags.value = tagRes.data || []
-        hotArticles.value = (artRes.data?.records || []).slice(0, 3)
-      } catch {
-        // 保留上一次结果
-      }
-    } else {
-      try {
-        const [catRes, tagRes, hotRes] = await Promise.all([
-          getBlogCategories(),
-          getBlogTags(),
-          getHotArticles(),
-        ])
-        categories.value = catRes.data || []
-        tags.value = tagRes.data || []
-        hotArticles.value = (hotRes.data || []).slice(0, 3)
-      } catch {
-        // 保留上一次结果
-      }
-    }
-    if (userStore.token) {
-      getUnreadNotificationCount().then(res => { unreadCount.value = res.data.count || 0 }).catch(() => {})
-    }
-  },
+  () => scopedAuthorId.value
+    ? `author:${scopedAuthorId.value}`
+    : (isSiteHome.value ? `owner:${SITE_OWNER_ID}` : (isSidebarlessPage.value ? `standalone:${route.path}` : 'global')),
+  loadSidebarData,
+  { immediate: true },
 )
 
-onMounted(async () => {
+watch(() => route.fullPath, () => { mobileMenuOpen.value = false })
+
+/** 组件挂载：获取用户信息和未读消息数。 */
+onMounted(() => {
   if (userStore.token && !userStore.userInfo) {
     userStore.fetchUserInfo().catch(() => {})
   }
   if (userStore.token) {
     getUnreadNotificationCount().then(res => { unreadCount.value = res.data.count || 0 }).catch(() => {})
-  }
-  if (isAuthorPage.value && authorId.value) {
-    try {
-      const [catRes, tagRes, artRes] = await Promise.all([
-        getPublicAuthorCategories(authorId.value),
-        getPublicAuthorTags(authorId.value),
-        getPublicAuthorArticles(authorId.value, { pageNum: 1, pageSize: 3, sort: 'mostViewed' }),
-      ])
-      categories.value = catRes.data || []
-      tags.value = tagRes.data || []
-      hotArticles.value = (artRes.data?.records || []).slice(0, 3)
-    } catch { /* ignore */ }
-  } else {
-    try {
-      const [catRes, tagRes, hotRes] = await Promise.all([
-        getBlogCategories(),
-        getBlogTags(),
-        getHotArticles(),
-      ])
-      categories.value = catRes.data
-      tags.value = tagRes.data
-      hotArticles.value = (hotRes.data || []).slice(0, 3)
-    } catch {
-      // 辅助内容加载失败不影响文章主列表。
-    }
   }
 })
 </script>
@@ -404,7 +577,7 @@ onMounted(async () => {
   backdrop-filter: blur(12px);
 }
 .header-inner {
-  max-width: var(--blog-content-max-width);
+  max-width: 1720px;
   height: 68px;
   margin: 0 auto;
   padding: 0 var(--blog-space-6);
@@ -425,6 +598,10 @@ onMounted(async () => {
 .logo:focus-visible,
 .nav-item:focus-visible,
 .mobile-nav-item:focus-visible,
+.category-all-link:focus-visible,
+.category-tree-link:focus-visible,
+.category-tree-toggle:focus-visible,
+.category-tree-child:focus-visible,
 .login-link:focus-visible,
 .header-icon-button:focus-visible,
 .tag-item:focus-visible,
@@ -450,24 +627,6 @@ onMounted(async () => {
   white-space: nowrap;
   transition: color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
 }
-.nav-category-group { position: relative; }
-.nav-submenu {
-  min-width: 160px;
-  padding: 8px;
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  display: none;
-  border: 1px solid var(--blog-color-border);
-  border-radius: var(--blog-radius-card);
-  background: var(--blog-color-surface);
-  box-shadow: 0 10px 28px rgba(31, 45, 61, 0.12);
-}
-.nav-category-group:hover .nav-submenu,
-.nav-category-group:focus-within .nav-submenu { display: flex; flex-direction: column; }
-.nav-submenu a { padding: 8px 10px; border-radius: var(--blog-radius-button); color: var(--blog-color-text-secondary); font-size: 13px; text-decoration: none; white-space: nowrap; }
-.nav-submenu a:hover,
-.nav-submenu a.router-link-exact-active { color: var(--blog-color-primary); background: var(--blog-color-primary-soft); }
 .nav-item:hover {
   color: var(--blog-color-primary);
   background: var(--blog-color-primary-soft);
@@ -475,7 +634,8 @@ onMounted(async () => {
 .nav-item:active {
   transform: translateY(1px);
 }
-.nav-item.router-link-exact-active {
+.nav-item.router-link-exact-active,
+.nav-item.author-filter-active {
   color: var(--blog-color-primary);
   background: var(--blog-color-primary-soft);
   font-weight: 600;
@@ -486,24 +646,17 @@ onMounted(async () => {
   gap: var(--blog-space-2);
   flex-shrink: 0;
 }
-.desktop-search {
-  width: clamp(210px, 18vw, 280px);
-}
-.desktop-search :deep(.el-input__wrapper),
 .mobile-search-panel :deep(.el-input__wrapper) {
   border-radius: var(--blog-radius-button);
   box-shadow: 0 0 0 1px var(--blog-color-border) inset;
   transition: box-shadow 0.18s ease, background-color 0.18s ease;
 }
-.desktop-search :deep(.el-input__wrapper:hover),
 .mobile-search-panel :deep(.el-input__wrapper:hover) {
   box-shadow: 0 0 0 1px var(--blog-color-border-hover) inset;
 }
-.desktop-search :deep(.el-input__wrapper.is-focus),
 .mobile-search-panel :deep(.el-input__wrapper.is-focus) {
   box-shadow: 0 0 0 2px rgba(51, 126, 204, 0.28) inset;
 }
-.desktop-search :deep(.el-input__inner::placeholder),
 .mobile-search-panel :deep(.el-input__inner::placeholder) {
   color: #8b95a3;
 }
@@ -581,27 +734,23 @@ onMounted(async () => {
 
 .blog-body {
   width: 100%;
-  max-width: var(--blog-content-max-width);
+  max-width: 1720px;
   margin: var(--blog-space-5) auto;
   padding: 0 var(--blog-space-6);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--blog-sidebar-width);
+  grid-template-columns: 220px minmax(0, 1fr) 300px;
   flex: 1;
   gap: var(--blog-layout-gap);
   min-height: 0;
   overflow: hidden;
   box-sizing: border-box;
 }
-.blog-main {
-  min-width: 0;
-  min-height: 0;
-  padding-right: 6px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
-  scrollbar-color: transparent transparent;
-  scrollbar-width: thin;
+.blog-body.sidebarless-layout {
+  max-width: 1248px;
+  grid-template-columns: minmax(0, 1fr);
 }
+.blog-category-sidebar,
+.blog-main,
 .blog-sidebar {
   min-width: 0;
   min-height: 0;
@@ -612,28 +761,34 @@ onMounted(async () => {
   scrollbar-color: transparent transparent;
   scrollbar-width: thin;
 }
+.blog-category-sidebar:hover,
 .blog-main:hover,
 .blog-sidebar:hover {
   scrollbar-color: rgba(144, 152, 163, 0.32) transparent;
 }
+.blog-category-sidebar::-webkit-scrollbar,
 .blog-main::-webkit-scrollbar,
 .blog-sidebar::-webkit-scrollbar {
   width: 4px;
 }
+.blog-category-sidebar::-webkit-scrollbar-track,
 .blog-main::-webkit-scrollbar-track,
 .blog-sidebar::-webkit-scrollbar-track {
   background: transparent;
 }
+.blog-category-sidebar::-webkit-scrollbar-thumb,
 .blog-main::-webkit-scrollbar-thumb,
 .blog-sidebar::-webkit-scrollbar-thumb {
   border-radius: 999px;
   background: transparent;
   transition: background-color 0.18s ease;
 }
+.blog-category-sidebar:hover::-webkit-scrollbar-thumb,
 .blog-main:hover::-webkit-scrollbar-thumb,
 .blog-sidebar:hover::-webkit-scrollbar-thumb {
   background: rgba(144, 152, 163, 0.28);
 }
+.blog-category-sidebar::-webkit-scrollbar-thumb:hover,
 .blog-main::-webkit-scrollbar-thumb:hover,
 .blog-sidebar::-webkit-scrollbar-thumb:hover {
   background: rgba(112, 121, 134, 0.48);
@@ -645,6 +800,181 @@ onMounted(async () => {
   border-radius: var(--blog-radius-card);
   background: var(--blog-color-surface);
 }
+.category-navigation {
+  min-height: 100%;
+  margin-bottom: 0;
+  padding: 18px 14px;
+}
+.category-navigation-title {
+  margin: 0 10px 14px;
+  padding-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--blog-color-border);
+  color: var(--blog-color-text);
+  font-size: 16px;
+  font-weight: 650;
+}
+.category-navigation-title::before {
+  width: 4px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--blog-color-primary);
+  content: '';
+}
+.category-all-link {
+  min-height: 38px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  border: 0;
+  border-radius: var(--blog-radius-button);
+  color: var(--blog-color-text-secondary);
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.16s ease, background-color 0.16s ease;
+}
+.category-all-link {
+  justify-content: space-between;
+  font-weight: 650;
+}
+.category-all-link:hover,
+.category-all-link.active,
+.category-all-link.router-link-exact-active {
+  color: var(--blog-color-primary);
+  background: var(--blog-color-primary-soft);
+}
+.category-count {
+  color: currentColor;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.category-tree {
+  margin-top: 10px;
+}
+.category-tree-branch + .category-tree-branch {
+  margin-top: 3px;
+}
+.category-tree-row {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  border-radius: var(--blog-radius-button);
+  transition: background-color 0.16s ease;
+}
+.category-tree-row:hover,
+.category-tree-row.active {
+  background: var(--blog-color-primary-soft);
+}
+.category-tree-link {
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 4px 0 12px;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  overflow: hidden;
+  color: var(--blog-color-text-secondary);
+  font-size: 13px;
+  line-height: 1.4;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.category-tree-link:hover,
+.category-tree-link.active {
+  color: var(--blog-color-primary);
+}
+.category-tree-link.active {
+  font-weight: 600;
+}
+.category-tree-toggle {
+  width: 32px;
+  height: 32px;
+  margin-right: 4px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--blog-color-text-muted);
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  transition: color 0.16s ease, background-color 0.16s ease;
+}
+.category-tree-toggle:hover {
+  color: var(--blog-color-primary);
+  background: rgba(51, 126, 204, 0.1);
+}
+.category-tree-toggle .el-icon {
+  transition: transform 0.18s ease;
+}
+.category-tree-toggle .el-icon.expanded {
+  transform: rotate(90deg);
+}
+.category-tree-children {
+  margin: 3px 0 7px 14px;
+  padding: 2px 0 2px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.category-tree-child {
+  position: relative;
+  padding: 7px 10px 7px 18px;
+  border-radius: 7px;
+  overflow: hidden;
+  color: var(--blog-color-text-muted);
+  font-size: 12px;
+  line-height: 1.35;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.16s ease, background-color 0.16s ease;
+}
+.category-tree-child::before {
+  position: absolute;
+  left: 7px;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #c3cfdb;
+  content: '';
+  transform: translateY(-50%);
+  transition: background-color 0.16s ease, transform 0.16s ease;
+}
+.category-tree-child:hover,
+.category-tree-child.active {
+  color: var(--blog-color-primary);
+  background: var(--blog-color-primary-soft);
+}
+.category-tree-child:hover::before,
+.category-tree-child.active::before {
+  background: var(--blog-color-primary);
+  transform: translateY(-50%) scale(1.25);
+}
+.category-tree-child.active {
+  font-weight: 600;
+}
+.category-children-enter-active,
+.category-children-leave-active {
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+.category-children-enter-from,
+.category-children-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
 .sidebar-title {
   margin: 0 0 var(--blog-space-4);
   padding-bottom: var(--blog-space-3);
@@ -653,15 +983,9 @@ onMounted(async () => {
   font-size: 15px;
   font-weight: 650;
 }
-.category-list { display: flex; flex-direction: column; gap: 4px; }
-.category-item {
-  display: block; width: 100%; padding: 6px 10px; border: 0; border-radius: 6px;
-  background: transparent; color: var(--blog-color-text-secondary); font-size: 13px;
-  text-align: left; cursor: pointer; transition: background 0.15s, color 0.15s;
-}
-.category-item:hover { background: var(--blog-color-primary-soft); color: var(--blog-color-primary); }
-.category-item.active { background: var(--blog-color-primary-soft); color: var(--blog-color-primary); font-weight: 600; }
+
 .tag-cloud {
+  display: flex;
   flex-wrap: wrap;
   gap: var(--blog-space-2);
 }
@@ -675,7 +999,8 @@ onMounted(async () => {
   transition: color 0.18s ease, background-color 0.18s ease;
 }
 .tag-item:hover,
-.tag-item.router-link-exact-active {
+.tag-item.router-link-exact-active,
+.tag-item.active {
   color: var(--blog-color-primary);
   box-shadow: 0 0 0 1px currentColor inset;
 }
@@ -760,7 +1085,7 @@ onMounted(async () => {
   margin: 0;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1360px) {
   .desktop-nav {
     display: none;
   }
@@ -772,6 +1097,12 @@ onMounted(async () => {
   }
   .menu-trigger {
     display: inline-flex;
+  }
+  .blog-body {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+  .blog-category-sidebar {
+    display: none;
   }
   .mobile-nav {
     max-height: min(70vh, 520px);
@@ -792,7 +1123,8 @@ onMounted(async () => {
     text-decoration: none;
   }
   .mobile-nav-item:hover,
-  .mobile-nav-item.router-link-exact-active {
+  .mobile-nav-item.router-link-exact-active,
+  .mobile-nav-item.author-filter-active {
     color: var(--blog-color-primary);
     background: var(--blog-color-primary-soft);
     font-weight: 600;
@@ -815,9 +1147,6 @@ onMounted(async () => {
   }
   .logo {
     font-size: 21px;
-  }
-  .desktop-search {
-    display: none;
   }
   .mobile-search-trigger {
     display: inline-flex;

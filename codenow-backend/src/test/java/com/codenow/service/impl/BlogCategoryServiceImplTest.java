@@ -61,12 +61,12 @@ class BlogCategoryServiceImplTest {
     @Test
     void listTreeByPublishedArticlesReturnsOnlyCategoriesWithArticlesAndAncestors() {
         // 已发布文章关联了分类 3（List），其祖先链为 1 -> 2 -> 3
-        when(articleMapper.selectPublishedCategoryIds()).thenReturn(List.of(3L));
         when(categoryMapper.selectList(any())).thenReturn(List.of(
                 category(1L, "Java 基础", 0L, 10L),
                 category(2L, "集合框架", 1L, 10L),
                 category(3L, "List", 2L, 10L),
                 category(4L, "无关分类", 0L, 10L)));
+        when(articleMapper.selectPublishedCategoryIds()).thenReturn(List.of(3L));
 
         List<BlogCategory> tree = categoryService.listTreeByPublishedArticles();
 
@@ -81,7 +81,7 @@ class BlogCategoryServiceImplTest {
 
     @Test
     void listTreeByPublishedArticlesReturnsEmptyWhenNoPublishedArticles() {
-        when(articleMapper.selectPublishedCategoryIds()).thenReturn(Collections.emptyList());
+        when(categoryMapper.selectList(any())).thenReturn(Collections.emptyList());
 
         List<BlogCategory> tree = categoryService.listTreeByPublishedArticles();
 

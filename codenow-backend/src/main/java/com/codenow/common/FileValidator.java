@@ -5,24 +5,32 @@ import java.io.InputStream;
 import java.util.Set;
 
 /**
- * 文件类型校验工具类
- * 通过 Magic Bytes（文件头签名）验证文件真实类型，防止 Content-Type 伪造
+ * 上传文件安全校验器。扩展名和 MIME 仅用于初筛，最终通过 Magic Bytes 检查真实类型，
+ * 防止客户端伪造 Content-Type 或用危险内容冒充图片。
  */
 public final class FileValidator {
 
+    /**
+     * 私有构造方法，防止实例化工具类。
+     */
     private FileValidator() {
     }
 
+    /** 允许上传的图片文件扩展名白名单 */
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "gif", "webp");
 
     /**
-     * 校验文件是否为合法的图片文件
+     * 校验文件是否为合法的图片文件。
+     * <p>
+     * 校验流程：先检查扩展名是否在白名单内，再读取文件头的 Magic Bytes 验证真实文件类型，
+     * 防止客户端伪造扩展名或 Content-Type。
+     * </p>
      *
-     * @param inputStream 文件输入流（调用方负责关闭）
+     * @param inputStream    文件输入流（调用方负责关闭）
      * @param originalFilename 原始文件名（用于获取扩展名）
-     * @return 校验通过的文件扩展名
-     * @throws IOException 如果读取文件头失败
-     * @throws IllegalArgumentException 如果文件类型不合法
+     * @return 校验通过的文件扩展名（小写）
+     * @throws IOException            如果读取文件头失败
+     * @throws IllegalArgumentException 如果文件为空、扩展名不合法或文件内容与扩展名不匹配
      */
     public static String validateImage(InputStream inputStream, String originalFilename) throws IOException {
         if (inputStream == null || originalFilename == null) {
@@ -51,7 +59,15 @@ public final class FileValidator {
     }
 
     /**
-     * 通过 Magic Bytes 判断文件是否为合法图片
+     * 通过 Magic Bytes 判断文件是否为合法图片。
+     * <p>
+     * 根据文件扩展名读取文件头字节，与已知的图片格式魔数进行比对。
+     * 支持 JPG、PNG、GIF、WebP 四种格式。
+     * </p>
+     *
+     * @param header 文件头字节数组（至少12字节）
+     * @param ext    文件扩展名（小写）
+     * @return 如果文件头与扩展名匹配则返回 {@code true}，否则返回 {@code false}
      */
     private static boolean isValidImage(byte[] header, String ext) {
         // JPG: FF D8 FF
@@ -97,7 +113,10 @@ public final class FileValidator {
     }
 
     /**
-     * 获取文件扩展名
+     * 获取文件扩展名。
+     *
+     * @param filename 文件名
+     * @return 文件扩展名（不包含"."），如果文件名为空或不含扩展名则返回空字符串
      */
     private static String getExtension(String filename) {
         if (filename == null || !filename.contains(".")) {

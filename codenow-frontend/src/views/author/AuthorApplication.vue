@@ -1,5 +1,6 @@
 <template>
   <section class="author-page" v-loading="loading">
+    <!-- 页面顶部横幅 -->
     <div class="hero">
       <div>
         <p class="eyebrow">AUTHOR PROGRAM</p>
@@ -9,6 +10,7 @@
       <el-tag v-if="userStore.isAuthor" type="success" size="large">已成为作者</el-tag>
     </div>
 
+    <!-- 已是作者时的提示信息 -->
     <el-alert
       v-if="userStore.isAuthor"
       title="你的作者身份已生效"
@@ -18,6 +20,7 @@
       show-icon
     />
 
+    <!-- 申请审核中的进度展示 -->
     <el-card v-else-if="latest?.status === 'PENDING'" class="status-card" shadow="never">
       <template #header><strong>申请审核中</strong></template>
       <el-steps :active="1" finish-status="success" align-center>
@@ -31,6 +34,7 @@
       </div>
     </el-card>
 
+    <!-- 申请表单卡片（新申请或重新提交） -->
     <el-card v-else class="form-card" shadow="never">
       <template #header>
         <div class="card-title">
@@ -72,6 +76,7 @@
       </el-form>
     </el-card>
 
+    <!-- 申请历史记录表格 -->
     <el-card class="history-card" shadow="never">
       <template #header><strong>申请记录</strong></template>
       <el-table :data="history" empty-text="暂无申请记录">
@@ -91,6 +96,7 @@
 </template>
 
 <script setup>
+/** 作者申请页面 - 用户提交作者申请、查看审核状态和申请历史 */
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
@@ -102,17 +108,21 @@ const loading = ref(false)
 const submitting = ref(false)
 const latest = ref(null)
 const history = ref([])
+/** 申请表单数据 */
 const form = reactive({ reason: '', expertiseText: '', bio: '', portfolioUrl: '', websiteUrl: '', agreementAccepted: false })
+/** 申请状态对应的显示文本和标签类型映射 */
 const statusMeta = {
   PENDING: { label: '审核中', type: 'warning' },
   APPROVED: { label: '已通过', type: 'success' },
   REJECTED: { label: '未通过', type: 'danger' },
   CANCELED: { label: '已撤回', type: 'info' },
 }
+/** 可选 URL 字段的格式校验器 */
 const optionalUrl = (_rule, value, callback) => {
   if (!value || /^https?:\/\/\S+$/.test(value)) callback()
   else callback(new Error('请输入有效的 HTTP/HTTPS 地址'))
 }
+/** 表单校验规则 */
 const rules = {
   reason: [{ required: true, message: '请输入申请理由', trigger: 'blur' }, { min: 50, max: 1000, message: '长度应为 50-1000 个字符', trigger: 'blur' }],
   expertiseText: [{ required: true, message: '请填写擅长领域', trigger: 'blur' }],
@@ -122,13 +132,16 @@ const rules = {
   agreementAccepted: [{ validator: (_r, value, callback) => value ? callback() : callback(new Error('请先同意作者创作规范')), trigger: 'change' }],
 }
 
+/** 格式化时间为中文本地格式 */
 function formatTime(value) {
   return value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '-'
 }
 
+/** 加载最新申请状态和历史记录 */
 async function load() {
   loading.value = true
   try {
+    // 最新状态决定页面主分支，历史记录用于追溯；二者并行加载避免串行等待。
     const [latestRes, historyRes] = await Promise.all([
       getAuthorApplicationLatest(),
       getAuthorApplicationHistory({ pageNum: 1, pageSize: 20 }),
@@ -141,6 +154,7 @@ async function load() {
   }
 }
 
+/** 提交作者申请表单 */
 async function submit() {
   await formRef.value.validate()
   const expertise = [...new Set(form.expertiseText.split(/[,，]/).map((item) => item.trim()).filter(Boolean))]
@@ -160,6 +174,7 @@ async function submit() {
   }
 }
 
+/** 撤回当前审核中的申请 */
 async function cancelPending() {
   await ElMessageBox.confirm('撤回后可以修改资料并重新提交，确定撤回吗？', '撤回作者申请', { type: 'warning' })
   submitting.value = true
@@ -172,6 +187,7 @@ async function cancelPending() {
   }
 }
 
+/** 页面挂载时加载用户信息和申请数据 */
 onMounted(async () => {
   if (!userStore.userInfo) await userStore.fetchUserInfo()
   await load()

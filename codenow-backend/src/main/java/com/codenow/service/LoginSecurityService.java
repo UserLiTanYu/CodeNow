@@ -12,6 +12,10 @@ import java.time.Duration;
 import java.util.Base64;
 import java.util.UUID;
 
+/**
+ * 登录安全服务。验证码验证后删除以抑制重放，但读取与删除是两个 Redis 命令，并非严格原子消费；
+ * 登录失败次数通过 Redis INCR 累加，使多个应用实例共享同一份临时锁定状态。
+ */
 @Service
 @RequiredArgsConstructor
 public class LoginSecurityService {
@@ -22,6 +26,11 @@ public class LoginSecurityService {
 
     private final StringRedisTemplate redisTemplate;
 
+    /**
+     * 创建图形验证码
+     *
+     * @return 验证码视图对象（包含验证码ID和SVG图片）
+     */
     public CaptchaVO createCaptcha() {
         int left = RANDOM.nextInt(9) + 1;
         int right = RANDOM.nextInt(9) + 1;
@@ -37,6 +46,12 @@ public class LoginSecurityService {
         return new CaptchaVO(captchaId, image);
     }
 
+    /**
+     * 验证图形验证码，验证后立即删除以抑制重放
+     *
+     * @param captchaId 验证码ID
+     * @param answer    用户输入的答案
+     */
     public void verifyCaptcha(String captchaId, String answer) {
         String key = captchaKey(captchaId);
         String expected = redisTemplate.opsForValue().get(key);
@@ -46,17 +61,33 @@ public class LoginSecurityService {
         }
     }
 
+    /**
+     * 检查账号是否因登录失败次数过多而被锁定
+     *
+     * @param account 账号
+     * @return 被锁定时返回 true
+     */
     public boolean isLocked(String account) {
         String value = redisTemplate.opsForValue().get(failureKey(account));
         return value != null && Integer.parseInt(value) >= MAX_FAILURES;
     }
 
+    /**
+     * 记录一次登录失败
+     *
+     * @param account 账号
+     */
     public void recordFailure(String account) {
         String key = failureKey(account);
         Long failures = redisTemplate.opsForValue().increment(key);
         if (failures != null && failures == 1) redisTemplate.expire(key, FAILURE_TTL);
     }
 
+    /**
+     * 清除账号的登录失败记录（登录成功后调用）
+     *
+     * @param account 账号
+     */
     public void clearFailures(String account) {
         redisTemplate.delete(failureKey(account));
     }
