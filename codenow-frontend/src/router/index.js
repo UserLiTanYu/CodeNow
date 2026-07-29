@@ -83,7 +83,7 @@ const router = createRouter({
         {
           path: 'site-profile',
           name: 'site-profile',
-          meta: { title: '个人简介' },
+          meta: { title: '站点资料' },
           component: () => import('@/views/site/SiteProfileEdit.vue'),
         },
       ],
@@ -165,6 +165,12 @@ const router = createRouter({
           name: 'blog-authors',
           meta: { title: '作者发现' },
           component: () => import('@/views/blog/BlogAuthors.vue'),
+        },
+        {
+          path: 'about',
+          name: 'blog-about',
+          meta: { title: '关于本站' },
+          component: () => import('@/views/blog/BlogAbout.vue'),
         },
         {
           path: 'author/:id',
