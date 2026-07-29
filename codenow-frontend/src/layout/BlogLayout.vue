@@ -11,7 +11,7 @@
         <nav class="nav-categories desktop-nav" aria-label="博客主导航">
           <router-link to="/blog" class="nav-item">文章</router-link>
           <router-link to="/blog/authors" class="nav-item">作者广场</router-link>
-          <a href="#blog-about" class="nav-item">关于本站</a>
+          <router-link to="/blog/about" class="nav-item">关于本站</router-link>
         </nav>
 
         <!-- 头部右侧操作区域 -->
@@ -106,6 +106,7 @@
         >
           <router-link to="/blog" class="mobile-nav-item">文章</router-link>
           <router-link to="/blog/authors" class="mobile-nav-item">作者广场</router-link>
+          <router-link to="/blog/about" class="mobile-nav-item">关于本站</router-link>
           <div
             v-for="cat in categories"
             :key="cat.id"
@@ -223,7 +224,7 @@
           </div>
         </div>
         <!-- 当前作者个人简介 -->
-        <div id="blog-about" class="sidebar-section">
+        <div id="author-profile-summary" class="sidebar-section">
           <h3 class="sidebar-title">个人简介</h3>
           <p class="about-text">{{ authorBio || '该作者暂未填写个人简介。' }}</p>
         </div>
@@ -312,7 +313,7 @@ const isAuthorPage = computed(() => /^\/blog\/author\/\d+/.test(route.path))
 const isAuthorsPage = computed(() => route.path === '/blog/authors')
 /** 个人功能、政策和作者广场使用独立单栏布局。 */
 const isSidebarlessPage = computed(() => isAuthorsPage.value
-  || /^\/blog\/(profile|favorites|comments|notifications|author-application|terms|privacy)$/.test(route.path))
+  || /^\/blog\/(about|profile|favorites|comments|notifications|author-application|terms|privacy)$/.test(route.path))
 /** 公开博客首页使用站长作者范围。 */
 const isSiteHome = computed(() => route.path === '/blog')
 /** 作者ID（从路由参数提取） */

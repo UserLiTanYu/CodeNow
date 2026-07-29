@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const request = vi.hoisted(() => ({ get: vi.fn() }))
 vi.mock('@/utils/request', () => ({ default: request }))
 
-import { getPublicAuthor, getPublicAuthorArticles, getPublicAuthors } from './blog'
+import { getPublicAuthor, getPublicAuthorArticles, getPublicAuthors, getSiteProfile, getSiteStats } from './blog'
 
 describe('public author api', () => {
   beforeEach(() => vi.clearAllMocks())
@@ -19,5 +19,13 @@ describe('public author api', () => {
     expect(request.get).toHaveBeenNthCalledWith(1, '/blog/authors', { params: discovery })
     expect(request.get).toHaveBeenNthCalledWith(2, '/blog/authors/7')
     expect(request.get).toHaveBeenNthCalledWith(3, '/blog/authors/7/articles', { params: articles })
+  })
+
+  it('uses the public site profile and statistics endpoints', () => {
+    getSiteProfile()
+    getSiteStats()
+
+    expect(request.get).toHaveBeenNthCalledWith(1, '/blog/site-profile')
+    expect(request.get).toHaveBeenNthCalledWith(2, '/blog/site-stats')
   })
 })

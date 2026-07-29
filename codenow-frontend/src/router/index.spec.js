@@ -91,6 +91,16 @@ describe('authGuard', () => {
     await expect(authGuard({ path: '/blog/authors', fullPath: '/blog/authors' })).resolves.toBe(true)
   })
 
+  it('registers the public about page without auth metadata', async () => {
+    const router = (await import('./index')).default
+    const about = router.getRoutes().find((route) => route.name === 'blog-about')
+
+    expect(about?.path).toBe('/blog/about')
+    expect(about?.meta.title).toBe('关于本站')
+    expect(about?.meta.requiresAuth).not.toBe(true)
+    await expect(authGuard({ path: '/blog/about', fullPath: '/blog/about' })).resolves.toBe(true)
+  })
+
   it('prevents ordinary users from entering the admin area', async () => {
     localStorage.setItem('token', 'member-token')
     globalThis.fetch = vi.fn().mockResolvedValue({

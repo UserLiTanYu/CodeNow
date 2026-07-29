@@ -115,6 +115,24 @@ describe('BlogLayout author category navigation', () => {
     expect(wrapper.find('.blog-sidebar').exists()).toBe(false)
   })
 
+  it('links both desktop and mobile navigation to the standalone about page', async () => {
+    route.path = '/blog/about'
+    route.fullPath = '/blog/about'
+    route.params = {}
+
+    const wrapper = mountLayout()
+    await flushPromises()
+    await wrapper.get('.menu-trigger').trigger('click')
+
+    const links = wrapper.findAllComponents(RouterLinkStub)
+      .filter(item => item.text() === '关于本站')
+    expect(links).toHaveLength(2)
+    expect(links.every(item => item.props('to') === '/blog/about')).toBe(true)
+    expect(wrapper.get('.blog-body').classes()).toContain('sidebarless-layout')
+    expect(wrapper.find('.blog-category-sidebar').exists()).toBe(false)
+    expect(wrapper.find('.blog-sidebar').exists()).toBe(false)
+  })
+
   it('hides article sidebars on member pages', async () => {
     route.path = '/blog/profile'
     route.fullPath = '/blog/profile'

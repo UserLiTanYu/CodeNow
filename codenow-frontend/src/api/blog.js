@@ -55,6 +55,9 @@ export const getPublicAuthor = (id, config) => config
 /** 获取管理员在博客首页展示的公开简介。 */
 export const getSiteProfile = () => request.get('/blog/site-profile')
 
+/** 获取关于本站页面展示的公开聚合统计。 */
+export const getSiteStats = () => request.get('/blog/site-stats')
+
 /**
  * 获取指定作者的文章列表（分页）
  * @param {number|string} id - 作者 ID
