@@ -58,3 +58,8 @@ docs/
 # 本地配置
 application-local.yaml
 application-local.yml
+
+# Redis 本地数据
+appendonly.aof
+dump.rdb
+redis/
