@@ -162,6 +162,16 @@
                 >
                   <el-icon :class="{ expanded: isCategoryExpanded(cat.id) }"><ArrowRight /></el-icon>
                 </button>
+                <button
+                  v-else
+                  type="button"
+                  class="category-tree-toggle"
+                  :aria-expanded="isArticleExpanded(cat.id)"
+                  :aria-label="`${isArticleExpanded(cat.id) ? '折叠' : '展开'}${cat.name}的文章`"
+                  @click="toggleCategoryArticles(cat.id)"
+                >
+                  <el-icon :class="{ expanded: isArticleExpanded(cat.id) }"><ArrowRight /></el-icon>
+                </button>
               </div>
               <Transition name="category-children">
                 <div
@@ -169,13 +179,40 @@
                   :id="`category-children-${cat.id}`"
                   class="category-tree-children"
                 >
-                  <router-link
-                    v-for="child in cat.children"
-                    :key="child.id"
-                    :to="categoryTarget(child.id)"
-                    :class="['category-tree-child', { active: isCategorySelected(child.id) }]"
-                    :exact-active-class="filterExactActiveClass"
-                  >{{ child.name }}</router-link>
+                  <div v-for="child in cat.children" :key="child.id" class="category-tree-leaf">
+                    <div :class="['category-tree-leaf-row', { active: isCategorySelected(child.id) }]">
+                      <router-link
+                        :to="categoryTarget(child.id)"
+                        :class="['category-tree-child', { active: isCategorySelected(child.id) }]"
+                        :exact-active-class="filterExactActiveClass"
+                      >{{ child.name }}</router-link>
+                      <button
+                        type="button"
+                        class="category-tree-toggle category-tree-toggle-sm"
+                        :aria-expanded="isArticleExpanded(child.id)"
+                        :aria-label="`${isArticleExpanded(child.id) ? '折叠' : '展开'}${child.name}的文章`"
+                        @click="toggleCategoryArticles(child.id)"
+                      >
+                        <el-icon :class="{ expanded: isArticleExpanded(child.id) }"><ArrowRight /></el-icon>
+                      </button>
+                    </div>
+                    <Transition name="category-children">
+                      <div v-if="isArticleExpanded(child.id)" class="category-article-list">
+                        <div v-if="isArticleLoading(child.id)" class="article-loading">
+                          <el-skeleton :rows="2" animated />
+                        </div>
+                        <template v-else-if="categoryArticlesMap[child.id]?.length">
+                          <router-link
+                            v-for="item in categoryArticlesMap[child.id]"
+                            :key="item.article.id"
+                            :to="`/blog/article/${item.article.id}`"
+                            class="category-article-item"
+                          >{{ item.article.title }}</router-link>
+                        </template>
+                        <p v-else class="article-empty">暂无文章</p>
+                      </div>
+                    </Transition>
+                  </div>
                 </div>
               </Transition>
             </div>
@@ -273,6 +310,12 @@ const authorBio = ref('')
 
 /** 左侧栏已展开的一级分类ID；初始为空，默认全部折叠。 */
 const expandedCategoryIds = ref(new Set())
+/** 左侧栏已展开文章列表的分类ID集合 */
+const expandedArticleIds = ref(new Set())
+/** 按分类ID缓存的文章列表 { categoryId: article[] } */
+const categoryArticlesMap = ref({})
+/** 正在加载文章的分类ID集合 */
+const loadingArticleIds = ref(new Set())
 
 /** 右侧标签按知识体系展示；未列入的新增标签保持接口顺序并排在末尾。 */
 const TAG_DISPLAY_ORDER = [
@@ -403,6 +446,45 @@ function toggleCategory(categoryId) {
   if (next.has(id)) next.delete(id)
   else next.add(id)
   expandedCategoryIds.value = next
+}
+
+/** 切换分类下的文章列表展开状态，首次展开时异步加载文章。 */
+async function toggleCategoryArticles(categoryId) {
+  const id = String(categoryId)
+  const next = new Set(expandedArticleIds.value)
+  if (next.has(id)) {
+    next.delete(id)
+    expandedArticleIds.value = next
+    return
+  }
+  next.add(id)
+  expandedArticleIds.value = next
+  // 已缓存则跳过加载
+  if (categoryArticlesMap.value[categoryId]) return
+  loadingArticleIds.value = new Set([...loadingArticleIds.value, categoryId])
+  try {
+    const params = { pageNum: 1, pageSize: 50, categoryId, sort: 'learning' }
+    if (scopedAuthorId.value) params.authorId = scopedAuthorId.value
+    else if (isSiteHome.value) params.authorId = SITE_OWNER_ID
+    const res = await getBlogArticles(params)
+    categoryArticlesMap.value = { ...categoryArticlesMap.value, [categoryId]: res.data?.records || [] }
+  } catch {
+    categoryArticlesMap.value = { ...categoryArticlesMap.value, [categoryId]: [] }
+  } finally {
+    const nextLoading = new Set(loadingArticleIds.value)
+    nextLoading.delete(categoryId)
+    loadingArticleIds.value = nextLoading
+  }
+}
+
+/** 判断分类的文章列表是否展开。 */
+function isArticleExpanded(categoryId) {
+  return expandedArticleIds.value.has(String(categoryId))
+}
+
+/** 判断分类文章是否正在加载。 */
+function isArticleLoading(categoryId) {
+  return loadingArticleIds.value.has(categoryId)
 }
 
 /** 判断作者标签是否处于选中状态。 */
@@ -966,6 +1048,75 @@ onMounted(() => {
 }
 .category-tree-child.active {
   font-weight: 600;
+}
+.category-tree-leaf + .category-tree-leaf {
+  margin-top: 2px;
+}
+.category-tree-leaf-row {
+  display: flex;
+  align-items: center;
+  border-radius: 7px;
+  transition: background-color 0.16s ease;
+}
+.category-tree-leaf-row:hover,
+.category-tree-leaf-row.active {
+  background: var(--blog-color-primary-soft);
+}
+.category-tree-toggle-sm {
+  width: 26px;
+  height: 26px;
+  margin-right: 2px;
+  flex: 0 0 26px;
+  font-size: 12px;
+}
+.category-article-list {
+  margin: 2px 0 6px 18px;
+  padding: 2px 0 2px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.category-article-item {
+  position: relative;
+  padding: 5px 8px 5px 16px;
+  border-radius: 6px;
+  color: var(--blog-color-text-muted);
+  font-size: 12px;
+  line-height: 1.35;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.16s ease, background-color 0.16s ease;
+}
+.category-article-item::before {
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #d0dae4;
+  content: '';
+  transform: translateY(-50%);
+  transition: background-color 0.16s ease;
+}
+.category-article-item:hover {
+  color: var(--blog-color-primary);
+  background: var(--blog-color-primary-soft);
+}
+.category-article-item:hover::before {
+  background: var(--blog-color-primary);
+}
+.article-loading {
+  padding: 4px 8px;
+}
+.article-empty {
+  margin: 0;
+  padding: 5px 8px;
+  color: var(--blog-color-text-muted);
+  font-size: 11px;
+  font-style: italic;
 }
 .category-children-enter-active,
 .category-children-leave-active {

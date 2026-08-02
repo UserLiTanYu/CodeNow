@@ -126,7 +126,9 @@ const slogan = computed(() => profile.slogan || defaults.slogan)
 const description = computed(() => profile.description || defaults.description)
 const renderedAboutContent = computed(() => {
   const source = profile.aboutContent || profile.bio || defaults.aboutContent
-  return DOMPurify.sanitize(marked(source), { ADD_ATTR: ['class'] })
+  const result = marked(source)
+  const html = typeof result === 'string' ? result : ''
+  return DOMPurify.sanitize(html, { ADD_ATTR: ['class'] })
 })
 const foundedYear = computed(() => profile.foundedAt?.slice(0, 4) || '')
 const hasPublicContact = computed(() => Boolean(profile.contactEmail || profile.githubUrl || profile.foundedAt))

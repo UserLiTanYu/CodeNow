@@ -41,6 +41,15 @@
       <!-- 文章正文内容（Markdown 渲染后的 HTML） -->
       <div class="article-body markdown-body" v-html="renderedContent"></div>
 
+      <!-- 学习顺序导航：下一篇 -->
+      <nav v-if="nextArticle" class="next-article-nav" aria-label="学习顺序导航">
+        <span class="next-article-label">下一篇</span>
+        <router-link :to="`/blog/article/${nextArticle.id}`" class="next-article-link">
+          <span class="next-article-title">{{ nextArticle.title }}</span>
+          <el-icon><ArrowRight /></el-icon>
+        </router-link>
+      </nav>
+
       <!-- 评论区 -->
       <div class="comment-section">
         <h3 class="section-title">评论 ({{ commentTotalCount }})</h3>
@@ -83,7 +92,7 @@
 /** 博客文章详情页 - 展示文章内容、作者信息、标签、评论区和收藏功能 */
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Folder, Clock, Star, StarFilled, View } from '@element-plus/icons-vue'
+import { Folder, Clock, Star, StarFilled, View, ArrowRight } from '@element-plus/icons-vue'
 import { marked } from 'marked'
 import { markedHighlight } from 'marked-highlight'
 import DOMPurify from 'dompurify'
@@ -104,7 +113,6 @@ import yaml from 'highlight.js/lib/languages/yaml'
 import go from 'highlight.js/lib/languages/go'
 import rust from 'highlight.js/lib/languages/rust'
 import cpp from 'highlight.js/lib/languages/cpp'
-import 'highlight.js/styles/github.css'
 
 hljs.registerLanguage('javascript', javascript)
 hljs.registerLanguage('typescript', typescript)
@@ -122,7 +130,7 @@ hljs.registerLanguage('go', go)
 hljs.registerLanguage('rust', rust)
 hljs.registerLanguage('c', cpp)
 hljs.registerLanguage('cpp', cpp)
-import { getBlogArticle } from '@/api/blog'
+import { getBlogArticle, getBlogArticles } from '@/api/blog'
 import { getCommentTree } from '@/api/comment'
 import { formatDate } from '@/utils/format'
 import { avatarUrl, useDefaultAvatar } from '@/utils/avatar'
@@ -130,16 +138,21 @@ import { addFavorite, getFavoriteStatus, removeFavorite } from '@/api/member'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 
-/** 配置 marked 使用 highlight.js 进行代码高亮（v18 使用 marked-highlight 扩展） */
-marked.use(markedHighlight({
-  langPrefix: 'hljs language-',
-  highlight(code, lang) {
-    if (lang && hljs.getLanguage(lang)) {
-      return hljs.highlight(code, { language: lang }).value
-    }
-    return hljs.highlightAuto(code).value
-  },
-}))
+// 配置 marked 使用 highlight.js 进行代码高亮
+// 注意：每次模块加载时调用 marked.use() 会合并配置而非覆盖，
+// 所以用 _hljsConfigured 标记避免 HMR 重复注册
+if (!globalThis._hljsConfigured) {
+  marked.use(markedHighlight({
+    langPrefix: 'hljs language-',
+    highlight(code, lang) {
+      if (lang && hljs.getLanguage(lang)) {
+        return hljs.highlight(code, { language: lang }).value
+      }
+      return hljs.highlightAuto(code).value
+    },
+  }))
+  globalThis._hljsConfigured = true
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -149,6 +162,7 @@ const author = ref(null)
 const categoryName = ref('')
 const tags = ref([])
 const comments = ref([])
+const nextArticle = ref(null)
 const loading = ref(true)
 const articleError = ref('')
 const commentError = ref('')
@@ -164,7 +178,10 @@ let requestId = 0
 /** 将 Markdown 内容渲染为安全的 HTML（经过 DOMPurify 消毒） */
 const renderedContent = computed(() => {
   if (!article.value?.content) return ''
-  const html = marked(article.value.content)
+  const result = marked(article.value.content)
+  // marked-highlight 使用同步 highlight 函数，应返回字符串；
+  // 若因模块初始化时序返回 Promise，则回退为空（下次依赖变化时 computed 会重新求值）
+  const html = typeof result === 'string' ? result : ''
   // 安全顺序固定为 Markdown/高亮生成 HTML 后再清洗；class 仅供代码高亮样式使用，勿随意扩大白名单。
   return DOMPurify.sanitize(html, { ADD_ATTR: ['class'] })
 })
@@ -185,6 +202,7 @@ async function fetchArticle(articleId) {
     commentPageNum.value = 1
     fetchComments()
     fetchFavoriteStatus()
+    fetchNextArticle()
   } catch {
     if (currentRequest !== requestId) return
     article.value = null
@@ -229,6 +247,27 @@ async function toggleFavorite() {
     }
   } finally {
     favoriteLoading.value = false
+  }
+}
+
+/** 获取同分类下一篇学习顺序的文章 */
+async function fetchNextArticle() {
+  nextArticle.value = null
+  if (!article.value?.categoryId) return
+  try {
+    const res = await getBlogArticles({
+      pageNum: 1,
+      pageSize: 100,
+      categoryId: article.value.categoryId,
+      sort: 'learning',
+    })
+    const records = res.data?.records || []
+    const idx = records.findIndex(r => r.article.id === article.value.id)
+    if (idx >= 0 && idx < records.length - 1) {
+      nextArticle.value = records[idx + 1].article
+    }
+  } catch {
+    nextArticle.value = null
   }
 }
 
@@ -407,6 +446,45 @@ watch(
   border: 1px solid var(--blog-color-border);
   border-radius: var(--blog-radius-card);
   background: var(--blog-color-surface);
+}
+
+/* 学习顺序导航：下一篇 */
+.next-article-nav {
+  margin-top: var(--blog-space-4);
+  padding: var(--blog-space-4) var(--blog-space-5);
+  display: flex;
+  align-items: center;
+  gap: var(--blog-space-3);
+  border: 1px solid var(--blog-color-border);
+  border-radius: var(--blog-radius-card);
+  background: var(--blog-color-surface);
+}
+.next-article-label {
+  flex-shrink: 0;
+  color: var(--blog-color-text-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+.next-article-link {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  justify-content: flex-end;
+  color: var(--blog-color-primary);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: opacity 0.16s ease;
+}
+.next-article-link:hover {
+  opacity: 0.75;
+}
+.next-article-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 评论区 */
