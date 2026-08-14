@@ -63,3 +63,7 @@ application-local.yml
 appendonly.aof
 dump.rdb
 redis/
+
+# 本地智能体指令文件（不提交到远程仓库）
+AGENTS.md
+AGENTS-CN.md
