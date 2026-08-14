@@ -215,6 +215,23 @@
                   </div>
                 </div>
               </Transition>
+              <!-- 无子分类的根级分类：直接展开该分类下的文章列表 -->
+              <Transition name="category-children">
+                <div v-if="!cat.children?.length && isArticleExpanded(cat.id)" class="category-article-list">
+                  <div v-if="isArticleLoading(cat.id)" class="article-loading">
+                    <el-skeleton :rows="2" animated />
+                  </div>
+                  <template v-else-if="categoryArticlesMap[cat.id]?.length">
+                    <router-link
+                      v-for="item in categoryArticlesMap[cat.id]"
+                      :key="item.article.id"
+                      :to="`/blog/article/${item.article.id}`"
+                      class="category-article-item"
+                    >{{ item.article.title }}</router-link>
+                  </template>
+                  <p v-else class="article-empty">暂无文章</p>
+                </div>
+              </Transition>
             </div>
           </div>
         </section>
@@ -228,7 +245,7 @@
       <aside v-if="!isSidebarlessPage" class="blog-sidebar">
         <!-- 热门文章列表 -->
         <div class="sidebar-section">
-          <h3 class="sidebar-title">{{ isAuthorPage ? '作者热门文章' : '热门文章' }}</h3>
+          <h3 class="sidebar-title">{{ isAuthorContextPage ? '作者热门文章' : '热门文章' }}</h3>
           <div v-if="hotArticles.length > 0" class="hot-list">
             <router-link
               v-for="(item, index) in hotArticles"
@@ -247,7 +264,7 @@
         </div>
         <!-- 标签云 -->
         <div class="sidebar-section">
-          <h3 class="sidebar-title">{{ isAuthorPage ? '作者标签' : '标签' }}</h3>
+          <h3 class="sidebar-title">{{ isAuthorContextPage ? '作者标签' : '标签' }}</h3>
           <div class="tag-cloud">
             <router-link
               v-for="tag in orderedTags"
@@ -288,6 +305,7 @@ import { ArrowRight, Close, EditPen, Menu, Search, Setting, User, View } from '@
 import { getBlogArticles, getBlogCategories, getBlogTags, getHotArticles, getPublicAuthor, getPublicAuthorCategories, getPublicAuthorTags, getPublicAuthorArticles, getSiteProfile } from '@/api/blog'
 import { SITE_OWNER_ID } from '@/config/site'
 import { avatarUrl, useDefaultAvatar } from '@/utils/avatar'
+import { currentArticleAuthorId } from '@/utils/blogArticleAuthor'
 import { getUnreadNotificationCount } from '@/api/member'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
@@ -359,21 +377,40 @@ const isSidebarlessPage = computed(() => isAuthorsPage.value
   || /^\/blog\/(about|profile|favorites|comments|notifications|author-application|terms|privacy)$/.test(route.path))
 /** 公开博客首页使用站长作者范围。 */
 const isSiteHome = computed(() => route.path === '/blog')
+/** 文章详情页。 */
+const isArticlePage = computed(() => /^\/blog\/article\/\d+/.test(route.path))
+/** 文章详情页当前文章的作者ID（由 BlogArticle.vue 写入，加载完成前为 null）。 */
+const articleAuthorId = currentArticleAuthorId
 /** 作者ID（从路由参数提取） */
 const authorId = computed(() => route.params.id)
-/** 作者主页的数据作者范围；首页使用独立的管理员内容范围。 */
-const scopedAuthorId = computed(() => isAuthorPage.value ? authorId.value : null)
-const isAuthorScopedPage = computed(() => isAuthorPage.value || isSiteHome.value)
+/** 侧边栏数据作者范围；作者主页使用路由ID，文章详情页使用文章作者ID。 */
+const scopedAuthorId = computed(() => {
+  if (isAuthorPage.value) return authorId.value
+  if (isArticlePage.value) return articleAuthorId.value
+  return null
+})
+/** 作者上下文页面：作者主页或文章详情页（作者非站长）。此范围下侧边栏链接保持作者上下文。 */
+const isAuthorContextPage = computed(() =>
+  isAuthorPage.value
+  || (isArticlePage.value && !!articleAuthorId.value && String(articleAuthorId.value) !== String(SITE_OWNER_ID)))
+const isAuthorScopedPage = computed(() => isAuthorContextPage.value || isSiteHome.value)
 /** 作者页选中的分类ID，以URL为唯一状态源。 */
 const selectedAuthorCategoryId = computed(() => route.query.categoryId ?? null)
 const filterExactActiveClass = computed(() => isAuthorScopedPage.value ? 'author-route-exact-match' : 'router-link-exact-active')
+/** 当前作者上下文中的作者ID（站长文章返回 null，保持全站链接）。 */
+function authorContextPath() {
+  if (isAuthorPage.value && authorId.value) return authorId.value
+  if (isArticlePage.value && articleAuthorId.value && String(articleAuthorId.value) !== String(SITE_OWNER_ID)) return articleAuthorId.value
+  return null
+}
 /** 左侧“全部文章”的跳转目标。 */
-const categoryHomeTarget = computed(() => isAuthorPage.value && authorId.value
-  ? `/blog/author/${authorId.value}`
-  : '/blog')
+const categoryHomeTarget = computed(() => {
+  const aid = authorContextPath()
+  return aid ? `/blog/author/${aid}` : '/blog'
+})
 /** 左侧“全部文章”是否处于选中状态。 */
 const isCategoryHomeSelected = computed(() => isAuthorScopedPage.value
-  ? !route.query.categoryId && !route.query.tagId && (isAuthorPage.value || isSiteHome.value)
+  ? !route.query.categoryId && !route.query.tagId && (isAuthorContextPage.value || isSiteHome.value)
   : route.path === '/blog')
 
 /** 标准化搜索关键词：去除首尾空格并限制最大长度为100字符 */
@@ -398,19 +435,21 @@ function clearSearch() {
   }
 }
 
-/** 分类链接：首页和作者页保持作者上下文，其他页面进入全站分类页。 */
+/** 分类链接：作者上下文页面保持作者范围，首页保持站长范围，其他页面进入全站分类页。 */
 function categoryTarget(categoryId) {
-  if (isAuthorPage.value && authorId.value) {
-    return { path: `/blog/author/${authorId.value}`, query: { categoryId } }
+  const aid = authorContextPath()
+  if (aid) {
+    return { path: `/blog/author/${aid}`, query: { categoryId } }
   }
   if (isSiteHome.value) return { path: '/blog', query: { categoryId } }
   return `/blog/category/${categoryId}`
 }
 
-/** 标签链接：首页和作者页保持作者上下文，其他页面进入全站标签页。 */
+/** 标签链接：作者上下文页面保持作者范围，首页保持站长范围，其他页面进入全站标签页。 */
 function tagTarget(tagId) {
-  if (isAuthorPage.value && authorId.value) {
-    return { path: `/blog/author/${authorId.value}`, query: { tagId } }
+  const aid = authorContextPath()
+  if (aid) {
+    return { path: `/blog/author/${aid}`, query: { tagId } }
   }
   if (isSiteHome.value) return { path: '/blog', query: { tagId } }
   return `/blog/tag/${tagId}`
@@ -555,8 +594,11 @@ async function loadSidebarData() {
   articleTotal.value = 0
   authorBio.value = ''
   if (isSidebarlessPage.value) return
+  // 文章详情页作者尚未解析前不加载全站数据，避免侧边栏闪烁与多余请求；
+  // 作者解析完成后由 watcher 重新触发本函数。
+  if (isArticlePage.value && !scopeId) return
   try {
-    if (scopeId) {
+    if (scopeId && !(isArticlePage.value && String(scopeId) === String(SITE_OWNER_ID))) {
       // 先确认作者仍可公开访问，避免不存在或已下架作者触发多条附属接口错误提示。
       const profileRes = await getPublicAuthor(scopeId, { silentError: true })
       if (currentRequest !== sidebarRequestId) return
@@ -573,7 +615,8 @@ async function loadSidebarData() {
       authorBio.value = profileRes?.data?.bio?.trim() || ''
       return
     }
-    if (isSiteHome.value) {
+    if (isSiteHome.value || (isArticlePage.value && scopeId)) {
+      // 站长文章与博客首页使用同一站长内容范围。
       const [profileRes, catRes, tagRes, artRes] = await Promise.all([
         getSiteProfile().catch(() => null),
         getBlogCategories({ ownerId: SITE_OWNER_ID }),
