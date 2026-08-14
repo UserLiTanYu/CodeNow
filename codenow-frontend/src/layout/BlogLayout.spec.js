@@ -1,7 +1,8 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ref } from 'vue'
 import BlogLayout from './BlogLayout.vue'
-import { getPublicAuthor, getPublicAuthorArticles, getPublicAuthorCategories, getPublicAuthorTags } from '@/api/blog'
+import { getBlogCategories, getBlogTags, getHotArticles, getPublicAuthor, getPublicAuthorArticles, getPublicAuthorCategories, getPublicAuthorTags } from '@/api/blog'
 
 const route = {
   path: '/blog/author/7',
@@ -144,5 +145,62 @@ describe('BlogLayout author category navigation', () => {
     expect(wrapper.get('.blog-body').classes()).toContain('sidebarless-layout')
     expect(wrapper.find('.blog-category-sidebar').exists()).toBe(false)
     expect(wrapper.find('.blog-sidebar').exists()).toBe(false)
+  })
+})
+
+describe('BlogLayout article page author scope', () => {
+  beforeEach(() => {
+    route.path = '/blog/article/99'
+    route.fullPath = '/blog/article/99'
+    route.params = { id: '99' }
+    route.query = {}
+    vi.clearAllMocks()
+    getPublicAuthor.mockResolvedValue({ data: { bio: '专注 Spring Boot 与工程实践' } })
+    getPublicAuthorCategories.mockResolvedValue({ data: [{ id: 2, name: '作者 Spring', children: [] }] })
+    getPublicAuthorTags.mockResolvedValue({ data: [{ id: 9, name: 'Spring 标签' }] })
+    getPublicAuthorArticles.mockResolvedValue({ data: { records: [] } })
+  })
+
+  it('scopes sidebar categories and hot articles to the article author', async () => {
+    const wrapper = mount(BlogLayout, {
+      global: {
+        provide: { articleAuthorId: ref(7) },
+        stubs: {
+          RouterLink: RouterLinkStub,
+          RouterView: true,
+          ElInput: true,
+          ElDropdown: true,
+          ElDropdownMenu: true,
+          ElDropdownItem: true,
+          ElIcon: { template: '<i><slot /></i>' },
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(getPublicAuthor).toHaveBeenCalledWith(7, { silentError: true })
+    expect(getPublicAuthorCategories).toHaveBeenCalledWith(7)
+    expect(getPublicAuthorTags).toHaveBeenCalledWith(7)
+    expect(getPublicAuthorArticles).toHaveBeenCalledWith(7, { pageNum: 1, pageSize: 3, sort: 'mostViewed' })
+    expect(getBlogCategories).not.toHaveBeenCalled()
+
+    const allLink = wrapper.findAllComponents(RouterLinkStub).find(item => item.text().includes('全部文章'))
+    expect(allLink.props('to')).toBe('/blog/author/7')
+    const categoryLink = wrapper.findAllComponents(RouterLinkStub).find(item => item.text() === '作者 Spring')
+    expect(categoryLink.props('to')).toEqual({ path: '/blog/author/7', query: { categoryId: 2 } })
+    const tagLink = wrapper.findAllComponents(RouterLinkStub).find(item => item.text() === 'Spring 标签')
+    expect(tagLink.props('to')).toEqual({ path: '/blog/author/7', query: { tagId: 9 } })
+    expect(wrapper.text()).toContain('作者热门文章')
+    expect(wrapper.text()).toContain('个人简介')
+  })
+
+  it('does not load global sidebar data before the article author is resolved', async () => {
+    mountLayout()
+    await flushPromises()
+
+    expect(getBlogCategories).not.toHaveBeenCalled()
+    expect(getBlogTags).not.toHaveBeenCalled()
+    expect(getHotArticles).not.toHaveBeenCalled()
+    expect(getPublicAuthorCategories).not.toHaveBeenCalled()
   })
 })

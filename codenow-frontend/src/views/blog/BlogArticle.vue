@@ -90,7 +90,7 @@
 
 <script setup>
 /** 博客文章详情页 - 展示文章内容、作者信息、标签、评论区和收藏功能 */
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, provide, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Folder, Clock, Star, StarFilled, View, ArrowRight } from '@element-plus/icons-vue'
 import { marked } from 'marked'
@@ -157,6 +157,8 @@ if (!globalThis._hljsConfigured) {
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+// 向布局提供当前文章的作者ID，使侧边栏（分类/热门文章）随文章作者作用域化。
+provide('articleAuthorId', computed(() => article.value?.authorId ?? null))
 const article = ref(null)
 const author = ref(null)
 const categoryName = ref('')
