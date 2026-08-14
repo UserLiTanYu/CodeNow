@@ -90,7 +90,7 @@
 
 <script setup>
 /** 博客文章详情页 - 展示文章内容、作者信息、标签、评论区和收藏功能 */
-import { ref, computed, provide, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Folder, Clock, Star, StarFilled, View, ArrowRight } from '@element-plus/icons-vue'
 import { marked } from 'marked'
@@ -134,6 +134,7 @@ import { getBlogArticle, getBlogArticles } from '@/api/blog'
 import { getCommentTree } from '@/api/comment'
 import { formatDate } from '@/utils/format'
 import { avatarUrl, useDefaultAvatar } from '@/utils/avatar'
+import { currentArticleAuthorId } from '@/utils/blogArticleAuthor'
 import { addFavorite, getFavoriteStatus, removeFavorite } from '@/api/member'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
@@ -157,8 +158,6 @@ if (!globalThis._hljsConfigured) {
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
-// 向布局提供当前文章的作者ID，使侧边栏（分类/热门文章）随文章作者作用域化。
-provide('articleAuthorId', computed(() => article.value?.authorId ?? null))
 const article = ref(null)
 const author = ref(null)
 const categoryName = ref('')
@@ -193,6 +192,8 @@ async function fetchArticle(articleId) {
   const currentRequest = ++requestId
   loading.value = true
   articleError.value = ''
+  // 路由切换时先清空作者，避免旧文章的作者侧边栏残留
+  currentArticleAuthorId.value = null
   try {
     const res = await getBlogArticle(articleId)
     if (currentRequest !== requestId) return
@@ -200,6 +201,8 @@ async function fetchArticle(articleId) {
     author.value = res.data.author || null
     categoryName.value = res.data.categoryName || ''
     tags.value = res.data.tags || []
+    // 向布局共享当前文章的作者ID，使侧边栏随文章作者作用域化
+    currentArticleAuthorId.value = author.value?.userId ?? article.value?.authorId ?? null
     document.title = `${article.value.title} - 码上记`
     commentPageNum.value = 1
     fetchComments()
@@ -214,6 +217,11 @@ async function fetchArticle(articleId) {
     if (currentRequest === requestId) loading.value = false
   }
 }
+
+/** 离开文章详情页时清空共享的作者ID，避免影响其他页面。 */
+onUnmounted(() => {
+  currentArticleAuthorId.value = null
+})
 
 /** 获取文章收藏状态 */
 async function fetchFavoriteStatus() {

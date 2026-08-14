@@ -215,6 +215,23 @@
                   </div>
                 </div>
               </Transition>
+              <!-- 无子分类的根级分类：直接展开该分类下的文章列表 -->
+              <Transition name="category-children">
+                <div v-if="!cat.children?.length && isArticleExpanded(cat.id)" class="category-article-list">
+                  <div v-if="isArticleLoading(cat.id)" class="article-loading">
+                    <el-skeleton :rows="2" animated />
+                  </div>
+                  <template v-else-if="categoryArticlesMap[cat.id]?.length">
+                    <router-link
+                      v-for="item in categoryArticlesMap[cat.id]"
+                      :key="item.article.id"
+                      :to="`/blog/article/${item.article.id}`"
+                      class="category-article-item"
+                    >{{ item.article.title }}</router-link>
+                  </template>
+                  <p v-else class="article-empty">暂无文章</p>
+                </div>
+              </Transition>
             </div>
           </div>
         </section>
@@ -282,12 +299,13 @@
  * 支持桌面端和移动端响应式布局，移动端有折叠搜索面板和分类导航菜单。
  * 侧边栏根据当前页面（普通博客页/作者页）动态加载不同的数据。
  */
-import { computed, inject, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowRight, Close, EditPen, Menu, Search, Setting, User, View } from '@element-plus/icons-vue'
 import { getBlogArticles, getBlogCategories, getBlogTags, getHotArticles, getPublicAuthor, getPublicAuthorCategories, getPublicAuthorTags, getPublicAuthorArticles, getSiteProfile } from '@/api/blog'
 import { SITE_OWNER_ID } from '@/config/site'
 import { avatarUrl, useDefaultAvatar } from '@/utils/avatar'
+import { currentArticleAuthorId } from '@/utils/blogArticleAuthor'
 import { getUnreadNotificationCount } from '@/api/member'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
@@ -361,8 +379,8 @@ const isSidebarlessPage = computed(() => isAuthorsPage.value
 const isSiteHome = computed(() => route.path === '/blog')
 /** 文章详情页。 */
 const isArticlePage = computed(() => /^\/blog\/article\/\d+/.test(route.path))
-/** 文章详情页当前文章的作者ID（由 BlogArticle.vue 提供，加载完成前为 null）。 */
-const articleAuthorId = inject('articleAuthorId', ref(null))
+/** 文章详情页当前文章的作者ID（由 BlogArticle.vue 写入，加载完成前为 null）。 */
+const articleAuthorId = currentArticleAuthorId
 /** 作者ID（从路由参数提取） */
 const authorId = computed(() => route.params.id)
 /** 侧边栏数据作者范围；作者主页使用路由ID，文章详情页使用文章作者ID。 */
